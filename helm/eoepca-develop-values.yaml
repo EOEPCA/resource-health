@@ -51,7 +51,7 @@ securityContext: {}
 ingress:
   enabled: true
   className: "nginx"
-  annotations: []
+  annotations: {}
   host: "resource-health.develop.eoepca.org"
   # tls: []
   #  - secretName: chart-example-tls
