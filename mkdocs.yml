@@ -12,6 +12,7 @@ nav:
       - getting-started/quick-start.md
     - Design:
       - Architecture overview: design/overview.md
+      - Use cases: design/use-cases.md
       - Core functions: design/0-core-functions.md
       - Data persistence: design/1-data-persistence.md
       - Management interface: design/2-management-interface.md
