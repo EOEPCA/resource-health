@@ -15,7 +15,7 @@ The documentation for the `<BB>` building block is organised as follows...
 * **API**<br>
   Details of APIs provided by the BB - including endpoints, usage descriptions and examples etc.
 
-## About `<BB>`
+## About Resource Health BB
 
 Description of the purpose of the BB.
 
