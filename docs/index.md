@@ -22,28 +22,28 @@ The Resource Health BB offers a generalised capability that allows all types of 
 ## Capabilities
 
 - General capability to specify and schedule checks:
-  - Manage life cycle of checks
-  - Means to comply with ownership/access restrictions of individual checks
-  - Ensure timely execution and required input retrieval of health checks
-  - Availability-type check specification
-  - Specification of checks that verify if resources meet end-user expectations
+    - Manage life cycle of checks
+    - Means to comply with ownership/access restrictions of individual checks
+    - Ensure timely execution and required input retrieval of health checks
+    - Availability-type check specification
+    - Specification of checks that verify if resources meet end-user expectations
 - Ablity to observe check outcomes and receive notifications according to outcomes:
-  - Mechanism that ensures timely notification issuance
-  - Mechanism to specify types of events that shall trigger notifications
+    - Mechanism that ensures timely notification issuance
+    - Mechanism to specify types of events that shall trigger notifications
 - Check specification via:
-  - REST API
-  - Dashboard (web UI)
-  - Git repository (Gitops-style)
+    - REST API
+    - Dashboard (web UI)
+    - Git repository (Gitops-style)
 - Support for checks whose outcomes are linked to events reported in the log of specified resources:
-  - Presence/absence of specified entries in resource logs
-  - Maintenance of traceability to check for "evidence" of an event
+    - Presence/absence of specified entries in resource logs
+    - Maintenance of traceability to check for "evidence" of an event
 - Check invocation according to variety of triggers:
-  - Time schedule
-  - Resource registration changes
-  - Platform/component updates
+    - Time schedule
+    - Resource registration changes
+    - Platform/component updates
 - Dashboard to visualize status of any health checks defined by the user
-  - Graphical UI for access and summary of the history of check outcomes
-  - Graphical UI for access and summary of performance statistics to assess correctnes of the execution of the check itself
+    - Graphical UI for access and summary of the history of check outcomes
+    - Graphical UI for access and summary of performance statistics to assess correctnes of the execution of the check itself
 - API to interrogate any health check status
-  - API access to the history of check outcomes sufficient to produce functionality available in the Graphical UI
-  - API access to execution performance statistics of check logic sufficient to produce functionality available in the Graphical UI
+    - API access to the history of check outcomes sufficient to produce functionality available in the Graphical UI
+    - API access to execution performance statistics of check logic sufficient to produce functionality available in the Graphical UI
