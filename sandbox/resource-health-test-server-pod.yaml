@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: resource-health-test-server-pod
+  namespace: resource-health-sandbox
+  labels:
+    app: resource-health-test-app
+spec:
+  containers:
+  - name: python-server
+    image: python:3.11.9-slim-bullseye
+    command: ["sh", "-c"]
+    args:
+    - |
+      pip install flask pyopenssl
+      echo 'H4sICGS9sGYAA2ZsYXNrYXBwLnB5ACWJMQrDMAwAd71C9WRDafaShE6lP+goDJFpiR0J1abfT0xuu7tkUjDl+FvxW1Ss4rMLQFTF6RRPtMXCRAHgcfSbSavs3eACLJzwwzkL/cXy4sMd8MC4NtvQjTq/+r3iu+/LOOjsYAdn3Z3bdQAAAA==' | base64 -d | gunzip > flaskapp.py &&
+      flask --app flaskapp run --port=443 --host=0.0.0.0 --cert=/tls/tls.crt --key=/tls/tls.key
+    ports:
+    - containerPort: 80
+    - containerPort: 443
+    volumeMounts:
+      - mountPath: "/tls"
+        name: tls-certs
+        readOnly: true
+  volumes:
+    - name: tls-certs
+      secret:
+        secretName: resource-health-test-certificate
