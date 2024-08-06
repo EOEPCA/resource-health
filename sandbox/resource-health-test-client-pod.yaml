@@ -14,7 +14,8 @@ spec:
       apt update
       apt install -y curl
       while true; do curl -s https://resource-health-test-service.resource-health-sandbox.svc.cluster.local 2>&1 ; echo "..."; sleep 5; done
-      #while true; do curl --cacert /etc/ssl/certs/eoepca.crt -s https://resource-health-test-service.resource-health-sandbox.svc.cluster.local 2>&1 ; echo "..."; sleep 5; done
+      # Or manually:
+      # while true; do curl --cacert /etc/ssl/certs/eoepca.crt -s https://resource-health-test-service.resource-health-sandbox.svc.cluster.local 2>&1 ; echo "..."; sleep 5; done
     volumeMounts:
       - mountPath: "/usr/local/share/ca-certificates/eoepca.crt"
         name: tls-certs
@@ -23,4 +24,4 @@ spec:
   volumes:
     - name: tls-certs
       secret:
-        secretName: resource-health-test-certificate
+        secretName: resource-health-test-client-certificate

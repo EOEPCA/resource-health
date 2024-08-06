@@ -1,0 +1,19 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: resource-health-test-client-certificate
+  namespace: resource-health-sandbox
+spec:
+  secretName: resource-health-test-client-certificate
+  isCA: false
+  usages:
+    - digital signature
+    - key encipherment
+    - server auth
+    - client auth
+  dnsNames:
+    - "resource-health-test-service.resource-health-sandbox.svc.cluster.local"
+    - "resource-health-test-service"
+  issuerRef:
+    kind: ClusterIssuer
+    name: eoepca-ca-clusterissuer
