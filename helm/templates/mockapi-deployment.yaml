@@ -34,18 +34,22 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.mockapi.image.repository }}:{{ .Values.mockapi.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.mockapi.image.pullPolicy }}
+          ## TODO: Un-hardcode this
+          env:
+          - name: OTEL_EXPORTER_OTLP_ENDPOINT
+            value: http://opentelemetry-collector.resource-health-opensearch.svc.cluster.local:4317
           ports:
             - name: http
               containerPort: {{ .Values.mockapi.containerPort }}
               protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /live
-              port: http
-          readinessProbe:
-            httpGet:
-              path: /ready
-              port: http
+          #livenessProbe:
+          #  httpGet:
+          #    path: /live
+          #    port: http
+          #readinessProbe:
+          #  httpGet:
+          #    path: /ready
+          #    port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
