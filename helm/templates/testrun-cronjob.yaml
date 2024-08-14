@@ -1,5 +1,5 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: CronJob
 metadata:
   name: {{ include "resource-health.fullname" . }}-testrun-cronjob
   labels:
@@ -9,25 +9,18 @@ spec:
   schedule: "{{ .Values.test_run.schedule }}"
   jobTemplate:
     spec:
-      metadata:
-        {{- with .Values.podAnnotations }}
-        annotations:
-          {{- toYaml . | nindent 8 }}
-        {{- end }}
-        labels:
-          app.kubernetes.io/component: "test_run"
-          {{- include "resource-health.selectorLabels" . | nindent 8 }}
-        {{- with .Values.imagePullSecrets }}
-        imagePullSecrets:
-          {{- toYaml . | nindent 8 }}
-        {{- end }}
-        serviceAccountName: {{ include "resource-health.serviceAccountName" . }}
-        securityContext:
-          {{- toYaml .Values.podSecurityContext | nindent 8 }}
-        containers:
+      template:
+        metadata:
+          {{- with .Values.podAnnotations }}
+          annotations:
+            {{- toYaml . | nindent 10 }}
+          {{- end }}
+          labels:
+            app.kubernetes.io/component: "test_run"
+            {{- include "resource-health.selectorLabels" . | nindent 12 }}
+        spec:
+          containers:
           - name: {{ .Chart.Name }}
-            securityContext:
-              {{- toYaml .Values.securityContext | nindent 12 }}
             image: "{{ .Values.test_run.image.repository }}:{{ .Values.test_run.image.tag | default .Chart.AppVersion }}"
             imagePullPolicy: {{ .Values.test_run.image.pullPolicy }}
             ## TODO: Un-hardcode this
@@ -38,18 +31,3 @@ spec:
               value: http://opentelemetry-collector.resource-health-opensearch.svc.cluster.local:4317
             - name: MOCK_API_HOST
               value: http://mock_api:5000
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}
-        {{- with .Values.nodeSelector }}
-        nodeSelector:
-          {{- toYaml . | nindent 8 }}
-        {{- end }}
-        {{- with .Values.affinity }}
-        affinity:
-          {{- toYaml . | nindent 8 }}
-        {{- end }}
-        {{- with .Values.tolerations }}
-        tolerations:
-          {{- toYaml . | nindent 8 }}
-        {{- end }}
-
