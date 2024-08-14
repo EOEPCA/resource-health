@@ -31,4 +31,4 @@ spec:
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: http://opentelemetry-collector.resource-health-opensearch.svc.cluster.local:4317
             - name: MOCK_API_HOST
-              value: http://mock_api:5000
+              value: http://resource-health-skeleton-mockapi:5000
