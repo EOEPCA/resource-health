@@ -12,6 +12,14 @@ mockapi:
   servicePort: 5000
   replicaCount: 2
 
+test_run:
+  image:
+    repository: docker.io/tilowiklundsensmetry/test_health
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  serviceType: ClusterIP
+  schedule: "@hourly"
+
 api:
   image:
     repository: nginx
