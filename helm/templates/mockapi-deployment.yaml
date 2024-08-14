@@ -35,6 +35,8 @@ spec:
           image: "{{ .Values.mockapi.image.repository }}:{{ .Values.mockapi.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.mockapi.image.pullPolicy }}
           ## TODO: Un-hardcode this
+          command: ["bash", "-c"]
+          args: ["poetry install && poe api"]
           env:
           - name: OTEL_EXPORTER_OTLP_ENDPOINT
             value: http://opentelemetry-collector.resource-health-opensearch.svc.cluster.local:4317
