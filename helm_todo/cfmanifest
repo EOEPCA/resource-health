@@ -1,0 +1,162 @@
+apiVersion: v1
+data:
+  opensearch: >
+    yml: 'cluster.name: opensearch-cluster# Bind to all interfaces because we
+    don''t know
+      what IP address Docker will assign to us.network.host: 0.0.0.0# Setting network.host
+      to a non-loopback address enables the annoying bootstrap checks. "Single-node" mode
+      disables them again.# Implicitly done if ".singleNode" is set to "true".# discovery.type:
+      single-node# Start OpenSearch Security Demo Configuration# WARNING: revise all the
+      lines below before you go into productionplugins:  security:    ssl:      transport:        pemcert_filepath:
+      esnode.pem        pemkey_filepath: esnode-key.pem        pemtrustedcas_filepath:
+      root-ca.pem        enforce_hostname_verification: false      http:        enabled:
+      true        pemcert_filepath: esnode/tls.crt        pemkey_filepath: esnode/tls.key        pemtrustedcas_filepath:
+      esnode/ca.crt    allow_unsafe_democertificates: false    allow_default_init_securityindex:
+      true    authcz:      admin_dn:        - CN=kirk,OU=client,O=client,L=test,C=de    audit.type:
+      internal_opensearch    enable_snapshot_restore_privilege: true    check_snapshot_restore_write_privileges:
+      true    restapi:      roles_enabled: ["all_access", "security_rest_api_access"]    system_indices:      enabled:
+      true      indices:        [          ".opendistro-alerting-config",          ".opendistro-alerting-alert*",          ".opendistro-anomaly-results*",          ".opendistro-anomaly-detector*",          ".opendistro-anomaly-checkpoints",          ".opendistro-anomaly-detection-state",          ".opendistro-reports-*",          ".opendistro-notifications-*",          ".opendistro-notebooks",          ".opendistro-asynchronous-search-response*",        ]########
+      End OpenSearch Security Demo Configuration ########'
+  opensearch.yml: >
+    cluster.name: opensearch-cluster
+
+
+    # Bind to all interfaces because we don't know what IP address Docker will
+    assign to us.
+
+    network.host: 0.0.0.0
+
+
+    # Setting network.host to a non-loopback address enables the annoying
+    bootstrap checks. "Single-node" mode disables them again.
+
+    # Implicitly done if ".singleNode" is set to "true".
+
+    # discovery.type: single-node
+
+
+    # Start OpenSearch Security Demo Configuration
+
+    # WARNING: revise all the lines below before you go into production
+
+    plugins:
+      security:
+        nodes_dn:
+          - 'CN=resource-health-opensearch.svc.cluster.local'
+        ssl:
+          transport:
+            pemcert_filepath: esnode/tls.crt
+            pemkey_filepath: esnode/tls.key
+            pemtrustedcas_filepath: esnode/ca.crt
+            enforce_hostname_verification: false
+          http:
+            enabled: true
+            pemcert_filepath: esnode/tls.crt
+            pemkey_filepath: esnode/tls.key
+            pemtrustedcas_filepath: esnode/ca.crt
+        allow_unsafe_democertificates: false
+        allow_default_init_securityindex: true
+        # authcz:
+        #   admin_dn:
+        #     - CN=kirk,OU=client,O=client,L=test,C=de
+        audit.type: internal_opensearch
+        enable_snapshot_restore_privilege: true
+        check_snapshot_restore_write_privileges: true
+        restapi:
+          roles_enabled: ["all_access", "security_rest_api_access"]
+        system_indices:
+          enabled: true
+          indices:
+            [
+              ".opendistro-alerting-config",
+              ".opendistro-alerting-alert*",
+              ".opendistro-anomaly-results*",
+              ".opendistro-anomaly-detector*",
+              ".opendistro-anomaly-checkpoints",
+              ".opendistro-anomaly-detection-state",
+              ".opendistro-reports-*",
+              ".opendistro-notifications-*",
+              ".opendistro-notebooks",
+              ".opendistro-asynchronous-search-response*",
+            ]
+    ######## End OpenSearch Security Demo Configuration ########
+kind: ConfigMap
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: >
+      {"apiVersion":"v1","data":{"opensearch":"yml: 'cluster.name:
+      opensearch-cluster# Bind to all interfaces because we don''t know\n  what
+      IP address Docker will assign to us.network.host: 0.0.0.0# Setting
+      network.host\n  to a non-loopback address enables the annoying bootstrap
+      checks. \"Single-node\" mode\n  disables them again.# Implicitly done if
+      \".singleNode\" is set to \"true\".# discovery.type:\n  single-node# Start
+      OpenSearch Security Demo Configuration# WARNING: revise all the\n  lines
+      below before you go into productionplugins:  security:    ssl:     
+      transport:        pemcert_filepath:\n  esnode.pem        pemkey_filepath:
+      esnode-key.pem        pemtrustedcas_filepath:\n  root-ca.pem       
+      enforce_hostname_verification: false      http:        enabled:\n 
+      true        pemcert_filepath: esnode/tls.crt        pemkey_filepath:
+      esnode/tls.key        pemtrustedcas_filepath:\n  esnode/ca.crt   
+      allow_unsafe_democertificates: false   
+      allow_default_init_securityindex:\n  true    authcz:      admin_dn:       
+      - CN=kirk,OU=client,O=client,L=test,C=de    audit.type:\n 
+      internal_opensearch    enable_snapshot_restore_privilege: true   
+      check_snapshot_restore_write_privileges:\n  true    restapi:     
+      roles_enabled: [\"all_access\", \"security_rest_api_access\"]   
+      system_indices:      enabled:\n  true      indices:        [         
+      \".opendistro-alerting-config\",         
+      \".opendistro-alerting-alert*\",         
+      \".opendistro-anomaly-results*\",         
+      \".opendistro-anomaly-detector*\",         
+      \".opendistro-anomaly-checkpoints\",         
+      \".opendistro-anomaly-detection-state\",         
+      \".opendistro-reports-*\",         
+      \".opendistro-notifications-*\",         
+      \".opendistro-notebooks\",         
+      \".opendistro-asynchronous-search-response*\",        ]########\n  End
+      OpenSearch Security Demo Configuration
+      ########'\n","opensearch.yml":"cluster.name: opensearch-cluster\n\n# Bind
+      to all interfaces because we don't know what IP address Docker will assign
+      to us.\nnetwork.host: 0.0.0.0\n\n# Setting network.host to a non-loopback
+      address enables the annoying bootstrap checks. \"Single-node\" mode
+      disables them again.\n# Implicitly done if \".singleNode\" is set to
+      \"true\".\n# discovery.type: single-node\n\n# Start OpenSearch Security
+      Demo Configuration\n# WARNING: revise all the lines below before you go
+      into production\nplugins:\n  security:\n    ssl:\n     
+      transport:\n        pemcert_filepath: esnode.pem\n        pemkey_filepath:
+      esnode-key.pem\n        pemtrustedcas_filepath: root-ca.pem\n       
+      enforce_hostname_verification: false\n      http:\n        enabled:
+      true\n        pemcert_filepath: esnode.pem\n        pemkey_filepath:
+      esnode-key.pem\n        pemtrustedcas_filepath: root-ca.pem\n   
+      allow_unsafe_democertificates: true\n    allow_default_init_securityindex:
+      true\n    authcz:\n      admin_dn:\n        -
+      CN=kirk,OU=client,O=client,L=test,C=de\n    audit.type:
+      internal_opensearch\n    enable_snapshot_restore_privilege: true\n   
+      check_snapshot_restore_write_privileges: true\n    restapi:\n     
+      roles_enabled: [\"all_access\", \"security_rest_api_access\"]\n   
+      system_indices:\n      enabled: true\n      indices:\n        [\n         
+      \".opendistro-alerting-config\",\n         
+      \".opendistro-alerting-alert*\",\n         
+      \".opendistro-anomaly-results*\",\n         
+      \".opendistro-anomaly-detector*\",\n         
+      \".opendistro-anomaly-checkpoints\",\n         
+      \".opendistro-anomaly-detection-state\",\n         
+      \".opendistro-reports-*\",\n         
+      \".opendistro-notifications-*\",\n         
+      \".opendistro-notebooks\",\n         
+      \".opendistro-asynchronous-search-response*\",\n        ]\n######## End
+      OpenSearch Security Demo Configuration
+      ########\n"},"kind":"ConfigMap","metadata":{"annotations":{},"labels":{"app.kubernetes.io/component":"opensearch-cluster-master","app.kubernetes.io/instance":"resource-health-opensearch","app.kubernetes.io/managed-by":"Helm","app.kubernetes.io/name":"opensearch","app.kubernetes.io/version":"2.15.0","argocd.argoproj.io/instance":"resource-health-opensearch","helm.sh/chart":"opensearch-2.21.0"},"name":"opensearch-cluster-master-config","namespace":"resource-health-opensearch"}}
+  creationTimestamp: '2024-08-07T13:06:16Z'
+  labels:
+    app.kubernetes.io/component: opensearch-cluster-master
+    app.kubernetes.io/instance: resource-health-opensearch
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: opensearch
+    app.kubernetes.io/version: 2.15.0
+    argocd.argoproj.io/instance: resource-health-opensearch
+    helm.sh/chart: opensearch-2.21.0
+  name: opensearch-cluster-master-config
+  namespace: resource-health-opensearch
+  resourceVersion: '14133457'
+  uid: 9c6f7bf4-0108-4c5b-ad74-be8bd6cf08d3
