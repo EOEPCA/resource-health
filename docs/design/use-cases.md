@@ -29,7 +29,8 @@ following resource types:
 
 **BR126**: The Resource Health BB shall allow the user to observe the outcome of their checks, and
 to receive notifications according to the outcome.
-BR127: The Resource Health BB shall support specification of checks via the following means:
+
+**BR127**: The Resource Health BB shall support specification of checks via the following means:
 * REST API
 * Dashboard (web UI)
 * Git repository (Gitops-style)
