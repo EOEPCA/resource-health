@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: resource-health
+  name: resource-health-core
   namespace: argocd
 spec:
   project: eoepca
@@ -13,7 +13,7 @@ spec:
       valueFiles:
         - eoepca-develop-values.yaml
   destination:
-    namespace: resource-health
+    namespace: resource-health-core
     name: in-cluster
   syncPolicy:
     automated:
