@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: 'https://github.com/EOEPCA/resource-health'
     path: helm
-    targetRevision: deploy-develop
+    targetRevision: tw/update-deployment
     helm:
       valueFiles:
         - eoepca-develop-values.yaml
