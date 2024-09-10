@@ -1,0 +1,11 @@
+resources:
+  - apps/opensearch-dashboards.yaml
+  - apps/opensearch.yaml
+  - apps/opentelemetry-collector.yaml
+  - apps/resource-health.yaml
+  - deployment/certificates/opensearch-admin-certificate.yaml
+  - deployment/certificates/opensearch-dashboards-client-certificate.yaml
+  - deployment/certificates/opensearch-dashboards-tls-certificate.yaml
+  - deployment/certificates/opensearch-tls-certificate.yaml
+  - deployment/certificates/otel-collector-certificate.yaml
+  - deployment/certificates/otel-collector-client-certificate.yaml

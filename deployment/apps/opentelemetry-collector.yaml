@@ -1,0 +1,111 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: opentelemetry-collector
+  namespace: argocd
+spec:
+  destination:
+    namespace: resource-health-opensearch
+    server: https://kubernetes.default.svc
+  project: eoepca
+  source:
+    chart: opentelemetry-collector
+    helm:
+      parameters:
+      - name: image.repository
+        value: otel/opentelemetry-collector-contrib
+      - name: mode
+        value: deployment
+      valuesObject:
+        config:
+          exporters:
+            debug:
+              verbosity: detailed
+            nop: {}
+            opensearch:
+              http:
+                endpoint: https://opensearch-cluster-master:9200
+                tls:
+                  ca_file: /certs/ca.crt
+                  cert_file: /certs/tls.crt
+                  key_file: /certs/tls.key
+          extensions:
+            health_check:
+              endpoint: ${env:MY_POD_IP}:13133
+          processors:
+            memory_limiter:
+              check_interval: 5s
+              limit_percentage: 80
+              spike_limit_percentage: 25
+          receivers:
+            otlp:
+              protocols:
+                grpc:
+                  endpoint: 0.0.0.0:4317
+          service:
+            extensions:
+            - health_check
+            pipelines:
+              logs:
+                exporters:
+                - debug
+                - opensearch
+                processors:
+                - memory_limiter
+                - batch
+                receivers:
+                - otlp
+              metrics:
+                exporters:
+                - nop
+                processors:
+                - memory_limiter
+                receivers:
+                - otlp
+              traces:
+                exporters:
+                - debug
+                - opensearch
+                processors:
+                - memory_limiter
+                - batch
+                receivers:
+                - otlp
+        extraVolumeMounts:
+        - mountPath: /certs
+          name: certificates
+          readOnly: true
+        extraVolumes:
+        - name: certificates
+          secret:
+            secretName: otel-collector-client-certificate
+        ports:
+          jaeger-compact:
+            enabled: false
+          jaeger-grpc:
+            enabled: false
+          jaeger-thrift:
+            enabled: false
+          metrics:
+            enabled: false
+          otlp-http:
+            enabled: false
+          zipkin:
+            enabled: false
+        presets:
+          clusterMetrics:
+            enabled: false
+          hostMetrics:
+            enabled: false
+          kubeletMetrics:
+            enabled: false
+          kubernetesAttributes:
+            enabled: false
+          logsCollection:
+            enabled: false
+        resources:
+          limits:
+            cpu: 250m
+            memory: 512Mi
+    repoURL: https://open-telemetry.github.io/opentelemetry-helm-charts
+    targetRevision: 0.101.2

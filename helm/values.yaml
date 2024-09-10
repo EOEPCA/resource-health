@@ -2,6 +2,24 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+mockapi:
+  image:
+    repository: docker.io/tilowiklundsensmetry/mock_api
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  serviceType: ClusterIP
+  containerPort: 5000
+  servicePort: 5000
+  replicaCount: 2
+
+test_run:
+  image:
+    repository: docker.io/tilowiklundsensmetry/test_health
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  serviceType: ClusterIP
+  schedule: "@hourly"
+
 api:
   image:
     repository: nginx
@@ -49,7 +67,7 @@ securityContext: {}
   # runAsUser: 1000
 
 ingress:
-  enabled: true
+  enabled: false
   className: "traefik"
   annotations: {}
   host: "kubernetes"
