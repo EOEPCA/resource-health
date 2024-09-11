@@ -40,15 +40,15 @@ spec:
               protocol: TCP
           env:
           {{- range .Values.web.environmentSecrets }}
-            - name: {{ toYaml .name }}
+            - name: {{ toYaml .name | trim }}
               valueFrom:
                 secretKeyRef:
-                  name: {{ toYaml .secret }}
-                  key: {{ toYaml .key }}
+                  name: {{ toYaml .secret | trim }}
+                  key: {{ toYaml .key | trim }}
           {{- end }}
           {{- range .Values.web.environmentFixed }}
-            - name: {{ toYaml .name }}
-              value: {{ toYaml .value }}
+            - name: {{ toYaml .name | trim }}
+              value: {{ toYaml .value | trim }}
           {{- end }}
           livenessProbe:
             httpGet:
