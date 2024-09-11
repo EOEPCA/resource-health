@@ -36,7 +36,7 @@ web:
     pullPolicy: IfNotPresent
     tag: "v0.0.1"
   serviceType: ClusterIP
-  containerPort: 80
+  containerPort: 3000
   servicePort: 80
   replicaCount: 2
   environmentSecrets:
