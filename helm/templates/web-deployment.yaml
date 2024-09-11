@@ -38,6 +38,18 @@ spec:
             - name: http
               containerPort: {{ .Values.web.containerPort }}
               protocol: TCP
+          env:
+          {{- range .Values.web.environmentSecrets }}
+            - name: {{ toYaml .name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ toYaml .secret }}
+                  key: {{ toYaml .key }}
+          {{- end }}
+          {{- range .Values.web.environmentFixed }}
+            - name: {{ toYaml .name }}
+              value: {{ toYaml .value }}
+          {{- end }}
           livenessProbe:
             httpGet:
               path: /

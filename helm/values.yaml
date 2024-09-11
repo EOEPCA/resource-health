@@ -32,13 +32,24 @@ api:
 
 web:
   image:
-    repository: nginx
+    repository: docker.io/tilowiklundsensmetry/resourcehealth_web:latest
     pullPolicy: IfNotPresent
-    tag: "1.27.0"
+    tag: "latest"
   serviceType: ClusterIP
   containerPort: 80
   servicePort: 80
   replicaCount: 2
+  environmentSecrets:
+    - name: OPENSEARCH_USERNAME
+      secret: sensmetry-user-secret
+      key: username
+    - name: OPENSEARCH_PASSWORD
+      secret: sensmetry-user-secret
+      key: password
+  environmentFixed:
+    - name: OPENSEARCH_ENDPOINT
+      value: "https://opensearch-cluster-master.resource-health-opensearch.svc.cluster.local:9200"
+
 
 imagePullSecrets: []
 nameOverride: ""
