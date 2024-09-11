@@ -14,7 +14,7 @@ spec:
         - eoepca-develop-values.yaml
   destination:
     namespace: resource-health
-    name: in-cluster
+    server: https://kubernetes.default.svc
   syncPolicy:
     automated:
       prune: true
