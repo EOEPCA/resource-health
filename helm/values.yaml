@@ -32,7 +32,7 @@ api:
 
 web:
   image:
-    repository: docker.io/tilowiklundsensmetry/resourcehealth_web:latest
+    repository: docker.io/tilowiklundsensmetry/resourcehealth_web
     pullPolicy: IfNotPresent
     tag: "latest"
   serviceType: ClusterIP
