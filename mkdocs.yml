@@ -1,21 +1,21 @@
-site_name: EOEPCA Document Template
-site_url: https://eoepca.readthedocs.io/projects/template/
-repo_url: https://github.com/EOEPCA/document-template/
+site_name: Resource Health Building Block
+site_url: https://eoepca.readthedocs.io/projects/resource-health/en/latest
+repo_url: https://github.com/EOEPCA/resource-health/
 edit_uri: "edit/main/docs/"
 
 nav:
   - EOEPCA Documentation: https://eoepca.readthedocs.io/
-  - System Architecture: https://eoepca.readthedocs.io/projects/architecture/
-  - Health and Resource Building Block:
+  - Resource Health:
     - index.md
     - Getting Started:
       - getting-started/quick-start.md
     - Design:
-      - design/overview.md
-      - design/0-core-functions.md
-      - design/1-data-persistence.md
-      - design/2-management-interface.md
-      - design/3-automated-scheduling.md
+      - Architecture overview: design/overview.md
+      - Use cases: design/use-cases.md
+      - Core functions: design/0-core-functions.md
+      - Data persistence: design/1-data-persistence.md
+      - Management interface: design/2-management-interface.md
+      - Automated scheduling: design/3-automated-scheduling.md
     # - Usage:
     #   - usage/tutorials.md
     #   - usage/howtos.md
