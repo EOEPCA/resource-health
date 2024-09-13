@@ -2,6 +2,24 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+mockapi:
+  image:
+    repository: docker.io/tilowiklundsensmetry/mock_api
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  serviceType: ClusterIP
+  containerPort: 5000
+  servicePort: 5000
+  replicaCount: 2
+
+test_run:
+  image:
+    repository: docker.io/tilowiklundsensmetry/test_health
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  serviceType: ClusterIP
+  schedule: "@hourly"
+
 api:
   image:
     repository: nginx
@@ -14,13 +32,23 @@ api:
 
 web:
   image:
-    repository: nginx
+    repository: docker.io/tilowiklundsensmetry/resourcehealth_web
     pullPolicy: IfNotPresent
-    tag: "1.27.0"
+    tag: "v0.0.2"
   serviceType: ClusterIP
-  containerPort: 80
+  containerPort: 3000
   servicePort: 80
   replicaCount: 2
+  environmentSecrets:
+    - name: OPENSEARCH_USERNAME
+      secret: sensmetry-user-secret
+      key: username
+    - name: OPENSEARCH_PASSWORD
+      secret: sensmetry-user-secret
+      key: password
+  environmentFixed:
+    - name: OPENSEARCH_ENDPOINT
+      value: "https://opensearch-cluster-master.resource-health-opensearch.svc.cluster.local:9200"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -49,7 +77,7 @@ securityContext: {}
   # runAsUser: 1000
 
 ingress:
-  enabled: true
+  enabled: false
   className: "nginx"
   annotations: {}
   host: "resource-health.develop.eoepca.org"

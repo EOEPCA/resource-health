@@ -1,0 +1,34 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "resource-health.fullname" . }}-testrun-cronjob
+  labels:
+    app.kubernetes.io/component: "mockapi"
+    {{- include "resource-health.labels" . | nindent 4 }}
+spec:
+  schedule: "{{ .Values.test_run.schedule }}"
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          {{- with .Values.podAnnotations }}
+          annotations:
+            {{- toYaml . | nindent 10 }}
+          {{- end }}
+          labels:
+            app.kubernetes.io/component: "test_run"
+            {{- include "resource-health.selectorLabels" . | nindent 12 }}
+        spec:
+          restartPolicy: "Never"
+          containers:
+          - name: {{ .Chart.Name }}
+            image: "{{ .Values.test_run.image.repository }}:{{ .Values.test_run.image.tag | default .Chart.AppVersion }}"
+            imagePullPolicy: {{ .Values.test_run.image.pullPolicy }}
+            ## TODO: Un-hardcode this
+            command: ["bash", "-c"]
+            args: ["poetry install; sleep 10; poe test --user-id johny1789; poe test --user-id 123potato123; sleep 10"]
+            env:
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://opentelemetry-collector.resource-health-opensearch.svc.cluster.local:4317
+            - name: MOCK_API_HOST
+              value: http://resource-health-skeleton-mockapi:5000

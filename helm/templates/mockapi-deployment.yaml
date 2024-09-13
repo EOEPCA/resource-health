@@ -1,15 +1,15 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "resource-health.fullname" . }}-web
+  name: {{ include "resource-health.fullname" . }}-mockapi
   labels:
-    app.kubernetes.io/component: "web"
+    app.kubernetes.io/component: "mockapi"
     {{- include "resource-health.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.web.replicaCount }}
+  replicas: {{ .Values.mockapi.replicaCount }}
   selector:
     matchLabels:
-      app.kubernetes.io/component: "web"
+      app.kubernetes.io/component: "mockapi"
       {{- include "resource-health.selectorLabels" . | nindent 6 }}
   template:
     metadata:
@@ -18,7 +18,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        app.kubernetes.io/component: "web"
+        app.kubernetes.io/component: "mockapi"
         {{- include "resource-health.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
@@ -32,32 +32,26 @@ spec:
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.web.image.repository }}:{{ .Values.web.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.web.image.pullPolicy }}
+          image: "{{ .Values.mockapi.image.repository }}:{{ .Values.mockapi.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.mockapi.image.pullPolicy }}
+          ## TODO: Un-hardcode this
+          command: ["bash", "-c"]
+          args: ["poetry install && poe api"]
+          env:
+          - name: OTEL_EXPORTER_OTLP_ENDPOINT
+            value: http://opentelemetry-collector.resource-health-opensearch.svc.cluster.local:4317
           ports:
             - name: http
-              containerPort: {{ .Values.web.containerPort }}
+              containerPort: {{ .Values.mockapi.containerPort }}
               protocol: TCP
-          env:
-          {{- range .Values.web.environmentSecrets }}
-            - name: {{ toYaml .name | trim }}
-              valueFrom:
-                secretKeyRef:
-                  name: {{ toYaml .secret | trim }}
-                  key: {{ toYaml .key | trim }}
-          {{- end }}
-          {{- range .Values.web.environmentFixed }}
-            - name: {{ toYaml .name | trim }}
-              value: {{ toYaml .value | trim }}
-          {{- end }}
-          livenessProbe:
-            httpGet:
-              path: /
-              port: http
-          readinessProbe:
-            httpGet:
-              path: /
-              port: http
+          #livenessProbe:
+          #  httpGet:
+          #    path: /live
+          #    port: http
+          #readinessProbe:
+          #  httpGet:
+          #    path: /ready
+          #    port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
