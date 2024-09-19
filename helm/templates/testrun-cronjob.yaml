@@ -29,6 +29,6 @@ spec:
             args: ["poetry install; sleep 10; poe test --user-id johny1789; poe test --user-id 123potato123; sleep 10"]
             env:
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: http://opentelemetry-collector.resource-health-opensearch.svc.cluster.local:4317
+              value: https://opentelemetry-collector.resource-health-opensearch.svc.cluster.local:4317
             - name: MOCK_API_HOST
               value: http://resource-health-skeleton-mockapi:5000

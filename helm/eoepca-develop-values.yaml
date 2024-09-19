@@ -48,7 +48,7 @@ web:
       key: password
   environmentFixed:
     - name: OPENSEARCH_ENDPOINT
-      value: "https://opensearch-cluster-master.resource-health-opensearch.svc.cluster.local:9200"
+      value: "https://opensearch-cluster-master-headless.resource-health-opensearch.svc.cluster.local:9200"
 
 imagePullSecrets: []
 nameOverride: ""
