@@ -19,6 +19,11 @@ test_run:
     tag: "latest"
   serviceType: ClusterIP
   schedule: "@hourly"
+  tls:
+    commonName: testrun.resource-health.svc.cluster.local
+    issuerRef:
+      kind: ClusterIssuer
+      name: ca-clusterissuer
 
 api:
   image:
