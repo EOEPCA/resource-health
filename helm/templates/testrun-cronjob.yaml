@@ -32,3 +32,19 @@ spec:
               value: https://opentelemetry-collector.resource-health-opensearch.svc.cluster.local:4317
             - name: MOCK_API_HOST
               value: http://resource-health-skeleton-mockapi:5000
+
+            - name: OTEL_EXPORTER_OTLP_CERTIFICATE
+              value: "/tls/ca.crt"
+            - name: OTEL_EXPORTER_OTLP_CLIENT_KEY
+              value: "/tls/tls.key"
+            - name: OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE
+              value: "/tls/tls.crt"
+
+            volumeMounts:
+            - name: tls
+              readOnly: true
+              mountPath: "/tls"
+          volumes:
+          - name: tls
+            secret:
+              secretName: {{ include "resource-health.fullname" . }}-testrun-certificate
