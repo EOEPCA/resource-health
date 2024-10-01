@@ -16,7 +16,7 @@ test_run:
   image:
     repository: docker.io/tilowiklundsensmetry/test_health
     pullPolicy: IfNotPresent
-    tag: "latest"
+    tag: "v0.0.2"
   serviceType: ClusterIP
   schedule: "@hourly"
   tls:
