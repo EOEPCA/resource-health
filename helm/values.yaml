@@ -16,7 +16,7 @@ test_run:
   image:
     repository: docker.io/tilowiklundsensmetry/test_health
     pullPolicy: IfNotPresent
-    tag: "latest"
+    tag: "v0.0.2"
   serviceType: ClusterIP
   schedule: "@hourly"
   tls:
@@ -39,7 +39,7 @@ web:
   image:
     repository: docker.io/tilowiklundsensmetry/resourcehealth_web
     pullPolicy: IfNotPresent
-    tag: "v0.0.2"
+    tag: "v0.0.3"
   serviceType: ClusterIP
   containerPort: 3000
   servicePort: 80
