@@ -24,9 +24,11 @@ spec:
           - name: {{ .Chart.Name }}
             image: "{{ .Values.test_run.image.repository }}:{{ .Values.test_run.image.tag | default .Chart.AppVersion }}"
             imagePullPolicy: {{ .Values.test_run.image.pullPolicy }}
-            ## TODO: Un-hardcode this
-            command: ["bash", "-c"]
-            args: ["poetry install; sleep 10; poe test --user-id johny1789; poe test --user-id 123potato123; sleep 10"]
+            args: [
+              "https://gist.githubusercontent.com/Jonas-Puksta-Sensmetry/cffc6a422d5bf5af7c4718ec75888950/raw/7e3a24902abd220bd5b3c12c7b3758185db5b13d/requirements.txt",
+              "https://gist.githubusercontent.com/Jonas-Puksta-Sensmetry/cffc6a422d5bf5af7c4718ec75888950/raw/7e3a24902abd220bd5b3c12c7b3758185db5b13d/test_stuff.py",
+              "bash -c 'pytest --export-traces test_stuff.py --user-id johny1789; pytest --export-traces test_stuff.py --user-id 123potato123'"
+            ]
             env:
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: https://opentelemetry-collector.resource-health-opensearch.svc.cluster.local:4317
