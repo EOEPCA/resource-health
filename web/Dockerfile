@@ -6,6 +6,6 @@ COPY ./tsconfig.json ./yarn.lock ./next-env.d.ts ./postcss.config.mjs ./.gitigno
 
 RUN yarn install
 
-COPY ./src/app/page.tsx ./src/app/globals.css ./src/app/layout.tsx /app/app
+COPY ./src/ /app/src/
 
 ENTRYPOINT [ "yarn", "dev" ]
