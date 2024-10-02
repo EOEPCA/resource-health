@@ -68,7 +68,7 @@ web:
   image:
     repository: docker.io/tilowiklundsensmetry/resourcehealth_web
     pullPolicy: IfNotPresent
-    tag: "v0.0.3"
+    tag: "v0.0.4"
   serviceType: ClusterIP
   containerPort: 3000
   servicePort: 80
