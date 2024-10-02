@@ -4,13 +4,18 @@
 
 mockapi:
   image:
-    repository: docker.io/tilowiklundsensmetry/mock_api
+    repository: docker.io/tilowiklundsensmetry/mock_service
     pullPolicy: IfNotPresent
-    tag: "latest"
+    tag: "v0.0.1"
   serviceType: ClusterIP
   containerPort: 5000
   servicePort: 5000
   replicaCount: 2
+  tls:
+    commonName: mockapi.resource-health.svc.cluster.local
+    issuerRef:
+      kind: ClusterIssuer
+      name: eoepca-ca-clusterissuer
 
 test_run:
   image:
