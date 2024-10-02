@@ -1,10 +1,10 @@
 {{- $top := . -}}
-{{- range $check := .Values.healthchecks.checks -}}
+{{- range $index,$check := .Values.healthchecks.checks -}}
 ---
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: {{ include "resource-health.fullname" $top }}-healthchecks-cronjob-{{ $check.name }}
+  name: {{ include "resource-health.fullname" $top }}-healthchecks-cronjob-{{ $index }}
   labels:
     app.kubernetes.io/component: "mockapi"
     {{- include "resource-health.labels" $top | nindent 4 }}
@@ -30,7 +30,7 @@ spec:
             args: [
               {{ $check.requirements }},
               {{ $check.script }},
-              pytest --export-traces script.py --user-id {{ $check.userid }}"
+              pytest --export-traces script.py --user-id {{ $check.userid }}
             ]
             env:
             {{- range $check.env }}
