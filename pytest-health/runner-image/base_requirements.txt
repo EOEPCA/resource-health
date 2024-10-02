@@ -1,6 +1,7 @@
 opentelemetry-exporter-otlp==1.25.0
 opentelemetry-instrumentation-requests==0.46b0
 opentelemetry-instrumentation==0.46b0
+pytest-custom-exit-code==0.3.0
 pytest-xdist==3.6.1
 pytest==8.3.2
 requests==2.32.3

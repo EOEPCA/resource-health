@@ -28,3 +28,8 @@ docker run --network host --rm temporary_runner_image:v0.0.1 "https://gist.githu
 ```
 
 It is currently published as `docker.io/tilowiklundsensmetry/healthcheck`.
+
+# Notes
+
+You can use `--suppress-tests-failed-exit-code` from the (preinstalled) `pytest-custom-exit-code` plugin to 
+make a failed test not generate a non-zero exit code (useful in Kubernetes to not trigger retries).
