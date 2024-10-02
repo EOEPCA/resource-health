@@ -23,7 +23,7 @@ healthchecks:
     image:
       repository: docker.io/tilowiklundsensmetry/healthcheck
       pullPolicy: IfNotPresent
-      tag: "v0.0.3"
+      tag: "v0.0.4"
     schedule: "@hourly"
     requirements: "https://gist.githubusercontent.com/Jonas-Puksta-Sensmetry/cffc6a422d5bf5af7c4718ec75888950/raw/7e3a24902abd220bd5b3c12c7b3758185db5b13d/requirements.txt"
     script: "https://gist.githubusercontent.com/Jonas-Puksta-Sensmetry/cffc6a422d5bf5af7c4718ec75888950/raw/7e3a24902abd220bd5b3c12c7b3758185db5b13d/test_stuff.py"
@@ -38,7 +38,7 @@ healthchecks:
     image:
       repository: docker.io/tilowiklundsensmetry/healthcheck
       pullPolicy: IfNotPresent
-      tag: "v0.0.3"
+      tag: "v0.0.4"
     ## Every day at 08:00
     schedule: "0 8 * * *"
     requirements: "https://gist.githubusercontent.com/Jonas-Puksta-Sensmetry/cffc6a422d5bf5af7c4718ec75888950/raw/7e3a24902abd220bd5b3c12c7b3758185db5b13d/requirements.txt"

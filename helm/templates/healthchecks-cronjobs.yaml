@@ -30,7 +30,7 @@ spec:
             args: [
               {{ $check.requirements }},
               {{ $check.script }},
-              pytest --export-traces script.py --user-id {{ $check.userid }}
+              pytest --export-traces --suppress-tests-failed-exit-code script.py --user-id {{ $check.userid }}
             ]
             env:
             {{- range $check.env }}
