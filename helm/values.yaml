@@ -17,18 +17,42 @@ mockapi:
       kind: ClusterIssuer
       name: eoepca-ca-clusterissuer
 
-test_run:
-  image:
-    repository: docker.io/tilowiklundsensmetry/test_health
-    pullPolicy: IfNotPresent
-    tag: "v0.0.2"
-  serviceType: ClusterIP
-  schedule: "@hourly"
+healthchecks:
+  checks:
+  - name: hourly-mockapi-check
+    image:
+      repository: docker.io/tilowiklundsensmetry/healthcheck
+      pullPolicy: IfNotPresent
+      tag: "v0.0.3"
+    schedule: "@hourly"
+    requirements: "https://gist.githubusercontent.com/Jonas-Puksta-Sensmetry/cffc6a422d5bf5af7c4718ec75888950/raw/7e3a24902abd220bd5b3c12c7b3758185db5b13d/requirements.txt"
+    script: "https://gist.githubusercontent.com/Jonas-Puksta-Sensmetry/cffc6a422d5bf5af7c4718ec75888950/raw/7e3a24902abd220bd5b3c12c7b3758185db5b13d/test_stuff.py"
+    userid: alice
+    env:
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: https://opentelemetry-collector.resource-health-opensearch.svc.cluster.local:4317
+      - name: MOCK_API_HOST
+        value: http://resource-health-skeleton-mockapi:5000
+
+  - name: daily-trivial-check
+    image:
+      repository: docker.io/tilowiklundsensmetry/healthcheck
+      pullPolicy: IfNotPresent
+      tag: "v0.0.3"
+    ## Every day at 08:00
+    schedule: "0 8 * * *"
+    requirements: "https://gist.githubusercontent.com/Jonas-Puksta-Sensmetry/cffc6a422d5bf5af7c4718ec75888950/raw/7e3a24902abd220bd5b3c12c7b3758185db5b13d/requirements.txt"
+    script: "https://gist.githubusercontent.com/tilowiklundSensmetry/74dea6500a5bd0b8bbce551249eb6786/raw/f7a614be2809576c4b4b0f3fcc1a1d34ac6af789/trivial_check.py"
+    userid: bob
+    env:
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: https://opentelemetry-collector.resource-health-opensearch.svc.cluster.local:4317
+
   tls:
-    commonName: testrun.resource-health.svc.cluster.local
+    commonName: healthchecks.resource-health.svc.cluster.local
     issuerRef:
       kind: ClusterIssuer
-      name: ca-clusterissuer
+      name: eoepca-ca-clusterissuer
 
 api:
   image:

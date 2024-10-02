@@ -1,21 +1,21 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: {{ include "resource-health.fullname" . }}-testrun-certificate
+  name: {{ include "resource-health.fullname" . }}-healthchecks-certificate
   labels:
     app.kubernetes.io/component: "mockapi"
     {{- include "resource-health.labels" . | nindent 4 }}
 spec:
-  secretName: {{ include "resource-health.fullname" . }}-testrun-certificate
+  secretName: {{ include "resource-health.fullname" . }}-healthchecks-certificate
   isCA: false
   usages:
     - digital signature
     - key encipherment
     - server auth
     - client auth
-  commonName: {{ .Values.test_run.tls.commonName }}
+  commonName: {{ .Values.healthchecks.tls.commonName }}
   issuerRef:
-    {{- toYaml .Values.test_run.tls.issuerRef | nindent 4 }}
+    {{- toYaml .Values.healthchecks.tls.issuerRef | nindent 4 }}
   privateKey:
     algorithm: RSA
     encoding: PKCS8

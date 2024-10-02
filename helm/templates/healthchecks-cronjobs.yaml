@@ -1,0 +1,56 @@
+{{- $top := . -}}
+{{- range $check := .Values.healthchecks.checks -}}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "resource-health.fullname" $top }}-healthchecks-cronjob-{{ $check.name }}
+  labels:
+    app.kubernetes.io/component: "mockapi"
+    {{- include "resource-health.labels" $top | nindent 4 }}
+spec:
+  schedule: "{{ $check.schedule }}"
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          {{- with $top.Values.podAnnotations }}
+          annotations:
+            {{- toYaml . | nindent 10 }}
+          {{- end }}
+          labels:
+            app.kubernetes.io/component: "healthchecks"
+            {{- include "resource-health.selectorLabels" $top | nindent 12 }}
+        spec:
+          restartPolicy: "Never"
+          containers:
+          - name: {{ $top.Chart.Name }}-healthcheck-{{$check.name}}
+            image: "{{ $check.image.repository }}:{{ $check.image.tag | default $top.Chart.AppVersion }}"
+            imagePullPolicy: {{ $check.image.pullPolicy }}
+            args: [
+              {{ $check.requirements }},
+              {{ $check.script }},
+              pytest --export-traces script.py --user-id {{ $check.userid }}"
+            ]
+            env:
+            {{- range $check.env }}
+            - name: {{ toYaml .name | trim }}
+              value: {{ toYaml .value | trim }}
+            {{- end }}
+
+            - name: OTEL_EXPORTER_OTLP_CERTIFICATE
+              value: "/tls/ca.crt"
+            - name: OTEL_EXPORTER_OTLP_CLIENT_KEY
+              value: "/tls/tls.key"
+            - name: OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE
+              value: "/tls/tls.crt"
+
+            volumeMounts:
+            - name: tls
+              readOnly: true
+              mountPath: "/tls"
+          volumes:
+          - name: tls
+            secret:
+              secretName: {{ include "resource-health.fullname" $top }}-healthchecks-certificate
+{{ end }}
