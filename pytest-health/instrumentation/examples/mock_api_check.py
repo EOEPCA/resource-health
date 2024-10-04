@@ -16,6 +16,6 @@ def test_dice_sum() -> None:
     r = requests.get(MOCK_API_HOST)
     assert int(r.content) <= 7
 
-def ping_api() -> None:
+def test_ping_api() -> None:
     r = requests.get(MOCK_API_HOST)
     assert r.status_code == 200
