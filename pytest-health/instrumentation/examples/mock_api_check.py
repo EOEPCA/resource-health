@@ -12,15 +12,10 @@ MOCK_API_HOST = (
     else "http://127.0.0.1:5000"
 )
 
-
-def test_api() -> None:
+def test_dice_sum() -> None:
     r = requests.get(MOCK_API_HOST)
-    assert r.content == b"Hello!"
+    assert int(r.content) <= 7
 
-
-def test_which_will_fail() -> None:
-    assert 2 == 3
-
-
-def test_which_wont_fail() -> None:
-    assert 3 == 3
+def ping_api() -> None:
+    r = requests.get(MOCK_API_HOST)
+    assert r.status_code == 200
