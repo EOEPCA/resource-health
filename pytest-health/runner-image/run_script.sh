@@ -10,7 +10,7 @@ wget -O requirements.txt "${1}"
 pip3 install --break-system-packages -r requirements.txt
 
 # python script
-wget "${2}"
+wget -O script.py "${2}"
 
 # command to launch the script
 echo $3

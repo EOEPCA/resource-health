@@ -1,21 +1,20 @@
-FROM ubuntu:24.04
+FROM python:3.11-slim as compiler
+ENV PYTHONUNBUFFERED 1
 
-# Set environment variables to non-interactive (this will prevent some prompts)
-ENV DEBIAN_FRONTEND=non-interactive
+RUN python -m venv /venv
+ENV PATH="/venv/bin:$PATH"
+COPY ./runner-image/base_requirements.txt /requirements.txt
+RUN pip install -Ur /requirements.txt
 
-# Update package list and install basic Linux support tools
-# Use apt-get instead of apt as that's the recommended one to use in scripts as it is more stable.
-# See https://unix.stackexchange.com/a/731298
+FROM python:3.11-slim as runner
+
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
-    wget \
-    git \
-    ssh \
-    gpg \
-    python-is-python3 \
-    python3 \
-    python3-pip && \
+    wget && \
     # Clean up after installation
-    apt-get clean && apt-get remove pip && rm -rf /var/lib/apt-get/lists/*
+    apt-get clean && rm -rf /var/lib/apt-get/lists/*
+
+COPY --from=compiler /venv /venv
+ENV PATH="/venv/bin:$PATH"
 
 WORKDIR /app
 
