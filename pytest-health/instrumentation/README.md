@@ -12,6 +12,8 @@ Ideally integrating with the [OpenTelemetry Python agent](https://opentelemetry.
 
 # Use
 
+Currently requires Python 3.11 or newer.
+
 Install requirements, preferrably in a venv (`python3 -m venv .venv; source .venv/bin/activate; pip install -r requirements.txt`). You may want to make sure that you can run the test **uninstrumented** as `pytest examples/trivial_check.py` before continuing.
 
 To execute with instrumentation, you need something to listen for opentelemetry traces. To get a simple graphical view you can use `otel-desktop-viewer` using the [following instructions](https://github.com/ojkelly/otel-desktop-viewer/tree/25713e1699f7d02d51b691ce3cce9db8bebb25d4?tab=readme-ov-file#via-go-install). Once running, open your browser to `http://localhost:8000`.
