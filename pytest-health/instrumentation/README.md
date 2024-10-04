@@ -1,6 +1,6 @@
 # PyTest instrumentation for OpenTelemetry
 
-Currently mostlya a copy of https://github.com/chrisguidry/pytest-opentelemetry/blob/main/src/pytest_opentelemetry/instrumentation.py
+Currently mostly a copy of https://github.com/chrisguidry/pytest-opentelemetry/blob/main/src/pytest_opentelemetry/instrumentation.py
 
 Will either transition to use/contribute to/fork:
 
