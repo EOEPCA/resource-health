@@ -6,3 +6,5 @@ pytest-xdist==3.6.1
 pytest==8.3.2
 requests==2.32.3
 opentelemetry-container-distro==0.2.0
+fsspec[http]==2024.9.0
+universal_pathlib==0.2.5

@@ -18,11 +18,11 @@ ENV PATH="/venv/bin:$PATH"
 
 WORKDIR /app
 
-COPY ./runner-image/run_script.sh /app/
+COPY ./runner-image/run_script.py /app/
 
 ## Replace with a (preinstalled) set of packages
 COPY ./instrumentation/conftest.py /app/
 
-RUN chmod +x /app/run_script.sh
+## RUN chmod +x /app/run_script.py
 
-ENTRYPOINT [ "/app/run_script.sh" ]
+ENTRYPOINT [ "python", "/app/run_script.py" ]
