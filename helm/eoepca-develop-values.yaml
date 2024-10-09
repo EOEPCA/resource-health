@@ -4,9 +4,9 @@
 
 mockapi:
   image:
-    repository: docker.io/tilowiklundsensmetry/mock_service
+    repository: docker.io/eoepca/mock_service
     pullPolicy: IfNotPresent
-    tag: "v0.0.1"
+    tag: "v0.1.0-demo"
   serviceType: ClusterIP
   containerPort: 5000
   servicePort: 5000
@@ -21,9 +21,9 @@ healthchecks:
   checks:
   - name: hourly-mockapi-check
     image:
-      repository: docker.io/tilowiklundsensmetry/healthcheck
+      repository: docker.io/eoepca/healthcheck_runner
       pullPolicy: IfNotPresent
-      tag: "v0.0.4"
+      tag: "v0.1.0-demo"
     schedule: "@hourly"
     requirements: "https://gist.githubusercontent.com/Jonas-Puksta-Sensmetry/cffc6a422d5bf5af7c4718ec75888950/raw/7e3a24902abd220bd5b3c12c7b3758185db5b13d/requirements.txt"
     script: "https://gist.githubusercontent.com/Jonas-Puksta-Sensmetry/cffc6a422d5bf5af7c4718ec75888950/raw/7e3a24902abd220bd5b3c12c7b3758185db5b13d/test_stuff.py"
@@ -36,9 +36,9 @@ healthchecks:
 
   - name: daily-trivial-check
     image:
-      repository: docker.io/tilowiklundsensmetry/healthcheck
+      repository: docker.io/eoepca/healthcheck_runner
       pullPolicy: IfNotPresent
-      tag: "v0.0.4"
+      tag: "v0.1.0-demo"
     ## Every day at 08:00
     schedule: "0 8 * * *"
     requirements: "https://gist.githubusercontent.com/Jonas-Puksta-Sensmetry/cffc6a422d5bf5af7c4718ec75888950/raw/7e3a24902abd220bd5b3c12c7b3758185db5b13d/requirements.txt"
@@ -66,9 +66,9 @@ api:
 
 web:
   image:
-    repository: docker.io/tilowiklundsensmetry/resourcehealth_web
+    repository: docker.io/eoepca/resourcehealth_web
     pullPolicy: IfNotPresent
-    tag: "v0.0.4"
+    tag: "v0.1.0-demo"
   serviceType: ClusterIP
   containerPort: 3000
   servicePort: 80
