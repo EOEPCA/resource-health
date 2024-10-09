@@ -23,6 +23,6 @@ COPY ./runner-image/run_script.py /app/
 ## Replace with a (preinstalled) set of packages
 COPY ./instrumentation/conftest.py /app/
 
-## RUN chmod +x /app/run_script.py
+ENTRYPOINT [ "python", "/app/run_script.py", "--traces_exporter", "otlp", "--logs_exporter", "otlp" ]
 
-ENTRYPOINT [ "python", "/app/run_script.py" ]
+CMD [ "pytest", "--export-traces", "/app/run_script.py" ]
