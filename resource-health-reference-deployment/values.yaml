@@ -272,13 +272,14 @@ opensearch:
   replicas: "2"
   
   persistence:
-    enabled: false
+    enabled: true
+    storageClass: managed-nfs-storage
     size: 12Gi
 
-    sysctl:
-      enabled: false
-    sysctlInit:
-      enabled: true
+  sysctl:
+    enabled: false
+  sysctlInit:
+    enabled: true
 
   extraEnvs:
     - name: DISABLE_INSTALL_DEMO_CONFIG
