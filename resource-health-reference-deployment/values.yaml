@@ -10,6 +10,7 @@ internalIssuerRef:
 ## Dependency values
 
 resource-health:
+  # Needed for predictable DNS and resource names
   fullnameOverride: "resource-health"
 
   mockapi:
@@ -148,6 +149,7 @@ resource-health:
 
 
 opentelemetry-collector:
+  # Needed for predictable DNS and resource names
   fullnameOverride: "resource-health-opentelemetry-collector"
 
   image:
@@ -264,6 +266,9 @@ opentelemetry-collector:
       memory: 512Mi
 
 opensearch:
+  # Needed for predictable DNS and resource names
+  fullnameOverride: "resource-health-opensearch"
+
   replicas: "2"
   
   persistence:
@@ -421,6 +426,9 @@ opensearch:
 
 
 opensearch-dashboards:
+  # Needed for predictable DNS and resource names
+  fullnameOverride: "resource-health-opensearch-dashboards"
+
   config:
     opensearch_dashboards.yml:
       server:
