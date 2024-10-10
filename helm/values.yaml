@@ -32,7 +32,7 @@ healthchecks:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: https://opentelemetry-collector:4317
       - name: MOCK_API_HOST
-        value: http://resource-health-skeleton-mockapi:5000
+        value: http://resource-health-mockapi:5000
 
   - name: daily-trivial-check
     image:

@@ -10,6 +10,8 @@ internalIssuerRef:
 ## Dependency values
 
 resource-health:
+  fullnameOverride: "resource-health"
+
   mockapi:
     image:
       repository: docker.io/eoepca/mock_service
@@ -40,7 +42,7 @@ resource-health:
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
           value: https://resource-health-opentelemetry-collector:4317
         - name: MOCK_API_HOST
-          value: http://resource-health-skeleton-mockapi:5000
+          value: http://resource-health-mockapi:5000
 
     - name: daily-trivial-check
       image:
@@ -93,8 +95,6 @@ resource-health:
           name: eoepca-ca-clusterissuer
 
   imagePullSecrets: []
-  nameOverride: ""
-  fullnameOverride: ""
 
   serviceAccount:
     # Specifies whether a service account should be created
