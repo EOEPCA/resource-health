@@ -38,7 +38,7 @@ resource-health:
       userid: alice
       env:
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
-          value: https://opentelemetry-collector:4317
+          value: https://resource-health-opentelemetry-collector:4317
         - name: MOCK_API_HOST
           value: http://resource-health-skeleton-mockapi:5000
 
@@ -54,7 +54,7 @@ resource-health:
       userid: bob
       env:
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
-          value: https://opentelemetry-collector:4317
+          value: https://resource-health-opentelemetry-collector:4317
 
     tls:
       commonName: healthchecks
@@ -148,6 +148,8 @@ resource-health:
 
 
 opentelemetry-collector:
+  fullnameOverride: "resource-health-opentelemetry-collector"
+
   image:
     repository: otel/opentelemetry-collector-contrib
 
