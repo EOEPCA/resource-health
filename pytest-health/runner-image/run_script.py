@@ -12,9 +12,12 @@ if __name__ == "__main__":
 
     if "RESOURCE_HEALTH_RUNNER_SCRIPT" in os.environ:
         from opentelemetry.instrumentation.auto_instrumentation import run
+        # run() starts opentelemetry-instrument and uses arguments in sys.argv
+        # Change name of executable to avoid confusion in error messages
+        sys.argv[0] = "opentelemetry-instrument"
         sys.exit(run())
     else:
         sys.exit("Failure: Could not find RESOURCE_HEALTH_RUNNER_SCRIPT.")
 
-# For pytest
+# Execute function definitions for pytest
 exec(upath.UPath(os.environ["RESOURCE_HEALTH_RUNNER_SCRIPT"]).read_text(), globals())
