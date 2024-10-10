@@ -15,8 +15,8 @@ spec:
     - client auth
   commonName: otel-collector
   dnsNames:
-    - "opentelemetry-collector.resource-health-opensearch.svc.cluster.local"
-    - "opentelemetry-collector"
+    - "resource-health-opentelemetry-collector.{{ .Values.internalDomain }}"
+    - "resource-health-opentelemetry-collector"
   issuerRef:
     {{- toYaml .Values.internalIssuerRef | nindent 4 }}
   privateKey:
