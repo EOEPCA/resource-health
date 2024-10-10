@@ -68,21 +68,21 @@ web:
   image:
     repository: docker.io/eoepca/resourcehealth_web
     pullPolicy: IfNotPresent
-    tag: "v0.1.0-demo"
+    tag: "v0.1.1"
   serviceType: ClusterIP
   containerPort: 3000
   servicePort: 80
   replicaCount: 2
-  environmentSecrets:
-    - name: OPENSEARCH_USERNAME
-      secret: sensmetry-user-secret
-      key: username
-    - name: OPENSEARCH_PASSWORD
-      secret: sensmetry-user-secret
-      key: password
   environmentFixed:
     - name: OPENSEARCH_ENDPOINT
-      value: "https://opensearch-cluster-master-headless.resource-health-opensearch.svc.cluster.local:9200"
+      value: "https://opensearch-cluster-master-headless:9200"
+
+  tls:
+    client:
+      commonName: resourcehealth-web
+      issuerRef:
+        kind: ClusterIssuer
+        name: eoepca-ca-clusterissuer
 
 
 imagePullSecrets: []
