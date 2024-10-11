@@ -11,6 +11,9 @@ mockapi:
   containerPort: 5000
   servicePort: 5000
   replicaCount: 2
+  environmentFixed:
+    - name: OTEL_EXPORTER_OTLP_ENDPOINT
+      value: https://opentelemetry-collector:4317
   tls:
     commonName: mockapi.resource-health.svc.cluster.local
     issuerRef:

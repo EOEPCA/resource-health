@@ -42,8 +42,10 @@ spec:
           imagePullPolicy: {{ .Values.mockapi.image.pullPolicy }}
           ## TODO: Un-hardcode this
           env:
-          - name: OTEL_EXPORTER_OTLP_ENDPOINT
-            value: https://opentelemetry-collector.resource-health-opensearch.svc.cluster.local:4317
+          {{- range .Values.web.environmentFixed }}
+          - name: {{ toYaml .name | trim }}
+            value: {{ toYaml .value | trim }}
+          {{- end }}
           - name: OTEL_EXPORTER_OTLP_CERTIFICATE
             value: "/tls/ca.crt"
           - name: OTEL_EXPORTER_OTLP_CLIENT_KEY

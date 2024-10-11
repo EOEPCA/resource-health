@@ -22,6 +22,9 @@ resource-health:
     containerPort: 5000
     servicePort: 5000
     replicaCount: 2
+    environmentFixed:
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: https://resource-health-opentelemetry-collector:4317
     tls:
       commonName: mockapi
       issuerRef:
