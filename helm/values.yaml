@@ -11,6 +11,9 @@ mockapi:
   containerPort: 5000
   servicePort: 5000
   replicaCount: 2
+  environmentFixed:
+    - name: OTEL_EXPORTER_OTLP_ENDPOINT
+      value: https://opentelemetry-collector:4317
   tls:
     commonName: mockapi.resource-health.svc.cluster.local
     issuerRef:
@@ -30,9 +33,9 @@ healthchecks:
     userid: alice
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: https://opentelemetry-collector.resource-health-opensearch.svc.cluster.local:4317
+        value: https://opentelemetry-collector:4317
       - name: MOCK_API_HOST
-        value: http://resource-health-skeleton-mockapi:5000
+        value: http://resource-health-mockapi:5000
 
   - name: daily-trivial-check
     image:
@@ -46,7 +49,7 @@ healthchecks:
     userid: bob
     env:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: https://opentelemetry-collector.resource-health-opensearch.svc.cluster.local:4317
+        value: https://opentelemetry-collector:4317
 
   tls:
     commonName: healthchecks.resource-health.svc.cluster.local
@@ -68,21 +71,21 @@ web:
   image:
     repository: docker.io/eoepca/resourcehealth_web
     pullPolicy: IfNotPresent
-    tag: "v0.1.0-demo"
+    tag: "v0.1.4"
   serviceType: ClusterIP
   containerPort: 3000
   servicePort: 80
   replicaCount: 2
-  environmentSecrets:
-    - name: OPENSEARCH_USERNAME
-      secret: sensmetry-user-secret
-      key: username
-    - name: OPENSEARCH_PASSWORD
-      secret: sensmetry-user-secret
-      key: password
   environmentFixed:
     - name: OPENSEARCH_ENDPOINT
-      value: "https://opensearch-cluster-master-headless.resource-health-opensearch.svc.cluster.local:9200"
+      value: "https://opensearch-cluster-master-headless:9200"
+
+  tls:
+    client:
+      commonName: resourcehealth-web
+      issuerRef:
+        kind: ClusterIssuer
+        name: eoepca-ca-clusterissuer
 
 
 imagePullSecrets: []

@@ -1,0 +1,22 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "resource-health.fullname" . }}-web-client-certificate
+  labels:
+    app.kubernetes.io/component: "web"
+    {{- include "resource-health.labels" . | nindent 4 }}
+spec:
+  secretName: {{ include "resource-health.fullname" . }}-web-client-certificate
+  isCA: false
+  usages:
+    - digital signature
+    - key encipherment
+    - server auth
+    - client auth
+  commonName: {{ .Values.web.tls.client.commonName }}
+  issuerRef:
+    {{- toYaml .Values.web.tls.client.issuerRef | nindent 4 }}
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS8
+    size: 2048
