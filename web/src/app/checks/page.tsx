@@ -31,6 +31,7 @@ async function MainPage() {
             </ul>
             </div>)
       } catch (err) {
+          console.error("%O", err);
           return `Failed to get k8s stuff: ${err}`;
       }
   };
