@@ -1,5 +1,7 @@
 const k8s = require('@kubernetes/client-node');
 
+const RESOURCE_HEALTH_WEB_CRONJOB_NAMESPACE = 'RESOURCE_HEALTH_WEB_CRONJOB_NAMESPACE';
+
 export default async function checks() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
@@ -9,6 +11,11 @@ export default async function checks() {
 }
 
 async function MainPage() {
+  const namespace = process.env[RESOURCE_HEALTH_WEB_CRONJOB_NAMESPACE];
+  if (!namespace) {
+    throw new Error(`Environment variable ${RESOURCE_HEALTH_WEB_CRONJOB_NAMESPACE} not set`);
+  }
+
   const kc = new k8s.KubeConfig();
   kc.loadFromDefault();
 
@@ -16,7 +23,7 @@ async function MainPage() {
 
   const main = async () => {
       try {
-          const cronjobs = await k8sApi.listNamespacedCronJob('resource-health');
+          const cronjobs = await k8sApi.listNamespacedCronJob(namespace);
           return (
             <div> Health Checks:
             <ul>

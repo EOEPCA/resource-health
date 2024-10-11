@@ -45,6 +45,8 @@ spec:
               containerPort: {{ .Values.web.containerPort }}
               protocol: TCP
           env:
+            - name: RESOURCE_HEALTH_WEB_CRONJOB_NAMESPACE
+              value: {{ .Values.web.cronjobNamespace | default .Release.Namespace | quote }}
             - name: CA_PATH
               value: /client-tls/ca.crt
             - name: CLIENT_CERT_PATH
