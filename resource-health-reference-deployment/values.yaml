@@ -1,11 +1,12 @@
-## The internal cluster (sub)domain for services in this deployment,
-## typically <namespace>.svc.cluster.local
-internalDomain: "resource-health.svc.cluster.local"
+global:
+  ## The internal cluster (sub)domain for services in this deployment,
+  ## typically <namespace>.svc.cluster.local
+  internalDomain: "svc.cluster.local" ## INSTRUCTION: See above
 
-## A certificate issues for the above domain
-internalIssuerRef:
-  kind: ClusterIssuer
-  name: eoepca-ca-clusterissuer
+  ## A certificate issues for the above domain
+  defaultInternalIssuerRef:
+    kind: ClusterIssuer
+    name: null ## INSTRUCTION: Set to name of certificate issuer for the internal cluster domain
 
 ## Dependency values
 
@@ -27,9 +28,9 @@ resource-health:
         value: https://resource-health-opentelemetry-collector:4317
     tls:
       commonName: mockapi
-      issuerRef:
-        kind: ClusterIssuer
-        name: eoepca-ca-clusterissuer
+      # issuerRef:
+      #   kind: ClusterIssuer
+      #   name: null ## INSTRUCTION: Set to name of certificate issuer for the internal cluster domain
 
   healthchecks:
     checks:
@@ -64,9 +65,9 @@ resource-health:
 
     tls:
       commonName: healthchecks
-      issuerRef:
-        kind: ClusterIssuer
-        name: eoepca-ca-clusterissuer
+      # issuerRef:
+      #   kind: ClusterIssuer
+      #   name: null ## INSTRUCTION: Set to name of certificate issuer for the internal cluster domain
 
   api:
     image:
@@ -94,9 +95,9 @@ resource-health:
     tls:
       client:
         commonName: resourcehealth-web
-        issuerRef:
-          kind: ClusterIssuer
-          name: eoepca-ca-clusterissuer
+        # issuerRef:
+        #   kind: ClusterIssuer
+        #   name: null ## INSTRUCTION: Set to name of certificate issuer for the internal cluster domain
 
   imagePullSecrets: []
 
@@ -122,11 +123,12 @@ resource-health:
     # runAsNonRoot: true
     # runAsUser: 1000
 
+  ## NOTE: Currently not used
   ingress:
     enabled: false
     className: "nginx"
     annotations: {}
-    host: "resource-health.develop.eoepca.org"
+    host: null
     # tls: []
     #  - secretName: chart-example-tls
     #    hosts:
@@ -391,13 +393,13 @@ opensearch:
             type: "internalusers"
             config_version: 2
 
-          ## TODO: Remove this user
-          sensmetry:
-            hash: "$2y$12$RnLnOIT2j7YQzyn9O8BRruOFcPbvqkSZVmT0kqioJCcOsK.ZIuVwG"
-            reserved: true
-            backend_roles:
-            - "admin"
-            description: "Temporary admin user (Delete me)"
+          ## NOTE: Example user
+          # sensmetry:
+          #   hash: "$2y$12$RnLnOIT2j7YQzyn9O8BRruOFcPbvqkSZVmT0kqioJCcOsK.ZIuVwG"
+          #   reserved: true
+          #   backend_roles:
+          #   - "admin"
+          #   description: "Temporary admin user (Delete me)"
 
         # roles.yml: |-
 
@@ -411,7 +413,6 @@ opensearch:
             backend_roles:
             - "admin"
             users:
-            - "sensmetry"
             - "otel-collector"
             - "resourcehealth-web"
             description: "Maps admin to all_access"

@@ -1,3 +1,5 @@
+{{- $issuerRef := .Values.mockapi.tls.issuerRef | default .Values.global.defaultInternalIssuerRef | required ".Values.mockapi.tls.issuerRef or .Values.global.defaultInternalIssuerRef must be set" -}}
+{{- $issuerName := $issuerRef.name | required "You probably forgot to set .Values.healthchecks.tls.issuerRef.name" -}}
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -15,7 +17,7 @@ spec:
     - client auth
   commonName: {{ .Values.mockapi.tls.commonName }}
   issuerRef:
-    {{- toYaml .Values.mockapi.tls.issuerRef | nindent 4 }}
+    {{- toYaml $issuerRef | nindent 4 }}
   privateKey:
     algorithm: RSA
     encoding: PKCS8

@@ -1,11 +1,12 @@
-## The internal cluster (sub)domain for services in this deployment,
-## typically <namespace>.svc.cluster.local
-internalDomain: "resource-health.svc.cluster.local"
+global:
+  ## The internal cluster (sub)domain for services in this deployment,
+  ## typically <namespace>.svc.cluster.local
+  internalDomain: "svc.cluster.local" ## INSTRUCTION: See above
 
-## A certificate issues for the above domain
-internalIssuerRef:
-  kind: ClusterIssuer
-  name: eoepca-ca-clusterissuer
+  ## A certificate issues for the above domain
+  defaultInternalIssuerRef:
+    kind: ClusterIssuer
+    name: eoepca-ca-clusterissuer
 
 ## Dependency values
 

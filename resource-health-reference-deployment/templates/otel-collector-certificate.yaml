@@ -15,10 +15,10 @@ spec:
     - client auth
   commonName: otel-collector
   dnsNames:
-    - "resource-health-opentelemetry-collector.{{ .Values.internalDomain }}"
+    - "resource-health-opentelemetry-collector.{{ .Release.Namespace }}.{{ .Values.global.internalDomain }}"
     - "resource-health-opentelemetry-collector"
   issuerRef:
-    {{- toYaml .Values.internalIssuerRef | nindent 4 }}
+    {{- toYaml .Values.global.defaultInternalIssuerRef | nindent 4 }}
   privateKey:
     algorithm: RSA
     encoding: PKCS8

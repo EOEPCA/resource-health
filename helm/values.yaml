@@ -1,6 +1,8 @@
-# Default values for resource-health.
-# This is a YAML-formatted file.
-# Declare variables to be passed into your templates.
+global:
+  ## A certificate issues for the above domain
+  defaultInternalIssuerRef:
+   kind: ClusterIssuer
+   name: null ## INSTRUCTION: certificate issuer
 
 mockapi:
   image:
@@ -16,9 +18,9 @@ mockapi:
       value: https://opentelemetry-collector:4317
   tls:
     commonName: mockapi.resource-health.svc.cluster.local
-    issuerRef:
-      kind: ClusterIssuer
-      name: eoepca-ca-clusterissuer
+    # issuerRef:
+    #   kind: ClusterIssuer
+    #   name: null ## INSTRUCTION: certificate issuer
 
 healthchecks:
   checks:
@@ -53,9 +55,9 @@ healthchecks:
 
   tls:
     commonName: healthchecks.resource-health.svc.cluster.local
-    issuerRef:
-      kind: ClusterIssuer
-      name: eoepca-ca-clusterissuer
+    # issuerRef:
+    #   kind: ClusterIssuer
+    #   name: null ## INSTRUCTION: certificate issuer
 
 api:
   image:
@@ -83,9 +85,9 @@ web:
   tls:
     client:
       commonName: resourcehealth-web
-      issuerRef:
-        kind: ClusterIssuer
-        name: eoepca-ca-clusterissuer
+      # issuerRef:
+      #   kind: ClusterIssuer
+      #   name: null ## INSTRUCTION: certificate issuer
 
 
 imagePullSecrets: []
