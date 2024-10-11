@@ -20,11 +20,11 @@ async function MainPage() {
           return (
             <div> Health Checks:
             <ul>
-            {cronjobs.body.items.map((cronjob, index) => (
+            {cronjobs.body.items.map((cronjob : any, index : any) => (
                 <li key={index}>
                 - Check {cronjob.metadata.name} is { cronjob.spec.suspend ? ("unscheduled") : ("scheduled " + cronjob.spec.schedule) }
-                <br/> {cronjob.spec.jobTemplate.spec.template.spec.containers[0].env.map((env,eindex) =>
-                    <p>Var: {env.name} = {env.value}</p>
+                <br/> {cronjob.spec.jobTemplate.spec.template.spec.containers[0].env.map((env : any, eindex : any) =>
+                    <p key={index+"_"+eindex}>Var: {env.name} = {env.value}</p>
                 )}
               </li>
               ))}
@@ -37,3 +37,5 @@ async function MainPage() {
 
   return main();
 }
+
+export const dynamic = "force-dynamic";

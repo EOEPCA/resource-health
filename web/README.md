@@ -10,15 +10,15 @@ WARNING: There is currently no authorization or authentication included (so do n
 
 You can build a container image the usual way, e.g.
 ```
-docker build -t tmp_resourcehealth_web:v0.0.1 .
+docker build -t tmp_resourcehealth_web:local-test .
 ```
 
 The image starts the application on a **yarn dev server** on port 3000, and requires
 specifying the OpenSearch endpoint and credentials, along the lines of
 ```
-docker run --rm --net host -e OPENSEARCH_ENDPOINT=https://localhost:9200 -e OPENSEARCH_USERNAME="<USERNAME>" -e OPENSEARCH_PASSWORD="<PASSWORD>" docker.io/tilowiklundsensmetry/resourcehealth_web
+docker run --rm --net host -v <PATH_TO_CLIENT_CERTIFICATES>:/client-tls -e OPENSEARCH_ENDPOINT=https://localhost:9200 -e CA_PATH=/client-tls/<CA_CERT> -e CLIENT_CERT_PATH=/client-tls/<CLIENT_CERT> -e CLIENT_KEY_PATH=/client-tls/<CLIENT_KEY> tmp_resourcehealth_web:local-test
 ```
 
 A list of most recent test executions is available on the server root (e.g. `http://localhost:3000`).
 
-The image is currently published under `docker.io/tilowiklundsensmetry/resourcehealth_web`.
+The image is currently published under `docker.io/eoepca/resourcehealth_web`.

@@ -125,3 +125,5 @@ async function GetTestResults({ endpoint, ca_path, client_cert_path, client_key_
   // console.log(testResultInfos);
   return testResultInfos;
 }
+
+export const dynamic = "force-dynamic";
