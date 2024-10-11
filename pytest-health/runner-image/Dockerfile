@@ -17,12 +17,19 @@ COPY --from=compiler /venv /venv
 ENV PATH="/venv/bin:$PATH"
 
 WORKDIR /app
+WORKDIR /app/utils
+ENV PATH="/app/utils:$PATH"
 
-COPY ./runner-image/run_script.py /app/
+COPY ./runner-image/ucat.py /app/utils/ucat
+COPY ./runner-image/run_script.sh /app/
+COPY ./runner-image/tests.py /app/
 
 ## Replace with a (preinstalled) set of packages
 COPY ./instrumentation/conftest.py /app/
 
-ENTRYPOINT [ "python", "/app/run_script.py", "--traces_exporter", "otlp", "--logs_exporter", "otlp" ]
+RUN chmod +x /app/utils/ucat
+RUN chmod +x /app/run_script.sh
 
-CMD [ "pytest", "--export-traces", "/app/run_script.py" ]
+ENTRYPOINT [ "/app/run_script.sh" ]
+
+CMD [ "pytest", "--export-traces", "tests.py" ]
