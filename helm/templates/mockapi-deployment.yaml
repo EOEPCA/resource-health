@@ -40,9 +40,8 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.mockapi.image.repository }}:{{ .Values.mockapi.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.mockapi.image.pullPolicy }}
-          ## TODO: Un-hardcode this
           env:
-          {{- range .Values.web.environmentFixed }}
+          {{- range .Values.mockapi.environmentFixed }}
           - name: {{ toYaml .name | trim }}
             value: {{ toYaml .value | trim }}
           {{- end }}
