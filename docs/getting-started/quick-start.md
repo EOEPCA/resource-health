@@ -1,6 +1,6 @@
 # Quick Start
 
-Since the resource health BB is currently unauthenticated it does not deploy any public ingresses. Access to any services therefore has to be done through port forwarding.
+Since the Resource Health BB is currently unauthenticated it does not deploy any public ingresses. Access to any services therefore has to be done through port forwarding.
 
 ## Skeleton web interface
 
@@ -53,4 +53,4 @@ The OpenSearch Dashboards (a.k.a. Kibana for OpenSearch) can be accessed through
 ```
 kubectl [--context=... --namespace=...] port-forward service/resource-health-opensearch-dashboards 5601
 ```
-NOTE that on the EOEPCA development cluster, OpenSearch dashboards is (currently) accessed over HTTP**S** with a self-signed certificate for the internal `svc.kubernetes.local` domain. You should therefore expect your browser to complain about invalid/untrusted/self-signed certificates.
+NOTE that on the EOEPCA development cluster, OpenSearch dashboards are (currently) accessed over HTTP**S** with a self-signed certificate for the internal `svc.kubernetes.local` domain. You should therefore expect your browser to complain about invalid/untrusted/self-signed certificates.
