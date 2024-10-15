@@ -1,0 +1,13 @@
+active: true
+derived: false
+header: |
+  BR127
+level: 1.2
+links:
+- T001: wPlUPpBCi0qVFMIr5QhKZFQ_DmiLhbjyZDRS3njGHLg=
+normative: true
+origin: SoW
+ref: ''
+reviewed: G8Tlf1T3ChERmxxOZc4u2-zQ9oEVIj9UDM5fZDlJ9HU=
+text: |2
+   The Resource Health BB shall support specification of checks via the following means: * REST API * Dashboard (web UI) * Git repository (Gitops-style) It shall be possible to specify all aspects of the check – including the target (endpoint/resource) of the check, the tests to be performed and the expected outcomes.

@@ -1,0 +1,12 @@
+active: true
+derived: false
+header: ''
+level: 1.15
+links:
+- BR131: gUQBnLB-tE2CHOcpmUroVlTxe468usXLx0d7jsiQwi4=
+normative: true
+origin: Tender proposal
+ref: ''
+reviewed: iQUfJQV59kALnrfMPhZF-DgmM875rR40-6b0ql9qevY=
+text: |
+  The Resource Health BB shall provide an API access to the history of check outcomes sufficient to reproduce the functionality exposed in the graphical user interface.

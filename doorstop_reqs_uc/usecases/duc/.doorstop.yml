@@ -1,0 +1,8 @@
+settings:
+  digits: 3
+  parent: UC
+  prefix: DUC
+  sep: ''
+attributes:
+  defaults:
+    origin: 'If known'

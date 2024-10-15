@@ -1,0 +1,12 @@
+active: true
+derived: false
+header: ''
+level: 1.3
+links:
+- BR125: LdTGIpCtQedLr28lhMh1oN_YLVBf40xrZQ71YHWh8-E=
+normative: true
+origin: Tender proposal
+ref: ''
+reviewed: ps5cO4bEtRIyfh8Xi2OZEmdkzcJgP0slmhbIBpC2HLk=
+text: |
+  The Resource Health BB shall allow specifying checks that determine the responsiveness of platform capabilities/services (such as determining ping/watchdog timer state/API timeouts/404 responses/...) sufficient for checking general availability of all/relevant other platform services/capabilities.

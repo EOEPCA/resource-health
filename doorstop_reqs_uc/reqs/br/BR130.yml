@@ -1,0 +1,13 @@
+active: true
+derived: false
+header: |
+  BR130
+level: 1.5
+links:
+- T001: wPlUPpBCi0qVFMIr5QhKZFQ_DmiLhbjyZDRS3njGHLg=
+normative: true
+origin: SoW
+ref: ''
+reviewed: GTWbamkY_2v4MvOymjTH42yvJNi28TE7K4f5W__lNWE=
+text: |2
+   The Resource Health BB shall provide a Dashboard to visualize the status of any health checks that the user has defined. The status reported for each check shall include pertinent metrics – such as uptime, number of checks performed vs number of failures, etc.

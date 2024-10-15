@@ -1,0 +1,14 @@
+active: true
+derived: false
+header: ''
+level: 1.13
+links:
+- REQ005: y-spRfwHZ94ooe28m4-ER8PcN-7Iy82KBwsvj4QIxvQ=
+- UC70: i6xIjTQtMnS0etuUNxf6bSptGtRtYnRqdDnLSVnL7KM=
+normative: true
+origin: |
+  Requirements and use case discussion with APEx group 2024-08-30 and later communication over email)
+ref: ''
+reviewed: bUTsQg2T05Vyf0nIp12OhusN_u9YNN2P9sVmBTaA_Iw=
+text: |
+  Check to verify if KPIs for ML models have been met.

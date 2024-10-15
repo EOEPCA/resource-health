@@ -1,0 +1,14 @@
+active: true
+derived: false
+header: ''
+level: 1.7
+links:
+- REQ004: TlWfYUEmS4DbOABTxLErdwsPdMmSTBEViJEbMGNUci4=
+- UC69: XwhK_Wo8e7dADCj8aBgtdqQmE02vEY_HMjtR0IyIYK0=
+normative: true
+origin: |
+  Requirements and use case discussion with APEx group 2024-08-30 and later communication over email)
+ref: ''
+reviewed: YfE91E4RMML4MlqU16O-UrAcYp6yJgxhN3wwLCu4Wz8=
+text: |
+  Check to verify if published dataset is discoverable in the Resource Catalogue (Resource Discovery BB). If check verification is negative, notification shall be issued.

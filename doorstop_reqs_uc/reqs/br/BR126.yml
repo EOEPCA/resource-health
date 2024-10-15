@@ -1,0 +1,13 @@
+active: true
+derived: false
+header: |
+  BR126
+level: 1.1
+links:
+- T001: wPlUPpBCi0qVFMIr5QhKZFQ_DmiLhbjyZDRS3njGHLg=
+normative: true
+origin: SoW
+ref: ''
+reviewed: NS6_a-EIESxn8MS0gHnORgg6PcJVlub3e_h9fbVUlmo=
+text: |2
+   The Resource Health BB shall allow the user to observe the outcome of their checks, and to receive notifications according to the outcome.

@@ -1,0 +1,12 @@
+active: true
+derived: false
+header: ''
+level: 1.18
+links:
+- BR129: dIRspqI3FQhMYGVMXYmU2YnLYW7upph3L1iBtszMOo0=
+normative: true
+origin: Tender proposal
+ref: ''
+reviewed: AopV2ICjgCIb-aB2ApxPDZxBIoD8_pN6g4hvlNFkbHs=
+text: |
+  The Resource Health BB shall allow specifying timeliness requirements of individual (active) checks as requiring (re)determination/execution at a specific sequence of potentially recurrent time points.

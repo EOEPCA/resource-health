@@ -1,0 +1,13 @@
+active: true
+derived: false
+header: ''
+level: '1.10'
+links:
+- BR127: G8Tlf1T3ChERmxxOZc4u2-zQ9oEVIj9UDM5fZDlJ9HU=
+- BR131: gUQBnLB-tE2CHOcpmUroVlTxe468usXLx0d7jsiQwi4=
+normative: true
+origin: Tender proposal
+ref: ''
+reviewed: hxRY84sEwXweFl3klxhTuFmq9USy-jyxaatbszloj7Q=
+text: |
+  The Resource Health BB shall provide a means to manage the life cycle (definition, termination, ...) of checks through a graphical user interface accessible through standard web browsers.

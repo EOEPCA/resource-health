@@ -1,0 +1,12 @@
+active: true
+derived: false
+header: ''
+level: 1.12
+links:
+- BR129: dIRspqI3FQhMYGVMXYmU2YnLYW7upph3L1iBtszMOo0=
+normative: true
+origin: Tender proposal
+ref: ''
+reviewed: KTFUfqjF-yA9-YhaUofC5EVvXRwdG0OHvaumDg54xqs=
+text: |
+  The Resource Health BB shall rely on capabilities of the Notification & Automation BB to ensure the timely determination of check outcomes, unless the capabilities of the Notification & Automation BB are insufficient to determine the check outcome in a timely manner (such as fast enough for ephemeral data to not have been lost).

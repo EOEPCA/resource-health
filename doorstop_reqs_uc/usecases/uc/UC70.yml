@@ -1,0 +1,12 @@
+active: true
+derived: false
+header: ''
+level: 1.2
+links:
+- T002: N7-yY26gADgRYCHq5rzrRAManpEgpcQE_AaNG6xnTUk=
+normative: true
+origin: 'Tender Use Case Document'
+ref: ''
+reviewed: er8HeBFi7CjsLml20HA5J2hmvkrP5XAszPkQ1-LhQvo=
+text: |
+  As a user, I want KPIs to be recorded for my published service, in order to demonstrate that I have met the SLA of my NoR offering. In this context, as a published service includes published datasets, workflows, ML models, Dashboards, etc.

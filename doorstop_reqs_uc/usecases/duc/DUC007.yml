@@ -1,0 +1,14 @@
+active: true
+derived: false
+header: ''
+level: 1.6
+links:
+- REQ005: y-spRfwHZ94ooe28m4-ER8PcN-7Iy82KBwsvj4QIxvQ=
+- UC68: TZ4LrjUSOHTwn2DjhZmNCO1a1LbXNrYCz7lgVl2ASVY=
+normative: true
+origin: |
+  Requirements and use case discussion with APEx group 2024-08-30 and later communication over email)
+ref: ''
+reviewed: IUpUvPx3VMKzNw2K3PAsGJjD8ao2UdSM6PsqXDnIxic=
+text: |
+  Check to verify if third party backends comply with API specification and profiles (such as for example openEO API profile). If check verification is negative, notification shall be issued.

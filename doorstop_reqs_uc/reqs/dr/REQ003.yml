@@ -1,0 +1,12 @@
+active: true
+derived: false
+header: ''
+level: 1.2
+links:
+- BR125: LdTGIpCtQedLr28lhMh1oN_YLVBf40xrZQ71YHWh8-E=
+normative: true
+origin: Tender proposal
+ref: ''
+reviewed: h50nvcNB7ivWnUGM4cvRR5wlSHynpIdpgbgrUqWAURE=
+text: |
+  The Resource Health BB shall ensure that the outcomes of current (active) specified checks are determined in a timely manner (meaning the execution of the checking logic is executed when necessary and that the necessary data/information is available to the check when it is executed).

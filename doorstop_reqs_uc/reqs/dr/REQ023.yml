@@ -1,0 +1,13 @@
+active: true
+derived: false
+header: ''
+level: 1.22
+links:
+- BR129: dIRspqI3FQhMYGVMXYmU2YnLYW7upph3L1iBtszMOo0=
+normative: true
+origin: |
+  Requirements and use case discussion with APEx group 2024-08-30 and later communication over email)
+ref: ''
+reviewed: C8cTKINJQ_TrLsBxQsD5V8YQ9vXJWQonkW_jjjtU1tg=
+text: |
+  The Resource Health BB shall allow the user to issue a check upon their request.

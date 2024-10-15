@@ -1,0 +1,12 @@
+active: true
+derived: false
+header: ''
+level: 1.1
+links:
+- T002: N7-yY26gADgRYCHq5rzrRAManpEgpcQE_AaNG6xnTUk=
+normative: true
+origin: 'Tender Use Case Document'
+ref: ''
+reviewed: TwqRixBdX5s3cm9nZeFJD7vPuZhkYWL9dAe9YVyzNZc=
+text: |
+  As a user, I want automated checks to verify the continued availability of my published datasets, so that I can receive notification when there is a problem. Availability of the dataset refers to discovery in the Catalogue and access via Data Retrieval and Visualisation services

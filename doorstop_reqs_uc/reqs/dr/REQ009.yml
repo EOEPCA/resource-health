@@ -1,0 +1,13 @@
+active: true
+derived: false
+header: ''
+level: 1.8
+links:
+- BR127: G8Tlf1T3ChERmxxOZc4u2-zQ9oEVIj9UDM5fZDlJ9HU=
+- BR130: GTWbamkY_2v4MvOymjTH42yvJNi28TE7K4f5W__lNWE=
+normative: true
+origin: Tender proposal
+ref: ''
+reviewed: dcCeFAIxtMKCHSU8l3QHVaoXXJBX1F_KUuN-T0ORMzE=
+text: |
+  The Resource Health BB shall provide a means to manage the life cycle (definition, termination, ...) of checks through a REST-style API.

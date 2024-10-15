@@ -1,0 +1,12 @@
+active: true
+derived: false
+header: ''
+level: 1.14
+links:
+- BR130: GTWbamkY_2v4MvOymjTH42yvJNi28TE7K4f5W__lNWE=
+normative: true
+origin: Tender proposal
+ref: ''
+reviewed: Bzf-xKbs3AjFHAQ0lpWURCBk4ePePYH3EQdePI6Il9k=
+text: |
+  The Resource Health BB shall provide an end-users graphical user interface for accessing and summarising the history of check outcomes (of checks accessible to the end user).

@@ -1,0 +1,12 @@
+active: true
+derived: false
+header: ''
+level: 1.4
+links:
+- BR125: LdTGIpCtQedLr28lhMh1oN_YLVBf40xrZQ71YHWh8-E=
+normative: true
+origin: Tender proposal
+ref: ''
+reviewed: T34Rs4fuog9nPNiGztgY675xILUPXYgU3jcBUG7WOiA=
+text: |
+  The Resource Health BB shall allow specifying checks that determine that resources provided by the platform meet end-user expectations (such as appearing in certain queries/enumerations, have the right metadata, have the right shape, contains expected columns, produce certain outputs ...) sufficient for all/relevant other platform services/capabilities.

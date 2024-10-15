@@ -1,0 +1,13 @@
+active: true
+derived: false
+header: ''
+level: 1.3
+links:
+- T002: N7-yY26gADgRYCHq5rzrRAManpEgpcQE_AaNG6xnTUk=
+normative: true
+origin: |
+  Requirements and use case discussion with APEx group 2024-08-30 and later communication over email)
+ref: ''
+reviewed: ShFi3De3mtOhIT6o2s1Ut1-VwzHwqzLoTj3dmmX4aqM=
+text: |
+  As a user I want to be able to invoke a check upon issuing a request

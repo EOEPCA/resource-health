@@ -1,0 +1,14 @@
+active: true
+derived: false
+header: ''
+level: 1.5
+links:
+- REQ005: y-spRfwHZ94ooe28m4-ER8PcN-7Iy82KBwsvj4QIxvQ=
+- UC68: TZ4LrjUSOHTwn2DjhZmNCO1a1LbXNrYCz7lgVl2ASVY=
+normative: true
+origin: |
+  Requirements and use case discussion with APEx group 2024-08-30 and later communication over email)
+ref: ''
+reviewed: 68z9kVoN84iMEH7jqX_XkfnKDT-JU7Mrwqnv2bGAZQ0=
+text: |
+  Check to verify if third party backends successfully finish certain typical test cases (e.g. access data of a given size). If check verification is negative, notification shall be issued.

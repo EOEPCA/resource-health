@@ -1,0 +1,13 @@
+active: true
+derived: false
+header: |
+  BR131
+level: 1.6
+links:
+- T001: wPlUPpBCi0qVFMIr5QhKZFQ_DmiLhbjyZDRS3njGHLg=
+normative: true
+origin: SoW
+ref: ''
+reviewed: gUQBnLB-tE2CHOcpmUroVlTxe468usXLx0d7jsiQwi4=
+text: |2
+   The Resource Health BB shall provide an API through which the status of any health checks can be interrogated (machine-to-machine) – for example to integrate the status into a portal.

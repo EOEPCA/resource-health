@@ -1,0 +1,14 @@
+active: true
+derived: false
+header: ''
+level: 1.1
+links:
+- REQ023: hGL3INyu0QKIw-3fSP2RO1NsiOGuCzpcMWxNbyKjKJY=
+- UC68_1: _ar3408Fc32KrgaSPtyvc5eIDKNrdt-RfYCfUjzdskI=
+normative: true
+origin: |
+  Requirements and use case discussion with APEx group 2024-08-30 and later communication over email)
+ref: ''
+reviewed: dbsKnB8M6TCSTFXpVp3bKz_F0uWyZ5qOKE20N7K2NsM=
+text: |
+  Ability to run checks upon user's request.

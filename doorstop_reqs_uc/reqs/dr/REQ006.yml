@@ -1,0 +1,12 @@
+active: true
+derived: false
+header: ''
+level: 1.5
+links:
+- BR128: ovtLfnwaC1aYKVOx60xcQu8WThW1DHTG-P4hUMixZ_s=
+normative: true
+origin: Tender proposal
+ref: ''
+reviewed: 4VpuAy_khQ_kUzuCLnGh5l5YRYvt5vTDORkAm_8r_QM=
+text: |
+  The Resource Health BB shall allow specifying checks that determine the presence or absence of specified entries in resource logs (such as the absence of error event).

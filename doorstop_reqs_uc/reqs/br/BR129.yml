@@ -1,0 +1,13 @@
+active: true
+derived: false
+header: |
+  BR129
+level: 1.4
+links:
+- T001: wPlUPpBCi0qVFMIr5QhKZFQ_DmiLhbjyZDRS3njGHLg=
+normative: true
+origin: SoW
+ref: ''
+reviewed: dIRspqI3FQhMYGVMXYmU2YnLYW7upph3L1iBtszMOo0=
+text: |2
+   The Resource Health BB shall support invocation of checks according a variety of triggers – including according to a time schedule, registration of new data, tag of a new software release, etc. Where appropriate, the Resource Health BB shall rely upon the Notification & Automation BB as a source of triggers.

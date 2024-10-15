@@ -1,0 +1,13 @@
+active: true
+derived: false
+header: |
+  BR125
+level: 1.0
+links:
+- T001: wPlUPpBCi0qVFMIr5QhKZFQ_DmiLhbjyZDRS3njGHLg=
+normative: true
+origin: SoW
+ref: ''
+reviewed: LdTGIpCtQedLr28lhMh1oN_YLVBf40xrZQ71YHWh8-E=
+text: |2
+   The Resource Health BB shall provide a general purpose capability that allows users (of all type) to specify and schedule checks that confirm the availability and function of specified resources. Checks shall include proactive (end-to-end) invocation of capabilities, including the following resource types: * A platform service, such as a building-block – the service is ‘up’ and responsive * A published dataset – discovery, access and visualisation * A published Processing Workflow – discovery, deployment and execution * A published Workflow-as-a-Service (i.e. a pre-deployed processing workflow) – end-to-end execution * Access to other published resources, such as documentation

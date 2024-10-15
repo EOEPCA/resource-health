@@ -1,0 +1,13 @@
+active: true
+derived: false
+header: ''
+level: 1.4
+links:
+- REQ012: vmF-fwatR1bYv_RBk_tXM6j5YomyLFSqf_0-0Tp5pFk=
+- T002: N7-yY26gADgRYCHq5rzrRAManpEgpcQE_AaNG6xnTUk=
+normative: true
+origin: 'Meeting with other BB developers 2024-09-24'
+ref: ''
+reviewed: t6ZX4Q95W8btt-QMqel2oIzw9MLlllGcaEsba_m24cA=
+text: |
+  As a user I want to be able to visualize the raster data with highlighted areas that were reproduced incorrectly as an evidence to the check outcome.

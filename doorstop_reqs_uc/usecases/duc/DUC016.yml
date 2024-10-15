@@ -1,0 +1,13 @@
+active: true
+derived: false
+header: ''
+level: 1.15
+links:
+- REQ005: y-spRfwHZ94ooe28m4-ER8PcN-7Iy82KBwsvj4QIxvQ=
+- UC68: TZ4LrjUSOHTwn2DjhZmNCO1a1LbXNrYCz7lgVl2ASVY=
+normative: true
+origin: 'Meeting with other BB developers 2024-09-24'
+ref: ''
+reviewed: dP4-b6M0n2l38u-VwocR6KCT59hYjobK7ILj50575Xg=
+text: |
+  Check to verify ability of a resource to reproduce reference data with a certain difference margin (that would act as a threshold health criteria).

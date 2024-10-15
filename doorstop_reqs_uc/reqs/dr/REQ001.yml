@@ -1,0 +1,12 @@
+active: true
+derived: false
+header: ''
+level: 1.0
+links:
+- BR125: LdTGIpCtQedLr28lhMh1oN_YLVBf40xrZQ71YHWh8-E=
+normative: true
+origin: Tender proposal
+ref: ''
+reviewed: dTIFKALQEuSXkn8ArcjM7vin4ToYOh54hp23FzUd0bo=
+text: |
+  The Resource Health BB shall provide a means for general end-users to manage the life cycle (definition, observation, termination, ...) of checks that they own/have access to.

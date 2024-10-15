@@ -1,0 +1,8 @@
+settings:
+  digits: 3
+  parent: BR
+  prefix: REQ
+  sep: ''
+attributes:
+  defaults:
+    origin: 'If known'
