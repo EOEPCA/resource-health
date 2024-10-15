@@ -39,6 +39,8 @@ spec:
               value: {{ toYaml .value | trim }}
             {{- end }}
 
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ $check.overrideOTLPEndpoint | default $top.Values.global.defaultOTLPEndpoint }}
             - name: OTEL_EXPORTER_OTLP_CERTIFICATE
               value: "/tls/ca.crt"
             - name: OTEL_EXPORTER_OTLP_CLIENT_KEY
