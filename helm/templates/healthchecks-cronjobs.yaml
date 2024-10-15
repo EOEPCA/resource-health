@@ -1,5 +1,6 @@
 {{- $top := . -}}
 {{- range $index,$check := .Values.healthchecks.checks -}}
+{{- $image := $check.image | default $top.Values.global.defaultHealthCheckImage -}}
 ---
 apiVersion: batch/v1
 kind: CronJob
@@ -25,12 +26,12 @@ spec:
           restartPolicy: "Never"
           containers:
           - name: {{ $top.Chart.Name }}-healthcheck-{{$check.name}}
-            image: "{{ $check.image.repository }}:{{ $check.image.tag | default $top.Chart.AppVersion }}"
-            imagePullPolicy: {{ $check.image.pullPolicy }}
+            image: "{{ $image.repository }}:{{ $image.tag | default $top.Chart.AppVersion }}"
+            imagePullPolicy: {{ $image.pullPolicy }}
             args: [
               {{ $check.requirements }},
               {{ $check.script }},
-              pytest --export-traces --suppress-tests-failed-exit-code script.py --user-id {{ $check.userid }}
+              pytest --export-traces --suppress-tests-failed-exit-code script.py --user-id defaultuser
             ]
             env:
             {{- range $check.env }}
