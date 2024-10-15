@@ -1,0 +1,13 @@
+active: true
+derived: false
+header: ''
+level: 1.21
+links:
+- BR125: LdTGIpCtQedLr28lhMh1oN_YLVBf40xrZQ71YHWh8-E=
+normative: true
+origin: |
+  Requirements and use case discussion with APEx group 2024-08-30 and later communication over email)
+ref: ''
+reviewed: eSTNz7OQxpYYD_QiBS2XJwvO2Fmn-0aKNOHZBHBGDJ8=
+text: |
+  The Resource Health BB shall provide a means for general end users to specify and schedule checks that confirm the availability and function of published datasets.

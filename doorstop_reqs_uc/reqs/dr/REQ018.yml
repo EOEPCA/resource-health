@@ -1,0 +1,12 @@
+active: true
+derived: false
+header: ''
+level: 1.17
+links:
+- BR131: gUQBnLB-tE2CHOcpmUroVlTxe468usXLx0d7jsiQwi4=
+normative: true
+origin: Tender proposal
+ref: ''
+reviewed: EiD7lOYRLRp5T0vwPUUXY2LgVjQBwar3kEpruaZf14U=
+text: |
+  The Resource Health BB shall provide an API access to execution performance statistics of check logic sufficient to reproduce the functionality exposed in the graphical user interface.

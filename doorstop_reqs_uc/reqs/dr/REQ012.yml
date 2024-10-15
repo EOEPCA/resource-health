@@ -1,0 +1,12 @@
+active: true
+derived: false
+header: ''
+level: 1.11
+links:
+- BR128: ovtLfnwaC1aYKVOx60xcQu8WThW1DHTG-P4hUMixZ_s=
+normative: true
+origin: Tender proposal
+ref: ''
+reviewed: TioNSj99bDxtx168mQyaUBHmgamIppa4catb-bx1i8w=
+text: |
+  The Resource Health BB shall provide a means to maintain traceability to check evidence of an event (such as location of a triggering lines in a log or timestamp of a threshold breach in a metric) when such evidence is available.

@@ -1,0 +1,14 @@
+active: true
+derived: false
+header: ''
+level: 1.8
+links:
+- REQ004: TlWfYUEmS4DbOABTxLErdwsPdMmSTBEViJEbMGNUci4=
+- UC69: XwhK_Wo8e7dADCj8aBgtdqQmE02vEY_HMjtR0IyIYK0=
+normative: true
+origin: |
+  Requirements and use case discussion with APEx group 2024-08-30 and later communication over email)
+ref: ''
+reviewed: EoCAJvtolH2ZsVzGyuocGhr0jidP-KMz5iBsUW_aEGM=
+text: |
+  Check to verify if published dataset is accessible via Data Retrieval and Visualization (Data Access BB). If check verification is negative, notification shall be issued.

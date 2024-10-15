@@ -1,0 +1,7 @@
+settings:
+  digits: 3
+  prefix: T
+  sep: ''
+attributes:
+  defaults:
+    origin: 'If known'

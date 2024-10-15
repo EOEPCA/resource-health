@@ -1,0 +1,15 @@
+active: true
+derived: false
+header: ''
+level: 1.0
+links:
+- REQ013: Z2rG6-9A9aBtJFWXQxHeWoEHhoW98FmOIhteVa7-kEQ=
+- UC68: TZ4LrjUSOHTwn2DjhZmNCO1a1LbXNrYCz7lgVl2ASVY=
+- UC69: XwhK_Wo8e7dADCj8aBgtdqQmE02vEY_HMjtR0IyIYK0=
+normative: true
+origin: |
+  Requirements and use case discussion with APEx group 2024-08-30 and later communication over email)
+ref: ''
+reviewed: IRjUCyeXfVXxk8ItEbwd3w9r2E0cCHZhykTQNrjsXkQ=
+text: |
+  Ability to run checks at regular intervals (Monthly being currently the only explicitly requested schedule).

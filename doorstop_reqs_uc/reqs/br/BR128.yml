@@ -1,0 +1,13 @@
+active: true
+derived: false
+header: |
+  BR128
+level: 1.3
+links:
+- T001: wPlUPpBCi0qVFMIr5QhKZFQ_DmiLhbjyZDRS3njGHLg=
+normative: true
+origin: SoW
+ref: ''
+reviewed: ovtLfnwaC1aYKVOx60xcQu8WThW1DHTG-P4hUMixZ_s=
+text: |2
+   The Resource Health BB shall support checks whose outcome is linked to occurrence of ‘events’ reported in the log output of specified resources.

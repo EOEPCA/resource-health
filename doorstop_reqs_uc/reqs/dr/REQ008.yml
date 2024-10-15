@@ -1,0 +1,12 @@
+active: true
+derived: false
+header: ''
+level: 1.7
+links:
+- BR126: NS6_a-EIESxn8MS0gHnORgg6PcJVlub3e_h9fbVUlmo=
+normative: true
+origin: Tender proposal
+ref: ''
+reviewed: ufVZURIe5u4Jby0YOrelB6absco-0166Qtu5GQ4ktkA=
+text: |
+  The Resource Health BB shall provide a mechanism by which end-users can specify which events to be notified of.

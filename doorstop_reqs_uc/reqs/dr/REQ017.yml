@@ -1,0 +1,12 @@
+active: true
+derived: false
+header: ''
+level: 1.16
+links:
+- BR130: GTWbamkY_2v4MvOymjTH42yvJNi28TE7K4f5W__lNWE=
+normative: true
+origin: Tender proposal
+ref: ''
+reviewed: F4StUBYR4NSkeMeG2873aFu47U6czOhdG3ioUJSUewI=
+text: |
+  The Resource Health BB shall provide an end-users graphical user interface for accessing and summarising execution performance statistics of check logic (such as number of times executed, time since last execution, execution time, ...) sufficient for end-user to assess the sufficient 'health' of a check itself (such as meeting expectations of timeliness).

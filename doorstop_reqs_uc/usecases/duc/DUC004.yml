@@ -1,0 +1,14 @@
+active: true
+derived: false
+header: ''
+level: 1.3
+links:
+- REQ005: y-spRfwHZ94ooe28m4-ER8PcN-7Iy82KBwsvj4QIxvQ=
+- UC68: TZ4LrjUSOHTwn2DjhZmNCO1a1LbXNrYCz7lgVl2ASVY=
+normative: true
+origin: |
+  Requirements and use case discussion with APEx group 2024-08-30 and later communication over email)
+ref: ''
+reviewed: SSeqtb-Wya79LEhYFVgUdwwRkD1G67Y4vtAl_dyyFfM=
+text: |
+  Check to verify if hosted algorithms satisfy certain conventions (e.g. publishes a specification that satisfies a set of linting rules). If check verification is negative, notification shall be issued.

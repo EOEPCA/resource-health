@@ -1,0 +1,12 @@
+active: true
+derived: false
+header: ''
+level: 1.6
+links:
+- BR126: NS6_a-EIESxn8MS0gHnORgg6PcJVlub3e_h9fbVUlmo=
+normative: true
+origin: Tender proposal
+ref: ''
+reviewed: 8-rtUhewAxBUpiio00SezY-6GinAPGzfATUCt2mKlyQ=
+text: |
+  The Resource Health BB shall provide some mechanism for the timely notification of end-users, of events related to (the determination of) check outcomes (for example through a generic mechanism like web hooks, or through a capability provided by other BBs such as the notification and automation BB).

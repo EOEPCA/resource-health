@@ -1,0 +1,14 @@
+active: true
+derived: false
+header: ''
+level: 1.9
+links:
+- REQ005: y-spRfwHZ94ooe28m4-ER8PcN-7Iy82KBwsvj4QIxvQ=
+- UC70: i6xIjTQtMnS0etuUNxf6bSptGtRtYnRqdDnLSVnL7KM=
+normative: true
+origin: |
+  Requirements and use case discussion with APEx group 2024-08-30 and later communication over email)
+ref: ''
+reviewed: wFr7q6wEE4hNcHs-3b05t7jDeuB9HLtOcvozhLkj5uM=
+text: |
+  Check to verify if KPIs for published EO data have been met.

@@ -1,0 +1,14 @@
+active: true
+derived: false
+header: ''
+level: 1.2
+links:
+- REQ004: TlWfYUEmS4DbOABTxLErdwsPdMmSTBEViJEbMGNUci4=
+- UC68: TZ4LrjUSOHTwn2DjhZmNCO1a1LbXNrYCz7lgVl2ASVY=
+normative: true
+origin: |
+  Requirements and use case discussion with APEx group 2024-08-30 and later communication over email)
+ref: ''
+reviewed: mFzUaw3Tz2y3asm3rWeQjoKbOndgZ6Y2tPRgScizWJ0=
+text: |
+  Check to verify if hosted algorithms are visible/callable (including cases where the algorithm ought to be callable under specific conditions, such as random spatial/temporal locations). If check verification is negative, notification shall be issued.

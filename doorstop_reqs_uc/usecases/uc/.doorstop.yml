@@ -1,0 +1,8 @@
+settings:
+  digits: 2
+  parent: T
+  prefix: UC
+  sep: ''
+attributes:
+  defaults:
+    origin: 'If known'
