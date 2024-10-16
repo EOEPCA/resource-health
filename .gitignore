@@ -1,1 +1,5 @@
+.gitignore
 venv/
+tmp/*
+*.tgz
+__pycache__
