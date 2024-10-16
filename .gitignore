@@ -4,3 +4,9 @@ __pycache__/
 build
 *.egg-info
 .check
+.gitignore
+venv/
+tmp/*
+*.tgz
+__pycache__
+
