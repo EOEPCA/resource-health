@@ -6,7 +6,7 @@ cd /app
 
 # Install requirements
 if [[ ! -z "$RESOURCE_HEALTH_RUNNER_REQUIREMENTS" ]]; then
-	pip3 install -r <(ucat "$RESOURCE_HEALTH_RUNNER_REQUIREMENTS")
+	pip3 install -r <(upcat "$RESOURCE_HEALTH_RUNNER_REQUIREMENTS")
 fi
 
 # Run tests
