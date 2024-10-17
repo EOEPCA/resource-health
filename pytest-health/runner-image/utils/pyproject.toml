@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "upcat"
+version = "0.0.1"
+readme = "README.md"
+dependencies = [
+	"fsspec[http]",
+	"universal_pathlib",
+]
+
+[project.scripts]
+upcat = "upcat.__main__:main"

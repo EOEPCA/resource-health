@@ -5,6 +5,8 @@ RUN python -m venv /venv
 ENV PATH="/venv/bin:$PATH"
 COPY ./runner-image/base_requirements.txt /requirements.txt
 RUN pip install -Ur /requirements.txt
+COPY ./runner-image/utils /utils
+RUN pip install /utils
 
 FROM python:3.11-slim as runner
 
@@ -17,17 +19,13 @@ COPY --from=compiler /venv /venv
 ENV PATH="/venv/bin:$PATH"
 
 WORKDIR /app
-WORKDIR /app/utils
-ENV PATH="/app/utils:$PATH"
 
-COPY ./runner-image/ucat.py /app/utils/ucat
 COPY ./runner-image/run_script.sh /app/
 COPY ./runner-image/tests.py /app/
 
 ## Replace with a (preinstalled) set of packages
 COPY ./instrumentation/conftest.py /app/
 
-RUN chmod +x /app/utils/ucat
 RUN chmod +x /app/run_script.sh
 
 ENTRYPOINT [ "/app/run_script.sh" ]
