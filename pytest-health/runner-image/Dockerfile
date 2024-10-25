@@ -3,7 +3,7 @@ ENV PYTHONUNBUFFERED=1
 
 RUN python -m venv /venv
 ENV PATH="/venv/bin:$PATH"
-COPY ./runner-image/utils /utils
+COPY ./utilities /utilities
 COPY ./runner-image/base_requirements.txt /requirements.txt
 RUN pip install -Ur /requirements.txt
 
