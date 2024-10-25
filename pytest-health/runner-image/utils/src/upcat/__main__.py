@@ -4,20 +4,18 @@ from upath import UPath
 
 
 def main():
-    parser = argparse.ArgumentParser(description="The upcat utility reads the content from paths sequentially, writing them to the standard output.")
-
-    parser.add_argument(
-            "-v",
-            "--version",
-            action="version",
-            version="%(prog)s " + importlib.metadata.version("upcat")
+    parser = argparse.ArgumentParser(
+        description="The upcat utility reads the content from paths sequentially, writing them to the standard output."
     )
 
     parser.add_argument(
-        "path",
-        nargs="+",
-        help="path to content"
+        "-v",
+        "--version",
+        action="version",
+        version="%(prog)s " + importlib.metadata.version("upcat"),
     )
+
+    parser.add_argument("path", nargs="+", help="path to content")
 
     args = parser.parse_args()
 
