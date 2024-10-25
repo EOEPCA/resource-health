@@ -13,4 +13,6 @@ Run
 uv run fastapi dev main.py
 ```
 
+Upon executing the above, the openapi spec is written to `openapi.json`, and the api is launched.
+
 Then go to http://127.0.0.1:8000/docs to see the API docs and experiment with the API

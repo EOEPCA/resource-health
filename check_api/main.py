@@ -1,4 +1,5 @@
 from collections import defaultdict
+import json
 from typing import Annotated, Iterable, NewType
 import uuid
 from fastapi import FastAPI, HTTPException, Query
@@ -139,3 +140,7 @@ def remove_check(auth_obj: AuthenticationObject, check_id: CheckId) -> None:
 @app.get("/checks/")
 def list_checks(auth_obj: AuthenticationObject) -> Iterable[Check]:
     return auth_to_id_to_check[auth_obj].values()
+
+
+with open("openapi.json", mode="w+") as file:
+    json.dump(app.openapi(), file, indent=2)
