@@ -3,7 +3,7 @@ requires = ["setuptools >= 61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "upcat"
+name = "utilities"
 version = "0.0.1"
 readme = "README.md"
 dependencies = [
@@ -12,4 +12,4 @@ dependencies = [
 ]
 
 [project.scripts]
-upcat = "upcat.__main__:main"
+upcat = "upcat:main"
