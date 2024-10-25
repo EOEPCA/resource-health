@@ -6,8 +6,6 @@ from jsonschema import validate
 from referencing.jsonschema import Schema
 from pydantic import BaseModel
 
-app = FastAPI()
-
 AuthenticationObject = NewType("AuthenticationObject", str)
 CronExpression = NewType("CronExpression", str)
 CheckTemplateId = NewType("CheckTemplateId", str)
@@ -16,15 +14,20 @@ type Json = dict[str, "Json"] | list["Json"] | str | int | float | bool | None
 type JsonSchema = dict[str, "JsonSchema"] | list["JsonSchema"] | str
 
 
+app = FastAPI()
+
+
 class CheckTemplate(BaseModel):
     id: CheckTemplateId
-    metadata: Json  # SHOULD contain { 'label' : str, 'description' : str }
+    # SHOULD contain { 'label' : str, 'description' : str }
+    metadata: dict[str, Json]
     arguments: Schema
 
 
 class Check(BaseModel):
     id: CheckId
-    metadata: Json  # SHOULD contain { 'label' : str, 'description' : str }, MAY contain { 'template': CheckTemplate, 'template_args': Json }
+    # SHOULD contain { 'label' : str, 'description' : str }, MAY contain { 'template': CheckTemplate, 'template_args': Json }
+    metadata: dict[str, Json]
     schedule: CronExpression
 
     # Conditions to determine which spans belong to this check outcome
@@ -50,6 +53,21 @@ def _get_check_templates() -> list[CheckTemplate]:
             },
         )
     ]
+
+
+def _get_check_template(template_id: CheckTemplateId) -> CheckTemplate:
+    if template_id not in check_template_id_to_template:
+        raise HTTPException(
+            status_code=404, detail=f"Template id {template_id} not found"
+        )
+    return check_template_id_to_template[template_id]
+
+
+def _get_check(auth_obj: AuthenticationObject, check_id: CheckId) -> Check:
+    id_to_check = auth_to_id_to_check[auth_obj]
+    if check_id not in id_to_check:
+        raise HTTPException(status_code=404, detail=f"Check id {check_id} not found")
+    return id_to_check[check_id]
 
 
 check_template_id_to_template: dict[CheckTemplateId, CheckTemplate] = {
@@ -80,11 +98,7 @@ def new_check(
     template_args: Json,
     schedule: CronExpression,
 ) -> CheckId:  # Optional? or raise exception?
-    if template_id not in check_template_id_to_template:
-        raise HTTPException(
-            status_code=404, detail=f"Template id {template_id} not found"
-        )
-    check_template = check_template_id_to_template[template_id]
+    check_template = _get_check_template(template_id)
     validate(template_args, check_template.arguments)
     check_id = CheckId(str(uuid.uuid4()))
     auth_to_id_to_check[auth_obj][check_id] = Check(
@@ -94,6 +108,24 @@ def new_check(
         outcome_filter={"test.id": check_id},
     )
     return check_id
+
+
+@app.patch("/checks/{check_id}")
+def update_check(
+    auth_obj: AuthenticationObject,
+    check_id: CheckId,
+    template_id: CheckTemplateId | None = None,
+    template_args: Json = None,
+    schedule: CronExpression | None = None,
+) -> None:
+    check = _get_check(auth_obj, check_id)
+    if template_id is not None:
+        check.metadata["template_id"] = template_id
+    if template_args is not None:
+        check.metadata["template_args"] = template_args
+    # TODO: check check if template_args and check_template are compatible
+    if schedule is not None:
+        check.schedule = schedule
 
 
 @app.delete("/checks/{check_id}")
