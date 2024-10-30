@@ -275,6 +275,8 @@ opensearch:
   fullnameOverride: "resource-health-opensearch"
 
   replicas: "2"
+
+  opensearchJavaOpts: "-Xmx2G -Xms1G"
   
   persistence:
     enabled: true
