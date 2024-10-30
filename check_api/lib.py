@@ -39,14 +39,14 @@ class Check(BaseModel):
 # Inherit from this class and implement the abstract methods for each new backend
 class CheckBackend(ABC):
     @abstractmethod
-    def list_check_templates(
+    async def list_check_templates(
         self: Self,
         ids: list[CheckTemplateId] | None = None,
     ) -> Iterable[CheckTemplate]:
         pass
 
     @abstractmethod
-    def new_check(
+    async def new_check(
         self: Self,
         auth_obj: AuthenticationObject,
         template_id: CheckTemplateId,
@@ -56,7 +56,7 @@ class CheckBackend(ABC):
         pass
 
     @abstractmethod
-    def update_check(
+    async def update_check(
         self: Self,
         auth_obj: AuthenticationObject,
         check_id: CheckId,
@@ -67,13 +67,13 @@ class CheckBackend(ABC):
         pass
 
     @abstractmethod
-    def remove_check(
+    async def remove_check(
         self: Self, auth_obj: AuthenticationObject, check_id: CheckId
     ) -> None:
         pass
 
     @abstractmethod
-    def list_checks(
+    async def list_checks(
         self: Self,
         auth_obj: AuthenticationObject,
         ids: list[CheckId] | None = None,
@@ -120,7 +120,7 @@ class MockBackend(CheckBackend):
             raise NotFoundException(f"Check id {check_id} not found")
         return id_to_check[check_id]
 
-    def list_check_templates(
+    async def list_check_templates(
         self: Self,
         ids: list[CheckTemplateId] | None = None,
     ) -> Iterable[CheckTemplate]:
@@ -128,7 +128,7 @@ class MockBackend(CheckBackend):
             return self._check_template_id_to_template.values()
         return [self._get_check_template(id) for id in ids]
 
-    def new_check(
+    async def new_check(
         self: Self,
         auth_obj: AuthenticationObject,
         template_id: CheckTemplateId,
@@ -146,7 +146,7 @@ class MockBackend(CheckBackend):
         )
         return check_id
 
-    def update_check(
+    async def update_check(
         self: Self,
         auth_obj: AuthenticationObject,
         check_id: CheckId,
@@ -163,7 +163,7 @@ class MockBackend(CheckBackend):
         if schedule is not None:
             check.schedule = schedule
 
-    def remove_check(
+    async def remove_check(
         self: Self, auth_obj: AuthenticationObject, check_id: CheckId
     ) -> None:
         id_to_check = self._auth_to_id_to_check[auth_obj]
@@ -171,7 +171,7 @@ class MockBackend(CheckBackend):
             raise NotFoundException(f"Check id {check_id} not found")
         id_to_check.pop(check_id)
 
-    def list_checks(
+    async def list_checks(
         self: Self,
         auth_obj: AuthenticationObject,
         ids: list[CheckId] | None = None,
