@@ -84,7 +84,11 @@ class CheckBackend(ABC):
         pass
 
     @abstractmethod
-    def list_checks(self: Self, auth_obj: AuthenticationObject) -> Iterable[Check]:
+    def list_checks(
+        self: Self,
+        auth_obj: AuthenticationObject,
+        ids: list[CheckId] | None = None,
+    ) -> Iterable[Check]:
         pass
 
 
@@ -164,5 +168,11 @@ class MockBackend(CheckBackend):
             raise NotFoundException(f"Check id {check_id} not found")
         id_to_check.pop(check_id)
 
-    def list_checks(self: Self, auth_obj: AuthenticationObject) -> Iterable[Check]:
-        return self._auth_to_id_to_check[auth_obj].values()
+    def list_checks(
+        self: Self,
+        auth_obj: AuthenticationObject,
+        ids: list[CheckId] | None = None,
+    ) -> Iterable[Check]:
+        if ids is None:
+            return self._auth_to_id_to_check[auth_obj].values()
+        return [self._get_check(auth_obj, id) for id in ids]

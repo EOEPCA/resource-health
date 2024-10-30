@@ -67,8 +67,13 @@ def remove_check(auth_obj: AuthenticationObject, check_id: CheckId) -> None:
 
 
 @app.get("/checks/")
-def list_checks(auth_obj: AuthenticationObject) -> Iterable[Check]:
-    return check_backend.list_checks(auth_obj)
+def list_checks(
+    auth_obj: AuthenticationObject,
+    ids: Annotated[
+        list[CheckId] | None, Query(description="restrict IDs to include")
+    ] = None,
+) -> Iterable[Check]:
+    return check_backend.list_checks(auth_obj, ids)
 
 
 # This needs to be at the bottom so that all methods, error handlers, and such are already defined
