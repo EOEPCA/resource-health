@@ -16,10 +16,12 @@ from lib import (
     NotFoundException,
 )
 
-app = FastAPI()
-
+# Dummy for now
+auth_obj = AuthenticationObject("user1")
 # Use type CheckBackend to ensure that the current backend could be replaced by any other without breaking anything
 check_backend: CheckBackend = MockBackend()
+
+app = FastAPI()
 
 
 @app.exception_handler(NotFoundException)
@@ -42,7 +44,6 @@ async def list_check_templates(
 
 @app.post("/checks")
 async def new_check(
-    auth_obj: AuthenticationObject,
     template_id: CheckTemplateId,
     template_args: Json,
     schedule: CronExpression,
@@ -52,7 +53,6 @@ async def new_check(
 
 @app.patch("/checks/{check_id}")
 async def update_check(
-    auth_obj: AuthenticationObject,
     check_id: CheckId,
     template_id: CheckTemplateId | None = None,
     template_args: Json = None,
@@ -64,13 +64,12 @@ async def update_check(
 
 
 @app.delete("/checks/{check_id}")
-async def remove_check(auth_obj: AuthenticationObject, check_id: CheckId) -> None:
+async def remove_check(check_id: CheckId) -> None:
     return await check_backend.remove_check(auth_obj, check_id)
 
 
 @app.get("/checks/")
 async def list_checks(
-    auth_obj: AuthenticationObject,
     ids: Annotated[
         list[CheckId] | None, Query(description="restrict IDs to include")
     ] = None,
