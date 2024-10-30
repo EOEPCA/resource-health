@@ -38,23 +38,12 @@ class Check(BaseModel):
 
 # Inherit from this class and implement the abstract methods for each new backend
 class CheckBackend(ABC):
-    def __init__(self: Self, check_templates: list[CheckTemplate]) -> None:
-        self.check_template_id_to_template: dict[CheckTemplateId, CheckTemplate] = {
-            template.id: template for template in check_templates
-        }
-
-    def _get_check_template(self: Self, template_id: CheckTemplateId) -> CheckTemplate:
-        if template_id not in self.check_template_id_to_template:
-            raise NotFoundException(f"Template id {template_id} not found")
-        return self.check_template_id_to_template[template_id]
-
+    @abstractmethod
     def list_check_templates(
         self: Self,
         ids: list[CheckTemplateId] | None = None,
     ) -> Iterable[CheckTemplate]:
-        if ids is None:
-            return self.check_template_id_to_template.values()
-        return [self._get_check_template(id) for id in ids]
+        pass
 
     @abstractmethod
     def new_check(
@@ -94,28 +83,34 @@ class CheckBackend(ABC):
 
 class MockBackend(CheckBackend):
     def __init__(self: Self) -> None:
-        super().__init__(
-            [
-                CheckTemplate(
-                    id=CheckTemplateId("check_template1"),
-                    metadata={
-                        "label": "Dummy check template",
-                        "description": "Dummy check template description",
-                    },
-                    arguments={
-                        "$schema": "https://json-schema.org/draft/2020-12/schema",
-                        "title": "Bla",
-                        "description": "Bla bla",
-                        # TODO: continue this
-                        # "type": "object",
-                        # "properties": "",
-                    },
-                )
-            ]
-        )
+        check_templates = [
+            CheckTemplate(
+                id=CheckTemplateId("check_template1"),
+                metadata={
+                    "label": "Dummy check template",
+                    "description": "Dummy check template description",
+                },
+                arguments={
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "title": "Bla",
+                    "description": "Bla bla",
+                    # TODO: continue this
+                    # "type": "object",
+                    # "properties": "",
+                },
+            )
+        ]
+        self._check_template_id_to_template: dict[CheckTemplateId, CheckTemplate] = {
+            template.id: template for template in check_templates
+        }
         self._auth_to_id_to_check: defaultdict[
             AuthenticationObject, dict[CheckId, Check]
         ] = defaultdict(dict)
+
+    def _get_check_template(self: Self, template_id: CheckTemplateId) -> CheckTemplate:
+        if template_id not in self._check_template_id_to_template:
+            raise NotFoundException(f"Template id {template_id} not found")
+        return self._check_template_id_to_template[template_id]
 
     def _get_check(
         self: Self, auth_obj: AuthenticationObject, check_id: CheckId
@@ -124,6 +119,14 @@ class MockBackend(CheckBackend):
         if check_id not in id_to_check:
             raise NotFoundException(f"Check id {check_id} not found")
         return id_to_check[check_id]
+
+    def list_check_templates(
+        self: Self,
+        ids: list[CheckTemplateId] | None = None,
+    ) -> Iterable[CheckTemplate]:
+        if ids is None:
+            return self._check_template_id_to_template.values()
+        return [self._get_check_template(id) for id in ids]
 
     def new_check(
         self: Self,

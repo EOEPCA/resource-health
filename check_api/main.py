@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 
 from lib import (
     AuthenticationObject,
+    CheckBackend,
     CronExpression,
     CheckTemplateId,
     CheckId,
@@ -17,7 +18,8 @@ from lib import (
 
 app = FastAPI()
 
-check_backend = MockBackend()
+# Use type CheckBackend to ensure that the current backend could be replaced by any other without breaking anything
+check_backend: CheckBackend = MockBackend()
 
 
 @app.exception_handler(NotFoundException)
