@@ -276,7 +276,7 @@ opensearch:
 
   replicas: "2"
 
-  opensearchJavaOpts: "-Xmx2G -Xms1G"
+  opensearchJavaOpts: "-Xmx2G -Xms2G"
   
   persistence:
     enabled: true
