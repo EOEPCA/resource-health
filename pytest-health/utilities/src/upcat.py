@@ -12,7 +12,7 @@ def main():
         "-v",
         "--version",
         action="version",
-        version="%(prog)s " + importlib.metadata.version("upcat"),
+        version="%(prog)s " + importlib.metadata.version("utilities"),
     )
 
     parser.add_argument("path", nargs="+", help="path to content")
