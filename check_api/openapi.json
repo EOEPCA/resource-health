@@ -60,142 +60,29 @@
         }
       }
     },
-    "/checks": {
+    "/checks/": {
       "post": {
         "summary": "New Check",
-        "operationId": "new_check_checks_post",
-        "parameters": [
-          {
-            "name": "auth_obj",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Auth Obj"
-            }
-          },
-          {
-            "name": "template_id",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Template Id"
-            }
-          },
-          {
-            "name": "template_args",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "$ref": "#/components/schemas/Json-Input"
-            }
-          },
-          {
-            "name": "schedule",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Schedule"
+        "operationId": "new_check_checks__post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_new_check_checks__post"
+              }
             }
           }
-        ],
+        },
         "responses": {
-          "200": {
+          "201": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "string",
-                  "title": "Response New Check Checks Post"
+                  "title": "Response New Check Checks  Post"
                 }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/checks/{check_id}": {
-      "patch": {
-        "summary": "Update Check",
-        "operationId": "update_check_checks__check_id__patch",
-        "parameters": [
-          {
-            "name": "check_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Check Id"
-            }
-          },
-          {
-            "name": "auth_obj",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Auth Obj"
-            }
-          },
-          {
-            "name": "template_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Template Id"
-            }
-          },
-          {
-            "name": "template_args",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "$ref": "#/components/schemas/Json-Input"
-            }
-          },
-          {
-            "name": "schedule",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Schedule"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
               }
             }
           },
@@ -211,65 +98,10 @@
           }
         }
       },
-      "delete": {
-        "summary": "Remove Check",
-        "operationId": "remove_check_checks__check_id__delete",
-        "parameters": [
-          {
-            "name": "check_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Check Id"
-            }
-          },
-          {
-            "name": "auth_obj",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Auth Obj"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/checks/": {
       "get": {
         "summary": "List Checks",
         "operationId": "list_checks_checks__get",
         "parameters": [
-          {
-            "name": "auth_obj",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Auth Obj"
-            }
-          },
           {
             "name": "ids",
             "in": "query",
@@ -319,10 +151,139 @@
           }
         }
       }
+    },
+    "/checks/{check_id}": {
+      "patch": {
+        "summary": "Update Check",
+        "operationId": "update_check_checks__check_id__patch",
+        "parameters": [
+          {
+            "name": "check_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Check Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_update_check_checks__check_id__patch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove Check",
+        "operationId": "remove_check_checks__check_id__delete",
+        "parameters": [
+          {
+            "name": "check_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Check Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "Body_new_check_checks__post": {
+        "properties": {
+          "template_id": {
+            "type": "string",
+            "title": "Template Id"
+          },
+          "template_args": {
+            "$ref": "#/components/schemas/Json-Input"
+          },
+          "schedule": {
+            "type": "string",
+            "title": "Schedule"
+          }
+        },
+        "type": "object",
+        "required": [
+          "template_id",
+          "template_args",
+          "schedule"
+        ],
+        "title": "Body_new_check_checks__post"
+      },
+      "Body_update_check_checks__check_id__patch": {
+        "properties": {
+          "template_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id"
+          },
+          "template_args": {
+            "$ref": "#/components/schemas/Json-Input"
+          },
+          "schedule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schedule"
+          }
+        },
+        "type": "object",
+        "title": "Body_update_check_checks__check_id__patch"
+      },
       "Check": {
         "properties": {
           "id": {
