@@ -29,7 +29,7 @@ spec:
             image: "{{ $image.repository }}:{{ $image.tag | default $top.Chart.AppVersion }}"
             imagePullPolicy: {{ $image.pullPolicy }}
             args: [
-              pytest --export-traces --suppress-tests-failed-exit-code script.py --user-id defaultuser
+              pytest --export-traces --suppress-tests-failed-exit-code tests.py --user-id defaultuser
             ]
             env:
             {{- range $check.env }}
