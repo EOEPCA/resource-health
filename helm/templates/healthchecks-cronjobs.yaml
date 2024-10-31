@@ -29,8 +29,6 @@ spec:
             image: "{{ $image.repository }}:{{ $image.tag | default $top.Chart.AppVersion }}"
             imagePullPolicy: {{ $image.pullPolicy }}
             args: [
-              {{ $check.requirements }},
-              {{ $check.script }},
               pytest --export-traces --suppress-tests-failed-exit-code script.py --user-id defaultuser
             ]
             env:
@@ -47,6 +45,10 @@ spec:
               value: "/tls/tls.key"
             - name: OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE
               value: "/tls/tls.crt"
+            - name: RESOURCE_HEALTH_RUNNER_REQUIREMENTS
+              value: {{ $check.requirements }}
+            - name: RESOURCE_HEALTH_RUNNER_SCRIPT
+              value: {{ $check.script }}
 
             volumeMounts:
             - name: tls
