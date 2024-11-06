@@ -80,8 +80,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "string",
-                  "title": "Response New Check Checks  Post"
+                  "$ref": "#/components/schemas/Check"
                 }
               }
             }
@@ -181,7 +180,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/Check"
+                }
               }
             }
           },

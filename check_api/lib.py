@@ -74,7 +74,7 @@ class CheckBackend(ABC):
         template_id: CheckTemplateId,
         template_args: Json,
         schedule: CronExpression,
-    ) -> CheckId:
+    ) -> Check:
         pass
 
     @abstractmethod
@@ -85,7 +85,7 @@ class CheckBackend(ABC):
         template_id: CheckTemplateId | None = None,
         template_args: Json = None,
         schedule: CronExpression | None = None,
-    ) -> None:
+    ) -> Check:
         pass
 
     @abstractmethod
@@ -156,17 +156,18 @@ class MockBackend(CheckBackend):
         template_id: CheckTemplateId,
         template_args: Json,
         schedule: CronExpression,
-    ) -> CheckId:
+    ) -> Check:
         check_template = self._get_check_template(template_id)
         validate(template_args, check_template.arguments)
         check_id = CheckId(str(uuid.uuid4()))
-        self._auth_to_id_to_check[auth_obj][check_id] = Check(
+        check = Check(
             id=check_id,
             metadata={"template_id": template_id, "template_args": template_args},
             schedule=schedule,
             outcome_filter={"test.id": check_id},
         )
-        return check_id
+        self._auth_to_id_to_check[auth_obj][check_id] = check
+        return check
 
     async def update_check(
         self: Self,
@@ -175,7 +176,7 @@ class MockBackend(CheckBackend):
         template_id: CheckTemplateId | None = None,
         template_args: Json = None,
         schedule: CronExpression | None = None,
-    ) -> None:
+    ) -> Check:
         check = self._get_check(auth_obj, check_id)
         if template_id is not None:
             check.metadata["template_id"] = template_id
@@ -184,6 +185,7 @@ class MockBackend(CheckBackend):
         # TODO: check check if template_args and check_template are compatible
         if schedule is not None:
             check.schedule = schedule
+        return check
 
     async def remove_check(
         self: Self, auth_obj: AuthenticationObject, check_id: CheckId
@@ -246,7 +248,7 @@ class RestBackend(CheckBackend):
         template_id: CheckTemplateId,
         template_args: Json,
         schedule: CronExpression,
-    ) -> CheckId:
+    ) -> Check:
         response = await self._client.post(
             self._url + NEW_CHECK_PATH,
             json={
@@ -256,7 +258,7 @@ class RestBackend(CheckBackend):
             },
         )
         if response.is_success:
-            return TypeAdapter(CheckId).validate_python(response.json())
+            return Check.model_validate(response.json())
         raise get_exception(status_code=response.status_code, content=response.json())
 
     async def update_check(
@@ -266,7 +268,7 @@ class RestBackend(CheckBackend):
         template_id: CheckTemplateId | None = None,
         template_args: Json = None,
         schedule: CronExpression | None = None,
-    ) -> None:
+    ) -> Check:
         response = await self._client.patch(
             self._url + UPDATE_CHECK_PATH.format(check_id=check_id),
             json={
@@ -276,7 +278,7 @@ class RestBackend(CheckBackend):
             },
         )
         if response.is_success:
-            return None  # TypeAdapter(None).validate_python(response.json())
+            return Check.model_validate(response.json())
         raise get_exception(status_code=response.status_code, content=response.json())
 
     async def remove_check(

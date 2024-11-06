@@ -58,7 +58,7 @@ async def new_check(
     template_id: Annotated[CheckTemplateId, Body()],
     template_args: Annotated[Json, Body()],
     schedule: Annotated[CronExpression, Body()],
-) -> CheckId:
+) -> Check:
     return await check_backend.new_check(auth_obj, template_id, template_args, schedule)
 
 
@@ -68,7 +68,7 @@ async def update_check(
     template_id: Annotated[CheckTemplateId | None, Body()] = None,
     template_args: Annotated[Json, Body()] = None,
     schedule: Annotated[CronExpression | None, Body()] = None,
-) -> None:
+) -> Check:
     return await check_backend.update_check(
         auth_obj, check_id, template_id, template_args, schedule
     )
