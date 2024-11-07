@@ -239,7 +239,7 @@
             "title": "Template Id"
           },
           "template_args": {
-            "$ref": "#/components/schemas/Json-Input"
+            "$ref": "#/components/schemas/Json"
           },
           "schedule": {
             "type": "string",
@@ -268,7 +268,14 @@
             "title": "Template Id"
           },
           "template_args": {
-            "$ref": "#/components/schemas/Json-Input"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Json"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "schedule": {
             "anyOf": [
@@ -292,18 +299,14 @@
             "title": "Id"
           },
           "metadata": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/Json-Output"
-            },
-            "type": "object",
-            "title": "Metadata"
+            "$ref": "#/components/schemas/Json"
           },
           "schedule": {
             "type": "string",
             "title": "Schedule"
           },
           "outcome_filter": {
-            "$ref": "#/components/schemas/Json-Output"
+            "$ref": "#/components/schemas/Json"
           }
         },
         "type": "object",
@@ -322,11 +325,7 @@
             "title": "Id"
           },
           "metadata": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/Json-Output"
-            },
-            "type": "object",
-            "title": "Metadata"
+            "$ref": "#/components/schemas/Json"
           },
           "arguments": {
             "anyOf": [
@@ -361,67 +360,8 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
-      "Json-Input": {
-        "anyOf": [
-          {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/Json-Input"
-            },
-            "type": "object"
-          },
-          {
-            "items": {
-              "$ref": "#/components/schemas/Json-Input"
-            },
-            "type": "array"
-          },
-          {
-            "type": "string"
-          },
-          {
-            "type": "integer"
-          },
-          {
-            "type": "number"
-          },
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ]
-      },
-      "Json-Output": {
-        "anyOf": [
-          {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/Json-Output"
-            },
-            "type": "object"
-          },
-          {
-            "items": {
-              "$ref": "#/components/schemas/Json-Output"
-            },
-            "type": "array"
-          },
-          {
-            "type": "string"
-          },
-          {
-            "type": "integer"
-          },
-          {
-            "type": "number"
-          },
-          {
-            "type": "boolean"
-          },
-          {
-            "type": "null"
-          }
-        ]
+      "Json": {
+        "type": "object"
       },
       "ValidationError": {
         "properties": {

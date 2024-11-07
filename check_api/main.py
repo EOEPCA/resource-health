@@ -70,7 +70,7 @@ async def new_check(
 async def update_check(
     check_id: Annotated[CheckId, Path()],
     template_id: Annotated[CheckTemplateId | None, Body()] = None,
-    template_args: Annotated[Json, Body()] = None,
+    template_args: Annotated[Json | None, Body()] = None,
     schedule: Annotated[CronExpression | None, Body()] = None,
 ) -> Check:
     return await check_backend.update_check(

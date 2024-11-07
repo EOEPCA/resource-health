@@ -12,8 +12,7 @@ AuthenticationObject = NewType("AuthenticationObject", str)
 CronExpression = NewType("CronExpression", str)
 CheckTemplateId = NewType("CheckTemplateId", str)
 CheckId = NewType("CheckId", str)
-type Json = dict[str, "Json"] | list["Json"] | str | int | float | bool | None
-# type JsonSchema = dict[str, "JsonSchema"] | list["JsonSchema"] | str
+type Json = dict[str, object]
 
 
 class NotFoundException(Exception):
@@ -43,14 +42,14 @@ def get_exception(status_code: int, content: Any) -> Exception:
 class CheckTemplate(BaseModel):
     id: CheckTemplateId
     # SHOULD contain { 'label' : str, 'description' : str }
-    metadata: dict[str, Json]
+    metadata: Json
     arguments: Schema
 
 
 class Check(BaseModel):
     id: CheckId
     # SHOULD contain { 'label' : str, 'description' : str }, MAY contain { 'template': CheckTemplate, 'template_args': Json }
-    metadata: dict[str, Json]
+    metadata: Json
     schedule: CronExpression
 
     # Conditions to determine which spans belong to this check outcome
@@ -87,7 +86,7 @@ class CheckBackend(ABC):
         auth_obj: AuthenticationObject,
         check_id: CheckId,
         template_id: CheckTemplateId | None = None,
-        template_args: Json = None,
+        template_args: Json | None = None,
         schedule: CronExpression | None = None,
     ) -> Check:
         pass
@@ -185,7 +184,7 @@ class MockBackend(CheckBackend):
         auth_obj: AuthenticationObject,
         check_id: CheckId,
         template_id: CheckTemplateId | None = None,
-        template_args: Json = None,
+        template_args: Json | None = None,
         schedule: CronExpression | None = None,
     ) -> Check:
         check = self._get_check(auth_obj, check_id)
@@ -287,7 +286,7 @@ class RestBackend(CheckBackend):
         auth_obj: AuthenticationObject,
         check_id: CheckId,
         template_id: CheckTemplateId | None = None,
-        template_args: Json = None,
+        template_args: Json | None = None,
         schedule: CronExpression | None = None,
     ) -> Check:
         response = await self._client.patch(
@@ -328,5 +327,3 @@ class RestBackend(CheckBackend):
             raise get_exception(
                 status_code=response.status_code, content=response.json()
             )
-            return TypeAdapter(list[Check]).validate_python(response.json())
-        raise get_exception(status_code=response.status_code, content=response.json())
