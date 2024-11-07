@@ -50,7 +50,11 @@ async def list_check_templates(
         list[CheckTemplateId] | None, Query(description="restrict IDs to include")
     ] = None,
 ) -> Iterable[CheckTemplate]:
-    return await check_backend.list_check_templates(ids)
+    # TODO: stream this instead of accumulating everything first
+    return [
+        check_template
+        async for check_template in check_backend.list_check_templates(ids)
+    ]
 
 
 @app.post(NEW_CHECK_PATH, status_code=status.HTTP_201_CREATED)
@@ -85,7 +89,8 @@ async def list_checks(
         list[CheckId] | None, Query(description="restrict IDs to include")
     ] = None,
 ) -> Iterable[Check]:
-    return await check_backend.list_checks(auth_obj, ids)
+    # TODO: stream this instead of accumulating everything first
+    return [check async for check in check_backend.list_checks(auth_obj, ids)]
 
 
 # This needs to be at the bottom so that all methods, error handlers, and such are already defined

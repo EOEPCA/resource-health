@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from types import TracebackType
-from typing import Any, Final, Iterable, Literal, NewType, Self, Type
+from typing import Any, AsyncIterable, Final, Literal, NewType, Self, Type
 import uuid
 import httpx
 from jsonschema import validate
@@ -64,8 +64,12 @@ class CheckBackend(ABC):
     async def list_check_templates(
         self: Self,
         ids: list[CheckTemplateId] | None = None,
-    ) -> Iterable[CheckTemplate]:
-        pass
+    ) -> AsyncIterable[CheckTemplate]:
+        # A trick to make the type of the function what I want
+        # Why yield inside function body effects the type of the function is explained in
+        # https://mypy.readthedocs.io/en/stable/more_types.html#asynchronous-iterators
+        if False:
+            yield
 
     @abstractmethod
     async def new_check(
@@ -99,8 +103,12 @@ class CheckBackend(ABC):
         self: Self,
         auth_obj: AuthenticationObject,
         ids: list[CheckId] | None = None,
-    ) -> Iterable[Check]:
-        pass
+    ) -> AsyncIterable[Check]:
+        # A trick to make the type of the function what I want
+        # Why yield inside function body effects the type of the function is explained in
+        # https://mypy.readthedocs.io/en/stable/more_types.html#asynchronous-iterators
+        if False:
+            yield
 
 
 class MockBackend(CheckBackend):
@@ -145,10 +153,13 @@ class MockBackend(CheckBackend):
     async def list_check_templates(
         self: Self,
         ids: list[CheckTemplateId] | None = None,
-    ) -> Iterable[CheckTemplate]:
+    ) -> AsyncIterable[CheckTemplate]:
         if ids is None:
-            return self._check_template_id_to_template.values()
-        return [self._get_check_template(id) for id in ids]
+            for template in self._check_template_id_to_template.values():
+                yield template
+        else:
+            for id in ids:
+                yield self._get_check_template(id)
 
     async def new_check(
         self: Self,
@@ -199,10 +210,13 @@ class MockBackend(CheckBackend):
         self: Self,
         auth_obj: AuthenticationObject,
         ids: list[CheckId] | None = None,
-    ) -> Iterable[Check]:
+    ) -> AsyncIterable[Check]:
         if ids is None:
-            return self._auth_to_id_to_check[auth_obj].values()
-        return [self._get_check(auth_obj, id) for id in ids]
+            for check in self._auth_to_id_to_check[auth_obj].values():
+                yield check
+        else:
+            for id in ids:
+                yield self._get_check(auth_obj, id)
 
 
 LIST_CHECK_TEMPLATES_PATH: Final[str] = "/check_templates/"
@@ -232,15 +246,22 @@ class RestBackend(CheckBackend):
     async def list_check_templates(
         self: Self,
         ids: list[CheckTemplateId] | None = None,
-    ) -> Iterable[CheckTemplate]:
+    ) -> AsyncIterable[CheckTemplate]:
         response = await self._client.get(
             self._url + LIST_CHECK_TEMPLATES_PATH,
             params={"ids": ids} if ids is not None else {},
         )
+        # TODO: stream this instead of accumulating everything first
         if response.is_success:
             # using Iterable[CheckTemplate] here and trying to iterate over the result explodes for some reason
-            return TypeAdapter(list[CheckTemplate]).validate_python(response.json())
-        raise get_exception(status_code=response.status_code, content=response.json())
+            for check_template in TypeAdapter(list[CheckTemplate]).validate_python(
+                response.json()
+            ):
+                yield check_template
+        else:
+            raise get_exception(
+                status_code=response.status_code, content=response.json()
+            )
 
     async def new_check(
         self: Self,
@@ -295,10 +316,17 @@ class RestBackend(CheckBackend):
         self: Self,
         auth_obj: AuthenticationObject,
         ids: list[CheckId] | None = None,
-    ) -> Iterable[Check]:
+    ) -> AsyncIterable[Check]:
         response = await self._client.get(
             self._url + LIST_CHECKS_PATH, params={"ids": ids} if ids is not None else {}
         )
+        # TODO: stream this instead of accumulating everything first
         if response.is_success:
+            for check in TypeAdapter(list[Check]).validate_python(response.json()):
+                yield check
+        else:
+            raise get_exception(
+                status_code=response.status_code, content=response.json()
+            )
             return TypeAdapter(list[Check]).validate_python(response.json())
         raise get_exception(status_code=response.status_code, content=response.json())
