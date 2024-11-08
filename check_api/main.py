@@ -32,7 +32,7 @@ class CheckDefinition(BaseModel):
 # Dummy for now
 auth_obj = AuthenticationObject("user1")
 # Use type CheckBackend to ensure that the current backend could be replaced by any other without breaking anything
-check_backend: CheckBackend = MockBackend()
+check_backend: CheckBackend = MockBackend(template_id_prefix="remote_")
 
 app = FastAPI()
 

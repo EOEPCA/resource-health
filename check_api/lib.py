@@ -1,7 +1,19 @@
 from abc import ABC, abstractmethod
+import asyncio
 from collections import defaultdict
+from enum import Enum, auto
 from types import TracebackType
-from typing import Any, AsyncIterable, Final, Literal, NewType, Self, Type
+from typing import (
+    Any,
+    AsyncIterable,
+    Final,
+    Literal,
+    NewType,
+    Self,
+    Type,
+    assert_never,
+    override,
+)
 import uuid
 import httpx
 from jsonschema import validate
@@ -15,28 +27,43 @@ CheckId = NewType("CheckId", str)
 type Json = dict[str, object]
 
 
-class NotFoundException(Exception):
-    pass
+class ErrorCode(Enum):
+    MainIdNotFound = auto()
+    NotFound = auto()
+    NonUniqueId = auto()
+    InternalError = auto()
 
 
+class CustomException(Exception):
+    def __init__(self: Self, code: ErrorCode, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+
+
+ERROR_CODE_KEY: Final[str] = "code"
 ERROR_MESSAGE_KEY: Final[str] = "detail"
 
 
-def get_status_code_and_message(exception: Exception) -> tuple[int, Json]:
-    match exception:
-        case NotFoundException():
-            return (404, {ERROR_MESSAGE_KEY: str(exception)})
-        case Exception():
-            return (500, {ERROR_MESSAGE_KEY: "Internal server error"})
+def get_status_code_and_message(exception: BaseException) -> tuple[int, Json]:
+    if not isinstance(exception, CustomException):
+        exception = CustomException(ErrorCode.InternalError, "Internal server error")
+    error_json: dict[str, object] = {
+        ERROR_CODE_KEY: exception.code.name,
+        ERROR_MESSAGE_KEY: str(exception),
+    }
+    match exception.code:
+        case ErrorCode.MainIdNotFound | ErrorCode.NotFound:
+            return (404, error_json)
+        case ErrorCode.NonUniqueId | ErrorCode.InternalError:
+            return (500, error_json)
+        case unreachable:
+            assert_never(unreachable)
 
 
-def get_exception(status_code: int, content: Any) -> Exception:
+def get_exception(status_code: int, content: Any) -> CustomException:
+    error_code = ErrorCode[content[ERROR_CODE_KEY]]
     message: str = content[ERROR_MESSAGE_KEY]
-    match status_code:
-        case 403:
-            return NotFoundException(message)
-        case _:
-            return Exception(message)
+    return CustomException(error_code, message)
 
 
 class CheckTemplate(BaseModel):
@@ -59,6 +86,12 @@ class Check(BaseModel):
 
 # Inherit from this class and implement the abstract methods for each new backend
 class CheckBackend(ABC):
+    # Close connections, release resources and such
+    # aclose is the standard name such methods when they are asynchronous
+    @abstractmethod
+    async def aclose(self: Self) -> None:
+        pass
+
     @abstractmethod
     async def list_check_templates(
         self: Self,
@@ -70,6 +103,8 @@ class CheckBackend(ABC):
         if False:
             yield
 
+    # Raise CustomException with MainIdNotFound code if template_id doesn't exist.
+    # Otherwise don't use that error code
     @abstractmethod
     async def new_check(
         self: Self,
@@ -80,6 +115,8 @@ class CheckBackend(ABC):
     ) -> Check:
         pass
 
+    # Raise CustomException with MainIdNotFound code if check_id doesn't exist.
+    # Otherwise don't use that error code
     @abstractmethod
     async def update_check(
         self: Self,
@@ -91,6 +128,8 @@ class CheckBackend(ABC):
     ) -> Check:
         pass
 
+    # Raise CustomException with MainIdNotFound code if check_id doesn't exist.
+    # Otherwise don't use that error code
     @abstractmethod
     async def remove_check(
         self: Self, auth_obj: AuthenticationObject, check_id: CheckId
@@ -111,10 +150,10 @@ class CheckBackend(ABC):
 
 
 class MockBackend(CheckBackend):
-    def __init__(self: Self) -> None:
+    def __init__(self: Self, template_id_prefix: str = "") -> None:
         check_templates = [
             CheckTemplate(
-                id=CheckTemplateId("check_template1"),
+                id=CheckTemplateId(template_id_prefix + "check_template1"),
                 metadata={
                     "label": "Dummy check template",
                     "description": "Dummy check template description",
@@ -136,9 +175,15 @@ class MockBackend(CheckBackend):
             AuthenticationObject, dict[CheckId, Check]
         ] = defaultdict(dict)
 
+    @override
+    async def aclose(self: Self) -> None:
+        pass
+
     def _get_check_template(self: Self, template_id: CheckTemplateId) -> CheckTemplate:
         if template_id not in self._check_template_id_to_template:
-            raise NotFoundException(f"Template id {template_id} not found")
+            raise CustomException(
+                ErrorCode.NotFound, f"Template id {template_id} not found"
+            )
         return self._check_template_id_to_template[template_id]
 
     def _get_check(
@@ -146,9 +191,10 @@ class MockBackend(CheckBackend):
     ) -> Check:
         id_to_check = self._auth_to_id_to_check[auth_obj]
         if check_id not in id_to_check:
-            raise NotFoundException(f"Check id {check_id} not found")
+            raise CustomException(ErrorCode.NotFound, f"Check id {check_id} not found")
         return id_to_check[check_id]
 
+    @override
     async def list_check_templates(
         self: Self,
         ids: list[CheckTemplateId] | None = None,
@@ -160,6 +206,7 @@ class MockBackend(CheckBackend):
             for id in ids:
                 yield self._get_check_template(id)
 
+    @override
     async def new_check(
         self: Self,
         auth_obj: AuthenticationObject,
@@ -179,6 +226,7 @@ class MockBackend(CheckBackend):
         self._auth_to_id_to_check[auth_obj][check_id] = check
         return check
 
+    @override
     async def update_check(
         self: Self,
         auth_obj: AuthenticationObject,
@@ -197,14 +245,16 @@ class MockBackend(CheckBackend):
             check.schedule = schedule
         return check
 
+    @override
     async def remove_check(
         self: Self, auth_obj: AuthenticationObject, check_id: CheckId
     ) -> None:
         id_to_check = self._auth_to_id_to_check[auth_obj]
         if check_id not in id_to_check:
-            raise NotFoundException(f"Check id {check_id} not found")
+            raise CustomException(ErrorCode.NotFound, f"Check id {check_id} not found")
         id_to_check.pop(check_id)
 
+    @override
     async def list_checks(
         self: Self,
         auth_obj: AuthenticationObject,
@@ -228,20 +278,13 @@ LIST_CHECKS_PATH: Final[str] = "/checks/"
 class RestBackend(CheckBackend):
     def __init__(self: Self, rest_url: str) -> None:
         self._url = rest_url
-
-    async def __aenter__(self: Self) -> Self:
         self._client = httpx.AsyncClient()
-        return self
 
-    async def __aexit__(
-        self: Self,
-        exctype: Type[BaseException] | None,
-        excinst: BaseException | None,
-        exctb: TracebackType | None,
-    ) -> Literal[False]:
+    @override
+    async def aclose(self: Self) -> None:
         await self._client.aclose()
-        return False
 
+    @override
     async def list_check_templates(
         self: Self,
         ids: list[CheckTemplateId] | None = None,
@@ -262,6 +305,7 @@ class RestBackend(CheckBackend):
                 status_code=response.status_code, content=response.json()
             )
 
+    @override
     async def new_check(
         self: Self,
         auth_obj: AuthenticationObject,
@@ -281,6 +325,7 @@ class RestBackend(CheckBackend):
             return Check.model_validate(response.json())
         raise get_exception(status_code=response.status_code, content=response.json())
 
+    @override
     async def update_check(
         self: Self,
         auth_obj: AuthenticationObject,
@@ -301,6 +346,7 @@ class RestBackend(CheckBackend):
             return Check.model_validate(response.json())
         raise get_exception(status_code=response.status_code, content=response.json())
 
+    @override
     async def remove_check(
         self: Self, auth_obj: AuthenticationObject, check_id: CheckId
     ) -> None:
@@ -311,6 +357,7 @@ class RestBackend(CheckBackend):
             return None
         raise get_exception(status_code=response.status_code, content=response.json())
 
+    @override
     async def list_checks(
         self: Self,
         auth_obj: AuthenticationObject,
@@ -327,3 +374,137 @@ class RestBackend(CheckBackend):
             raise get_exception(
                 status_code=response.status_code, content=response.json()
             )
+
+
+class AggregationBackend(CheckBackend):
+    def __init__(self, backends: list[CheckBackend]) -> None:
+        self._backends = backends
+
+    @staticmethod
+    def _process_results[T](
+        results: list[T | BaseException], non_unique_id_message: str
+    ) -> T:
+        successes = [
+            result for result in results if not isinstance(result, BaseException)
+        ]
+        # Interesting failures.
+        failures = [
+            result
+            for result in results
+            if isinstance(result, Exception)
+            and (
+                not isinstance(result, CustomException)
+                or result.code != ErrorCode.MainIdNotFound
+            )
+        ]
+        match (successes, failures):
+            case ([success], _):
+                return success
+            case ([_, _, *_], _):
+                raise CustomException(ErrorCode.NonUniqueId, non_unique_id_message)
+            case ([], [failure, *_]):
+                raise failure
+            case ([], []):
+                assert isinstance(results[0], Exception)
+                raise results[0]
+            case _:
+                # This is unreachable as far as I can tell, but Mypy doesn't agree.
+                # It seems to have a problem with [*rest] type of patterns - it doesn't recognise that [*rest] would
+                # match any list, for example
+                assert False
+
+    @override
+    async def aclose(self: Self) -> None:
+        await asyncio.gather(*(backend.aclose() for backend in self._backends))
+
+    @override
+    async def list_check_templates(
+        self: Self,
+        ids: list[CheckTemplateId] | None = None,
+    ) -> AsyncIterable[CheckTemplate]:
+        for backend in self._backends:
+            async for template in backend.list_check_templates(ids):
+                yield template
+
+    @override
+    async def new_check(
+        self: Self,
+        auth_obj: AuthenticationObject,
+        template_id: CheckTemplateId,
+        template_args: Json,
+        schedule: CronExpression,
+    ) -> Check:
+        results = await asyncio.gather(
+            *(
+                backend.new_check(auth_obj, template_id, template_args, schedule)
+                for backend in self._backends
+            ),
+            return_exceptions=True,
+        )
+        return AggregationBackend._process_results(
+            results, f"Check template id {template_id} exists in multiple backends"
+        )
+
+    @override
+    async def update_check(
+        self: Self,
+        auth_obj: AuthenticationObject,
+        check_id: CheckId,
+        template_id: CheckTemplateId | None = None,
+        template_args: Json | None = None,
+        schedule: CronExpression | None = None,
+    ) -> Check:
+        results = await asyncio.gather(
+            *(
+                backend.update_check(
+                    auth_obj, check_id, template_id, template_args, schedule
+                )
+                for backend in self._backends
+            ),
+            return_exceptions=True,
+        )
+        return AggregationBackend._process_results(
+            results, f"Check id {check_id} exists in multiple backends"
+        )
+
+    @override
+    async def remove_check(
+        self: Self, auth_obj: AuthenticationObject, check_id: CheckId
+    ) -> None:
+        results = await asyncio.gather(
+            *(backend.remove_check(auth_obj, check_id) for backend in self._backends),
+            return_exceptions=True,
+        )
+        return AggregationBackend._process_results(
+            results, f"Check id {check_id} exists in multiple backends"
+        )
+
+    @override
+    async def list_checks(
+        self: Self,
+        auth_obj: AuthenticationObject,
+        ids: list[CheckId] | None = None,
+    ) -> AsyncIterable[Check]:
+        # A trick to make the type of the function what I want
+        # Why yield inside function body effects the type of the function is explained in
+        # https://mypy.readthedocs.io/en/stable/more_types.html#asynchronous-iterators
+        for backend in self._backends:
+            async for check in backend.list_checks(auth_obj, ids):
+                yield check
+
+
+class CheckBackendContextManager:
+    def __init__(self: Self, check_backend: CheckBackend) -> None:
+        self._check_backend = check_backend
+
+    async def __aenter__(self: Self) -> CheckBackend:
+        return self._check_backend
+
+    async def __aexit__(
+        self: Self,
+        exctype: Type[BaseException] | None,
+        excinst: BaseException | None,
+        exctb: TracebackType | None,
+    ) -> Literal[False]:
+        await self._check_backend.aclose()
+        return False
