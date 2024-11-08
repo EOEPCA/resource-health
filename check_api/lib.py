@@ -1,11 +1,21 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from types import TracebackType
-from typing import Any, AsyncIterable, Final, Literal, NewType, Self, Type
+from typing import (
+    Any,
+    AsyncIterable,
+    AsyncIterator,
+    Final,
+    Literal,
+    NewType,
+    Self,
+    Type,
+)
 import uuid
 import httpx
+import ijson
 from jsonschema import validate
-from pydantic import BaseModel, TypeAdapter
+from pydantic import BaseModel
 from referencing.jsonschema import Schema
 
 AuthenticationObject = NewType("AuthenticationObject", str)
@@ -128,7 +138,22 @@ class MockBackend(CheckBackend):
                     # "type": "object",
                     # "properties": "",
                 },
-            )
+            ),
+            CheckTemplate(
+                id=CheckTemplateId("check_template2"),
+                metadata={
+                    "label": "Template 2",
+                    "description": "Description 2",
+                },
+                arguments={
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "title": "Bla2",
+                    "description": "Bla bla bla bla",
+                    # TODO: continue this
+                    # "type": "object",
+                    # "properties": "",
+                },
+            ),
         ]
         self._check_template_id_to_template: dict[CheckTemplateId, CheckTemplate] = {
             template.id: template for template in check_templates
@@ -226,6 +251,33 @@ REMOVE_CHECK_PATH: Final[str] = "/checks/{check_id}"
 LIST_CHECKS_PATH: Final[str] = "/checks/"
 
 
+class HttpxStreamAsFile:
+    def __init__(self, client: httpx.AsyncClient, request: httpx.Request):
+        self.request = request
+        self.data: AsyncIterator[bytes] | None = None
+        self.client = client
+
+    async def __aenter__(self: Self) -> Self:
+        self.res = await self.client.send(self.request, stream=True)
+        self.data = self.res.aiter_bytes()
+        return self
+
+    async def __aexit__(
+        self: Self,
+        exctype: Type[BaseException] | None,
+        excinst: BaseException | None,
+        exctb: TracebackType | None,
+    ) -> Literal[False]:
+        await self.res.aclose()
+        return False
+
+    async def read(self, n: int) -> bytes:
+        if self.data is None or n == 0:
+            return b""
+
+        return await anext(self.data, b"")
+
+
 class RestBackend(CheckBackend):
     def __init__(self: Self, rest_url: str) -> None:
         self._url = rest_url
@@ -247,21 +299,45 @@ class RestBackend(CheckBackend):
         self: Self,
         ids: list[CheckTemplateId] | None = None,
     ) -> AsyncIterable[CheckTemplate]:
-        response = await self._client.get(
-            self._url + LIST_CHECK_TEMPLATES_PATH,
-            params={"ids": ids} if ids is not None else {},
-        )
-        # TODO: stream this instead of accumulating everything first
-        if response.is_success:
-            # using Iterable[CheckTemplate] here and trying to iterate over the result explodes for some reason
-            for check_template in TypeAdapter(list[CheckTemplate]).validate_python(
-                response.json()
-            ):
-                yield check_template
-        else:
-            raise get_exception(
-                status_code=response.status_code, content=response.json()
-            )
+        async with HttpxStreamAsFile(
+            self._client,
+            self._client.build_request(
+                "GET",
+                self._url + LIST_CHECK_TEMPLATES_PATH,
+                params={"ids": ids} if ids is not None else {},
+            ),
+        ) as httpx_as_file:
+            # TODO: error handling
+            async for obj in ijson.items(httpx_as_file, "item"):
+                yield CheckTemplate.model_validate(obj)
+
+        # async with self._client.stream(
+        #     "GET",
+        #     self._url + LIST_CHECK_TEMPLATES_PATH,
+        #     params={"ids": ids} if ids is not None else {},
+        # ) as response:
+        #     if response.is_success:
+        #         yield CheckTemplate.model_validate(response.json())
+        #     else:
+        #         raise get_exception(
+        #             status_code=response.status_code, content=response.json()
+        #         )
+
+        # response = await self._client.get(
+        #     self._url + LIST_CHECK_TEMPLATES_PATH,
+        #     params={"ids": ids} if ids is not None else {},
+        # )
+        # # TODO: stream this instead of accumulating everything first
+        # if response.is_success:
+        #     # using Iterable[CheckTemplate] here and trying to iterate over the result explodes for some reason
+        #     for check_template in TypeAdapter(list[CheckTemplate]).validate_python(
+        #         response.json()
+        #     ):
+        #         yield check_template
+        # else:
+        #     raise get_exception(
+        #         status_code=response.status_code, content=response.json()
+        #     )
 
     async def new_check(
         self: Self,
@@ -317,16 +393,38 @@ class RestBackend(CheckBackend):
         auth_obj: AuthenticationObject,
         ids: list[CheckId] | None = None,
     ) -> AsyncIterable[Check]:
-        response = await self._client.get(
-            self._url + LIST_CHECKS_PATH, params={"ids": ids} if ids is not None else {}
-        )
-        # TODO: stream this instead of accumulating everything first
-        if response.is_success:
-            for check in TypeAdapter(list[Check]).validate_python(response.json()):
-                yield check
-        else:
-            raise get_exception(
-                status_code=response.status_code, content=response.json()
-            )
-            return TypeAdapter(list[Check]).validate_python(response.json())
-        raise get_exception(status_code=response.status_code, content=response.json())
+        async with self._client.stream(
+            "GET",
+            self._url + LIST_CHECKS_PATH,
+            params={"ids": ids} if ids is not None else {},
+        ) as response:
+            if response.is_success:
+                yield Check.model_validate(response.json())
+            else:
+                raise get_exception(
+                    status_code=response.status_code, content=response.json()
+                )
+        # response = await self._client.get(
+        #     self._url + LIST_CHECKS_PATH, params={"ids": ids} if ids is not None else {}
+        # )
+        # # TODO: stream this instead of accumulating everything first
+        # if response.is_success:
+        #     for check in TypeAdapter(list[Check]).validate_python(response.json()):
+        #         yield check
+        # else:
+        #     raise get_exception(
+        #         status_code=response.status_code, content=response.json()
+        #     )
+
+
+# class AggregationBackend(CheckBackend):
+#     def __init__(self: Self, backends: list[CheckBackend]) -> None:
+#         self._backends = backends
+
+#     async def list_check_templates(
+#         self: Self,
+#         ids: list[CheckTemplateId] | None = None,
+#     ) -> AsyncIterable[CheckTemplate]:
+#         return chain(
+#             (await backend.list_check_templates(ids)) for backend in self._backends
+#         )

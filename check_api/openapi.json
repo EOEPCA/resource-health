@@ -5,6 +5,22 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/dummy": {
+      "get": {
+        "summary": "Get Dummy",
+        "operationId": "get_dummy_dummy_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/check_templates/": {
       "get": {
         "summary": "List Check Templates",
@@ -37,13 +53,7 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CheckTemplate"
-                  },
-                  "title": "Response List Check Templates Check Templates  Get"
-                }
+                "schema": {}
               }
             }
           },
@@ -128,13 +138,7 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Check"
-                  },
-                  "title": "Response List Checks Checks  Get"
-                }
+                "schema": {}
               }
             }
           },
@@ -314,39 +318,6 @@
           "outcome_filter"
         ],
         "title": "Check"
-      },
-      "CheckTemplate": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "metadata": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/Json-Output"
-            },
-            "type": "object",
-            "title": "Metadata"
-          },
-          "arguments": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "object"
-              }
-            ],
-            "title": "Arguments"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "metadata",
-          "arguments"
-        ],
-        "title": "CheckTemplate"
       },
       "HTTPValidationError": {
         "properties": {

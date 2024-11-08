@@ -1,5 +1,21 @@
 # Check API
 
+## Response streaming experiment
+
+Adds `/dummy` path which streams an array of jsons. Also some other WIP changes.
+
+Run the REST API
+
+```bash
+uv run fastapi dev main.py
+```
+
+Then run a script which receives and prints the streamed message
+
+```bash
+uv run dummy.py
+```
+
 ## Setup
 
 1. [Install uv](https://docs.astral.sh/uv/getting-started/installation/)
