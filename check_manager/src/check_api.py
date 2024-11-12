@@ -93,6 +93,13 @@ async def list_checks(
     return [check async for check in check_backend.list_checks(auth_obj, ids)]
 
 
-# This needs to be at the bottom so that all methods, error handlers, and such are already defined
-with open("openapi.json", mode="w+") as file:
-    json.dump(app.openapi(), file, indent=2)
+def uvicorn_dev():
+    with open("openapi.json", mode="w+") as file:
+        json.dump(app.openapi(), file, indent=2)
+
+    import uvicorn
+    uvicorn.run("check_api:app", reload=True)
+
+
+if __name__ == "__main__":
+    uvicorn_dev()
