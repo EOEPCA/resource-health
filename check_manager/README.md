@@ -1,4 +1,4 @@
-# Check API
+# Check manager
 
 ## Setup
 

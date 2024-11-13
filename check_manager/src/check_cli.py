@@ -18,8 +18,8 @@ __version__: str = "0.0.1"
 
 check_backend: CheckBackend = K8sBackend()
 
-app = Typer()
-config_app = Typer()
+app = Typer(no_args_is_help=True)
+config_app = Typer(no_args_is_help=True)
 app.add_typer(config_app, name="config")
 
 
@@ -32,13 +32,21 @@ def version_callback(value: bool):
 @app.callback()
 def common(
     ctx: Context,
-    version: bool = Option(None, "--version", "-v", callback=version_callback),
+    version: bool = Option(None, "--version", "-v", help="Print version information.", callback=version_callback),
 ):
+    """
+    Command line tool for managing and deploying resource-health checks.
+
+    Find more information at https://github.com/EOEPCA/resource-health/tree/main
+    """
     pass
 
 
 @config_app.callback()
 def config_callback():
+    """
+    Manage your configuration.
+    """
     if not Path(".check").is_dir() and not Path(".check/config.json").is_file():
         print("Current directory not initialized.")
         raise Exit()
@@ -54,6 +62,9 @@ def make_default_config() -> dict:
 
 @app.command("init")
 def init_config() -> None:
+    """
+    Create a local configuration in this directory.
+    """
     config_dir: Path = Path(".check")
     config_file: Path = config_dir / "config.json"
 
@@ -68,6 +79,9 @@ def init_config() -> None:
 
 @config_app.command("reset")
 def reset_config() -> None:
+    """
+    Reset the current configuration to the default.
+    """
     config_file: Path = Path(".check/config.json")
     with open(config_file, "w") as c:
         json.dump(make_default_config(), c)
@@ -75,6 +89,9 @@ def reset_config() -> None:
 
 @config_app.command("purge")
 def purge_config() -> None:
+    """
+    Remove configuration from the current directory.
+    """
     from shutil import rmtree
     rmtree(".check")
 
@@ -84,6 +101,9 @@ def set_config_value(
     user_name: Annotated[Optional[str], Option()] = None,
     backend: Annotated[Optional[str], Option()] = None,
 ) -> None:
+    """
+    Set chosen values in your configuration.
+    """
     config_file: Path = Path(".check/config.json")
     config_dict: dict = {}
     with open(config_file, "r") as c:
@@ -103,6 +123,9 @@ def get_config_value(
     user_name: Annotated[bool, Option("--user-name")] = False,
     backend: Annotated[bool, Option("--backend")] = False,
 ) -> None:
+    """
+    Display chosen values from your configuration.
+    """
     config_file: Path = Path(".check/config.json")
     with open(config_file, "r") as c:
         config_dict = json.load(c)
@@ -120,6 +143,9 @@ async def print_checks(auth_obj: AuthenticationObject) -> None:
 
 @app.command("list")
 def ls(auth_obj: Annotated[str, Option()] = "default_user"):
+    """
+    List currently deployed health checks.
+    """
     asyncio.run(print_checks(AuthenticationObject(auth_obj)))
 
 
@@ -141,7 +167,9 @@ def create(
     auth_obj: Annotated[str, Option(default_factory=get_user_name)],
     schedule: Annotated[str, Option()],
 ):
-    # print("Create new check:")
+    """
+    Create and deploy a new health check.
+    """
     check: Check = asyncio.run(
         check_backend.new_check(
             auth_obj=AuthenticationObject(auth_obj),
@@ -158,6 +186,9 @@ def delete(
     id: str,
     auth_obj: Annotated[str, Option(default_factory=get_user_name)],
 ):
+    """
+    Delete a deployed health check.
+    """
     asyncio.run(
         check_backend.remove_check(
             auth_obj=AuthenticationObject(auth_obj),
