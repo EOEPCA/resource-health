@@ -93,11 +93,12 @@ async def list_checks(
     return [check async for check in check_backend.list_checks(auth_obj, ids)]
 
 
-def uvicorn_dev():
+def uvicorn_dev() -> None:
     with open("openapi.json", mode="w+") as file:
         json.dump(app.openapi(), file, indent=2)
 
     import uvicorn
+
     uvicorn.run("check_api:app", reload=True)
 
 

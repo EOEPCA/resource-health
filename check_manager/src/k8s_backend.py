@@ -1,9 +1,11 @@
 from collections import defaultdict
+from jsonschema import validate
 from kubernetes_asyncio import client, config
 from kubernetes_asyncio.client.api_client import ApiClient
 from kubernetes_asyncio.client.models.v1_container import V1Container
 from kubernetes_asyncio.client.models.v1_cron_job import V1CronJob
 from kubernetes_asyncio.client.models.v1_cron_job_spec import V1CronJobSpec
+from kubernetes_asyncio.client.models.v1_env_var import V1EnvVar
 from kubernetes_asyncio.client.models.v1_job_spec import V1JobSpec
 from kubernetes_asyncio.client.models.v1_pod_spec import V1PodSpec
 from kubernetes_asyncio.client.models.v1_job_template_spec import V1JobTemplateSpec
@@ -31,7 +33,7 @@ NAMESPACE: str = "default"
 logger = logging.getLogger("HEALTH_CHECK")
 
 
-def make_cronjob(name: str, schedule: str) -> V1CronJob:
+def make_cronjob(name: str, script: str, schedule: str) -> V1CronJob:
     return V1CronJob(
         api_version="batch/v1",
         kind="CronJob",
@@ -44,13 +46,14 @@ def make_cronjob(name: str, schedule: str) -> V1CronJob:
                         spec=V1PodSpec(
                             containers=[
                                 V1Container(
-                                    name=f"{name}-container",
-                                    image="busybox:1.28",
+                                    name="healthcheck",
+                                    image="victorlinrothsensmetry/healthcheck:v0.0.1",
                                     image_pull_policy="IfNotPresent",
-                                    command=[
-                                        "/bin/sh",
-                                        "-c",
-                                        "date; echo CronJob Container",
+                                    env=[
+                                        V1EnvVar(
+                                            name="RESOURCE_HEALTH_RUNNER_SCRIPT",
+                                            value=script,
+                                        ),
                                     ],
                                 ),
                             ],
@@ -71,18 +74,23 @@ class K8sBackend(CheckBackend):
         ] = defaultdict(dict)
         check_templates = [
             CheckTemplate(
-                id=CheckTemplateId("check_template1"),
+                id=CheckTemplateId("default_k8s_template"),
                 metadata={
-                    "label": "Dummy check template",
-                    "description": "Dummy check template description",
+                    "label": "Default Kubernetes template",
+                    "description": "Default template for checks in the Kubernetes backend.",
                 },
                 arguments={
                     "$schema": "https://json-schema.org/draft/2020-12/schema",
-                    "title": "Bla",
-                    "description": "Bla bla",
-                    # TODO: continue this
-                    # "type": "object",
-                    # "properties": "",
+                    "type": "object",
+                    "properties": {
+                        "script": {
+                            "type": "string",
+                        },
+                        "requirements": {
+                            "type": "string",
+                        },
+                    },
+                    "required": ["script"],
                 },
             ),
         ]
@@ -93,6 +101,11 @@ class K8sBackend(CheckBackend):
     async def aclose(self: Self) -> None:
         pass
 
+    def _get_check_template(self: Self, template_id: CheckTemplateId) -> CheckTemplate:
+        if template_id not in self._check_template_id_to_template:
+            raise KeyError(f"Template id {template_id} not found")
+        return self._check_template_id_to_template[template_id]
+
     def _make_check(self: Self, cronjob: V1CronJob) -> Check:
         return Check(
             id=CheckId(cronjob.metadata.name),
@@ -101,12 +114,16 @@ class K8sBackend(CheckBackend):
             outcome_filter={},
         )
 
-
     async def list_check_templates(
         self: Self,
         ids: list[CheckTemplateId] | None = None,
     ) -> AsyncIterable[CheckTemplate]:
-        yield CheckTemplate()
+        if ids is None:
+            for template in self._check_template_id_to_template.values():
+                yield template
+        else:
+            for id in ids:
+                yield self._get_check_template(id)
 
     async def new_check(
         self: Self,
@@ -115,7 +132,8 @@ class K8sBackend(CheckBackend):
         template_args: Json,
         schedule: CronExpression,
     ) -> Check:
-        # check = Check()
+        check_template = self._get_check_template(template_id)
+        validate(template_args, check_template.arguments)
         check_id = CheckId(str(uuid.uuid4()))
         await config.load_kube_config()
         async with ApiClient() as api_client:
@@ -123,7 +141,11 @@ class K8sBackend(CheckBackend):
             try:
                 api_response = await api_instance.create_namespaced_cron_job(
                     namespace=NAMESPACE,
-                    body=make_cronjob(check_id, schedule),
+                    body=make_cronjob(
+                        check_id,
+                        template_args["script"],
+                        schedule,
+                    ),
                 )
                 logger.info(f"Succesfully created new cron job: {api_response}")
             except ApiException as e:

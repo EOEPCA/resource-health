@@ -1,13 +1,17 @@
 import asyncio
+from base64 import b64encode
 import json
 from k8s_backend import K8sBackend
 from lib import (
+    AggregationBackend,
     AuthenticationObject,
     Check,
     CheckId,
     CheckBackend,
     CheckTemplateId,
     CronExpression,
+    MockBackend,
+    RestBackend,
 )
 from pathlib import Path
 from typer import Context, Exit, Option, Typer
@@ -16,11 +20,13 @@ from typing_extensions import Annotated
 
 __version__: str = "0.0.1"
 
-check_backend: CheckBackend = K8sBackend()
+# check_backend: CheckBackend = K8sBackend()
 
 app = Typer(no_args_is_help=True)
 config_app = Typer(no_args_is_help=True)
 app.add_typer(config_app, name="config")
+list_app = Typer(no_args_is_help=True)
+app.add_typer(list_app, name="list")
 
 
 def version_callback(value: bool):
@@ -32,7 +38,13 @@ def version_callback(value: bool):
 @app.callback()
 def common(
     ctx: Context,
-    version: bool = Option(None, "--version", "-v", help="Print version information.", callback=version_callback),
+    version: bool = Option(
+        None,
+        "--version",
+        "-v",
+        help="Print version information.",
+        callback=version_callback,
+    ),
 ):
     """
     Command line tool for managing and deploying resource-health checks.
@@ -52,12 +64,32 @@ def config_callback():
         raise Exit()
 
 
+@list_app.callback()
+def list_callback():
+    """
+    List resources (templates or checks)
+    """
+    pass
+
+
 def make_default_config() -> dict:
     return {
         "version": __version__,
         "user": None,
-        "backend": None,
+        "backends": [],
     }
+
+
+def load_config() -> Optional[dict]:
+    config_dir: Path = Path(".check")
+    config_file: Path = config_dir / "config.json"
+
+    config_dict: Optional[dict] = None
+    if config_dir.is_dir() and config_file.is_file():
+        c = open(config_file, "r")
+        config_dict = json.load(c)
+
+    return config_dict
 
 
 @app.command("init")
@@ -93,6 +125,7 @@ def purge_config() -> None:
     Remove configuration from the current directory.
     """
     from shutil import rmtree
+
     rmtree(".check")
 
 
@@ -113,7 +146,8 @@ def set_config_value(
             config_dict["user"] = user_name
             print(f"User name: {user_name}")
         if backend is not None:
-            config_dict["backend"] = backend
+            if backend not in config_dict["backends"]:
+                config_dict["backends"].append(backend)
             print(f"Backend: {backend}")
         json.dump(config_dict, c)
 
@@ -121,28 +155,73 @@ def set_config_value(
 @config_app.command("get")
 def get_config_value(
     user_name: Annotated[bool, Option("--user-name")] = False,
-    backend: Annotated[bool, Option("--backend")] = False,
+    backends: Annotated[bool, Option("--backends")] = False,
 ) -> None:
     """
-    Display chosen values from your configuration.
+    Print chosen values from your configuration.
     """
     config_file: Path = Path(".check/config.json")
     with open(config_file, "r") as c:
         config_dict = json.load(c)
         if user_name:
             print(f"User name: {config_dict['user']}")
-        if backend:
-            print(f"Backend: {config_dict['backend']}")
+        if backends:
+            print(f"Backends: {config_dict['backends']}")
+
+
+def load_backend() -> CheckBackend | AggregationBackend:
+    backends_list: list[str] = []
+    conf = load_config()
+    if conf is not None:
+        backends_list = conf.get("backends", [])
+
+    backends: list[CheckBackend] = []
+
+    if "k8sbackend" in backends_list:
+        backends.append(K8sBackend())
+    if "restbackend" in backends_list:
+        backends.append(RestBackend("dummy_url"))
+    if "mockbackend" in backends_list:
+        backends.append(MockBackend())
+
+    if len(backends) == 0:
+        print("Backends must be configured before using this command.")
+        raise Exit()
+
+    backend: CheckBackend | AggregationBackend
+    if len(backends) > 1:
+        backend = AggregationBackend(backends)
+    else:
+        backend = backends[0]
+
+    return backend
+
+
+async def print_templates() -> None:
+    check_backend = load_backend()
+    async for template in check_backend.list_check_templates():
+        print(f"- Template id: {template.id}")
+        print(f"  Label: {template.metadata['label']}")
+        print(f"  Description: {template.metadata['description']}")
 
 
 async def print_checks(auth_obj: AuthenticationObject) -> None:
+    check_backend = load_backend()
     async for check in check_backend.list_checks(auth_obj):
-        print(f"-Check id: {check.id}")
-        print(f" Schedule: {check.schedule}")
+        print(f"- Check id: {check.id}")
+        print(f"  Schedule: {check.schedule}")
 
 
-@app.command("list")
-def ls(auth_obj: Annotated[str, Option()] = "default_user"):
+@list_app.command("templates")
+def list_templates():
+    """
+    List available templates.
+    """
+    asyncio.run(print_templates())
+
+
+@list_app.command("checks")
+def list_checks(auth_obj: Annotated[str, Option()] = "default_user"):
     """
     List currently deployed health checks.
     """
@@ -158,23 +237,45 @@ def get_user_name() -> str:
         config_dict = json.load(c)
         user_name = config_dict["user"]
         if user_name is None:
-            print("No preset value for user name in configuration. Give user name with '--user-name'.")
+            print(
+                "No preset value for user name in configuration. Give user name with '--user-name'."
+            )
             raise Exit()
+    return user_name
+
+
+def b64encode_file(file_name: str) -> str:
+    if not Path(file_name).is_file():
+        print(f"Could not find file: {file_name}")
+        raise Exit()
+    with open(file_name, "r") as f:
+        return b64encode(f.read().encode("ascii")).decode("ascii")
 
 
 @app.command()
 def create(
     auth_obj: Annotated[str, Option(default_factory=get_user_name)],
     schedule: Annotated[str, Option()],
+    url: Annotated[Optional[str], Option()] = None,
+    file: Annotated[Optional[str], Option()] = None,
 ):
     """
     Create and deploy a new health check.
     """
+    if url is not None:
+        script = url
+    elif file is not None:
+        script = f"data:text/plain;base64,{b64encode_file(file)}"
+    else:
+        print("Script is required. Use either '--url' or '--file'.")
+        raise Exit()
+
+    check_backend = load_backend()
     check: Check = asyncio.run(
         check_backend.new_check(
             auth_obj=AuthenticationObject(auth_obj),
-            template_id=CheckTemplateId("Null"),
-            template_args=dict(),
+            template_id=CheckTemplateId("default_k8s_template"),
+            template_args={"script": script},
             schedule=CronExpression(schedule),
         )
     )
@@ -189,6 +290,7 @@ def delete(
     """
     Delete a deployed health check.
     """
+    check_backend = load_backend()
     asyncio.run(
         check_backend.remove_check(
             auth_obj=AuthenticationObject(auth_obj),
