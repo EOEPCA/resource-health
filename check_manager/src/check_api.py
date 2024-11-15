@@ -3,6 +3,7 @@ from typing import Annotated, Iterable
 from fastapi import Body, FastAPI, Path, Query, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 
 from lib import (
     LIST_CHECK_TEMPLATES_PATH,
@@ -35,6 +36,14 @@ auth_obj = AuthenticationObject("user1")
 check_backend: CheckBackend = MockBackend(template_id_prefix="remote_")
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.exception_handler(Exception)

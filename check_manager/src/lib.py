@@ -166,6 +166,21 @@ class MockBackend(CheckBackend):
                     # "type": "object",
                     # "properties": "",
                 },
+            ),
+            CheckTemplate(
+                id=CheckTemplateId(template_id_prefix + "check_template2"),
+                metadata={
+                    "label": "One more check template",
+                    "description": "Blady bla",
+                },
+                arguments={
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "title": "Bla",
+                    "description": "Even more bla",
+                    # TODO: continue this
+                    # "type": "object",
+                    # "properties": "",
+                },
             )
         ]
         self._check_template_id_to_template: dict[CheckTemplateId, CheckTemplate] = {
