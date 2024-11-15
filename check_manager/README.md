@@ -22,9 +22,17 @@ for instuctions how to use the CLI.
 Run
 
 ```bash
-uv run check-api-server
+uv run check-api-server-dev
 ```
 
 Upon executing the above, the openapi spec is written to `openapi.json`, and the api is launched.
 
-Then go to http://127.0.0.1:8000/docs to see the API docs and experiment with the API
+Then go to http://127.0.0.1:8000/docs to see the API docs and experiment with the API. This instance runs with the `MockBackend` and reloads any changes you make to `src/check_api.py`.
+
+If you have running Kubernetes cluster you can run
+
+```bash
+uv run check-api-server-k8s
+```
+
+which uses the `K8sBackend` and does not reload unless you restart the server.

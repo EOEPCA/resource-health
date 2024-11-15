@@ -102,5 +102,16 @@ def uvicorn_dev() -> None:
     uvicorn.run("check_api:app", reload=True)
 
 
+def uvicorn_k8s() -> None:
+    from k8s_backend import K8sBackend
+
+    global check_backend
+    check_backend = K8sBackend()
+
+    import uvicorn
+
+    uvicorn.run(app)
+
+
 if __name__ == "__main__":
     uvicorn_dev()

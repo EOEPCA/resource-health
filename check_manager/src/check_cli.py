@@ -180,9 +180,9 @@ def load_backend() -> CheckBackend | AggregationBackend:
     if "k8sbackend" in backends_list:
         backends.append(K8sBackend())
     if "restbackend" in backends_list:
-        backends.append(RestBackend("dummy_url"))
+        backends.append(RestBackend("http://127.0.0.1:8000"))
     if "mockbackend" in backends_list:
-        backends.append(MockBackend())
+        backends.append(MockBackend("local_"))
 
     if len(backends) == 0:
         print("Backends must be configured before using this command.")
