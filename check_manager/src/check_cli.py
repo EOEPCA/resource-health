@@ -1,5 +1,6 @@
 import asyncio
 from base64 import b64encode
+from enum import Enum
 import json
 from k8s_backend import K8sBackend
 from lib import (
@@ -20,7 +21,12 @@ from typing_extensions import Annotated
 
 __version__: str = "0.0.1"
 
-# check_backend: CheckBackend = K8sBackend()
+
+class Backend(str, Enum):
+    rest = "REST"
+    k8s = "K8s"
+    mock = "Mock"
+
 
 app = Typer(no_args_is_help=True)
 config_app = Typer(no_args_is_help=True)
@@ -132,7 +138,7 @@ def purge_config() -> None:
 @config_app.command("set")
 def set_config_value(
     user_name: Annotated[Optional[str], Option()] = None,
-    backend: Annotated[Optional[str], Option()] = None,
+    backend: Annotated[Optional[Backend], Option(case_sensitive=False)] = None,
 ) -> None:
     """
     Set chosen values in your configuration.
@@ -147,8 +153,8 @@ def set_config_value(
             print(f"User name: {user_name}")
         if backend is not None:
             if backend not in config_dict["backends"]:
-                config_dict["backends"].append(backend)
-            print(f"Backend: {backend}")
+                config_dict["backends"].append(backend.value)
+            print(f"Backend: {str(backend.value)}")
         json.dump(config_dict, c)
 
 
@@ -177,11 +183,11 @@ def load_backend() -> CheckBackend | AggregationBackend:
 
     backends: list[CheckBackend] = []
 
-    if "k8sbackend" in backends_list:
+    if Backend.k8s.value in backends_list:
         backends.append(K8sBackend())
-    if "restbackend" in backends_list:
+    if Backend.rest.value in backends_list:
         backends.append(RestBackend("http://127.0.0.1:8000"))
-    if "mockbackend" in backends_list:
+    if Backend.mock.value in backends_list:
         backends.append(MockBackend("local_"))
 
     if len(backends) == 0:
@@ -256,7 +262,7 @@ def b64encode_file(file_name: str) -> str:
 def create_check(
     auth_obj: Annotated[str, Option(default_factory=get_user_name)],
     schedule: Annotated[str, Option()],
-    template_id: Annotated[str, Option()] = CheckTemplateId("default_k8s_template"),
+    template_id: Annotated[str, Option()] = "default_k8s_template",
     url: Annotated[Optional[str], Option()] = None,
     file: Annotated[Optional[str], Option()] = None,
     url_req: Annotated[Optional[str], Option()] = None,
@@ -291,7 +297,7 @@ def create_check(
     check: Check = asyncio.run(
         check_backend.new_check(
             auth_obj=AuthenticationObject(auth_obj),
-            template_id=template_id,
+            template_id=CheckTemplateId(template_id),
             template_args=template_args,
             schedule=CronExpression(schedule),
         )

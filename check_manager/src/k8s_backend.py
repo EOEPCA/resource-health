@@ -23,7 +23,7 @@ from lib import (
     Json,
 )
 import logging
-from typing import AsyncIterable, Self
+from typing import AsyncIterable, Optional, Self
 import uuid
 # import yaml
 
@@ -33,8 +33,13 @@ NAMESPACE: str = "default"
 logger = logging.getLogger("HEALTH_CHECK")
 
 
-def make_cronjob(name: str, script: str, schedule: str) -> V1CronJob:
-    return V1CronJob(
+def make_cronjob(
+    name: str,
+    schedule: str,
+    script: str,
+    requirements: Optional[str] = None,
+) -> V1CronJob:
+    cronjob = V1CronJob(
         api_version="batch/v1",
         kind="CronJob",
         metadata=V1ObjectMeta(name=name),
@@ -64,6 +69,14 @@ def make_cronjob(name: str, script: str, schedule: str) -> V1CronJob:
             ),
         ),
     )
+    if requirements:
+        cronjob.spec.job_template.spec.template.spec.containers[0].env.append(
+            V1EnvVar(
+                name="RESOURCE_HEALTH_RUNNER_REQUIREMENTS",
+                value=requirements,
+            )
+        )
+    return cronjob
 
 
 class K8sBackend(CheckBackend):
@@ -142,9 +155,10 @@ class K8sBackend(CheckBackend):
                 api_response = await api_instance.create_namespaced_cron_job(
                     namespace=NAMESPACE,
                     body=make_cronjob(
-                        check_id,
-                        template_args["script"],
-                        schedule,
+                        name=check_id,
+                        schedule=schedule,
+                        script=template_args["script"],
+                        requirements=template_args.get("requirements", None),
                     ),
                 )
                 logger.info(f"Succesfully created new cron job: {api_response}")
