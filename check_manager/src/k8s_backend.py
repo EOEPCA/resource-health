@@ -207,33 +207,3 @@ async def list_checks(check_backend: CheckBackend) -> None:
     async for check in check_backend.list_checks(AuthenticationObject("dummy")):
         print(f"-Check id: {check.id}")
         print(f" Schedule: {check.schedule}")
-
-
-# For testing the backend functions
-if __name__ == "__main__":
-    # logging.basicConfig(level=logging.INFO)
-    logging.basicConfig(level=logging.WARNING)
-
-    check_backend: CheckBackend = K8sBackend()
-
-    auth_obj = AuthenticationObject("dummy")
-
-    import asyncio
-
-    check: Check = asyncio.run(
-        check_backend.new_check(
-            auth_obj=auth_obj,
-            template_id=CheckTemplateId("Null"),
-            template_args=dict(),
-            schedule=CronExpression("1 * * * *"),
-        )
-    )
-
-    asyncio.run(list_checks(check_backend))
-
-    asyncio.run(
-        check_backend.remove_check(
-            auth_obj=auth_obj,
-            check_id=check.id,
-        )
-    )

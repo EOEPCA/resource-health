@@ -252,38 +252,55 @@ def b64encode_file(file_name: str) -> str:
         return b64encode(f.read().encode("ascii")).decode("ascii")
 
 
-@app.command()
-def create(
+@app.command("create")
+def create_check(
     auth_obj: Annotated[str, Option(default_factory=get_user_name)],
     schedule: Annotated[str, Option()],
+    template_id: Annotated[str, Option()] = CheckTemplateId("default_k8s_template"),
     url: Annotated[Optional[str], Option()] = None,
     file: Annotated[Optional[str], Option()] = None,
+    url_req: Annotated[Optional[str], Option()] = None,
+    file_req: Annotated[Optional[str], Option()] = None,
 ):
     """
     Create and deploy a new health check.
     """
+    template_args: dict = {"script": None}
+    if url is not None and file is not None:
+        print("Use one of '--url' or '--file'.")
+        raise Exit()
     if url is not None:
-        script = url
+        template_args["script"] = url
     elif file is not None:
-        script = f"data:text/plain;base64,{b64encode_file(file)}"
+        template_args["script"] = f"data:text/plain;base64,{b64encode_file(file)}"
     else:
         print("Script is required. Use either '--url' or '--file'.")
         raise Exit()
+
+    if url_req is not None and file_req is not None:
+        print("Use one of '--url_req' or '--file_req'.")
+        raise Exit()
+    if url_req is not None:
+        template_args.update({"requirements": "url_req"})
+    elif file_req is not None:
+        template_args.update(
+            {"requirements": f"data:text/plain;base64,{b64encode_file(file_req)}"}
+        )
 
     check_backend = load_backend()
     check: Check = asyncio.run(
         check_backend.new_check(
             auth_obj=AuthenticationObject(auth_obj),
-            template_id=CheckTemplateId("default_k8s_template"),
-            template_args={"script": script},
+            template_id=template_id,
+            template_args=template_args,
             schedule=CronExpression(schedule),
         )
     )
     print(check)
 
 
-@app.command()
-def delete(
+@app.command("delete")
+def delete_check(
     id: str,
     auth_obj: Annotated[str, Option(default_factory=get_user_name)],
 ):
