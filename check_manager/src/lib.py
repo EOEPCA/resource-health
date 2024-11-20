@@ -159,12 +159,17 @@ class MockBackend(CheckBackend):
                     "description": "Dummy check template description",
                 },
                 arguments={
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
-                    "title": "Bla",
-                    "description": "Bla bla",
-                    # TODO: continue this
-                    # "type": "object",
-                    # "properties": "",
+                    "$schema": "http://json-schema.org/draft-07/schema",
+                    "type": "object",
+                    "properties": {
+                        "script": {
+                            "type": "string",
+                        },
+                        "requirements": {
+                            "type": "string",
+                        },
+                    },
+                    "required": ["script"],
                 },
             ),
             CheckTemplate(
