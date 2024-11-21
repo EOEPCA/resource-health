@@ -1,3 +1,4 @@
+
 from enum import Enum
 import json
 from pathlib import Path
@@ -40,8 +41,7 @@ def service_callback():
 def make_default_config() -> dict:
     return {
         "version": __config_version__,
-        "user": None,
-        "backends": [],
+        "authentication object": None,
         "services": [],
     }
 
@@ -68,7 +68,7 @@ def purge_config() -> None:
 
 @config_app.command("set")
 def set_config_value(
-    user_name: Annotated[Optional[str], Option()] = None,
+    auth_obj: Annotated[Optional[str], Option()] = None,
 ) -> None:
     """
     Set chosen values in your configuration.
@@ -78,15 +78,15 @@ def set_config_value(
     with open(config_file, "r") as c:
         config_dict = json.load(c)
     with open(config_file, "w") as c:
-        if user_name is not None:
-            config_dict["user"] = user_name
-            print(f"User name: {user_name}")
+        if auth_obj is not None:
+            config_dict["authentication object"] = auth_obj
+            print(f"Authentication object: {auth_obj}")
         json.dump(config_dict, c)
 
 
 @config_app.command("get")
 def get_config_value(
-    user_name: Annotated[bool, Option("--user-name")] = False,
+    auth_obj: Annotated[bool, Option("--auth-obj")] = False,
 ) -> None:
     """
     Print chosen values from your configuration.
@@ -94,8 +94,8 @@ def get_config_value(
     config_file: Path = Path(".check/config.json")
     with open(config_file, "r") as c:
         config_dict = json.load(c)
-        if user_name:
-            print(f"User name: {config_dict['user']}")
+        if auth_obj:
+            print(f"Authentication object: {config_dict['authentication object']}")
 
 
 def print_service(service: dict, index: int) -> None:
@@ -137,10 +137,10 @@ def remove_service(
     config_dict: dict = {}
     with open(config_file, "r") as c:
         config_dict = json.load(c)
-    service = config_dict["services"][index - 1]
+    service = config_dict["services"][index-1]
     print("Removed service")
     print_service(service, index)
-    del config_dict["services"][index - 1]
+    del config_dict["services"][index-1]
     with open(config_file, "w") as c:
         json.dump(config_dict, c)
 
@@ -154,4 +154,4 @@ def list_services() -> None:
     with open(config_file, "r") as c:
         config_dict = json.load(c)
         for index, service in enumerate(config_dict["services"]):
-            print_service(service, index + 1)
+            print_service(service, index+1)

@@ -98,12 +98,13 @@ def load_backend() -> AggregationBackend:
     services: list[CheckBackend] = []
 
     for service in services_list:
-        if service["name"] == ServiceName.k8s.value:
-            services.append(K8sBackend(service["arg"]))
-        if service["name"] == ServiceName.rest.value:
-            services.append(RestBackend(service["arg"]))
-        if service["name"] == ServiceName.mock.value:
-            services.append(MockBackend(service["arg"]))
+        match service["name"]:
+            case ServiceName.k8s.value:
+                services.append(K8sBackend(service["arg"]))
+            case ServiceName.rest.value:
+                services.append(RestBackend(service["arg"]))
+            case ServiceName.mock.value:
+                services.append(MockBackend(service["arg"]))
 
     if len(services) == 0:
         print("Make sure your services are correctly configured.")
@@ -138,27 +139,27 @@ def list_templates():
 
 
 @list_app.command("checks")
-def list_checks(auth_obj: Annotated[str, Option()] = "default_user"):
+def list_checks(auth_obj: Annotated[str, Option()] = "default_obj"):
     """
     List currently deployed health checks.
     """
     asyncio.run(print_checks(AuthenticationObject(auth_obj)))
 
 
-def get_user_name() -> str:
+def get_auth_obj() -> str:
     if not Path(".check").is_dir() and not Path(".check/config.json").is_file():
-        print("No preset configuration. Give user name with '--user-name'.")
+        print("No preset configuration. Give authentication object with '--auth-obj'.")
         raise Exit()
     config_file: Path = Path(".check/config.json")
     with open(config_file, "r") as c:
         config_dict = json.load(c)
-        user_name = config_dict["user"]
-        if user_name is None:
+        auth_obj = config_dict["authentication object"]
+        if auth_obj is None:
             print(
-                "No preset value for user name in configuration. Give user name with '--user-name'."
+                "No preset value for authentication object in configuration. Set calue with '--auth-obj'."
             )
             raise Exit()
-    return user_name
+    return auth_obj
 
 
 def if_only_one_service():
@@ -179,7 +180,7 @@ def b64encode_file(file_name: str) -> str:
 
 @app.command("create")
 def create_check(
-    auth_obj: Annotated[str, Option(default_factory=get_user_name)],
+    auth_obj: Annotated[str, Option(default_factory=get_auth_obj)],
     service_nr: Annotated[int, Option(default_factory=if_only_one_service)],
     template_id: Annotated[str, Option()],
     schedule: Annotated[str, Option()],
@@ -227,13 +228,15 @@ def create_check(
             schedule=CronExpression(schedule),
         )
     )
-    print(check)
+    print("Created health check")
+    print(f"- Check id: {check.id}")
+    print(f"  Schedule: {check.schedule}")
 
 
 @app.command("delete")
 def delete_check(
     id: str,
-    auth_obj: Annotated[str, Option(default_factory=get_user_name)],
+    auth_obj: Annotated[str, Option(default_factory=get_auth_obj)],
 ):
     """
     Delete a deployed health check.

@@ -269,7 +269,6 @@ class AggregationBackend(CheckBackend):
     def _process_results[T](
         results: list[T | BaseException], non_unique_id_message: str
     ) -> T:
-        print("Processing results...")
         successes = [
             result for result in results if not isinstance(result, BaseException)
         ]
