@@ -155,8 +155,31 @@ class MockBackend(CheckBackend):
             CheckTemplate(
                 id=CheckTemplateId(template_id_prefix + "check_template1"),
                 metadata={
-                    "label": "Dummy check template",
-                    "description": "Dummy check template description",
+                    "label": "Default Kubernetes template",
+                    "description": "Default template for checks in the Kubernetes backend.",
+                },
+                arguments={
+                    "$schema": "http://json-schema.org/draft-07/schema",
+                    "type": "object",
+                    "properties": {
+                        "label": {
+                            "type": "string"
+                        },
+                        "script": {
+                            "type": "string",
+                        },
+                        "requirements": {
+                            "type": "string",
+                        },
+                    },
+                    "required": ["label", "script"],
+                },
+            ),
+            CheckTemplate(
+                id=CheckTemplateId(template_id_prefix + "check_template2"),
+                metadata={
+                    "label": "One more check template",
+                    "description": "Blady bla",
                 },
                 arguments={
                     "$schema": "http://json-schema.org/draft-07/schema",
@@ -168,23 +191,12 @@ class MockBackend(CheckBackend):
                         "requirements": {
                             "type": "string",
                         },
+                        "file": {
+                            "type": "string",
+                            "format": "data-url"
+                        }
                     },
                     "required": ["script"],
-                },
-            ),
-            CheckTemplate(
-                id=CheckTemplateId(template_id_prefix + "check_template2"),
-                metadata={
-                    "label": "One more check template",
-                    "description": "Blady bla",
-                },
-                arguments={
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
-                    "title": "Bla",
-                    "description": "Even more bla",
-                    # TODO: continue this
-                    # "type": "object",
-                    # "properties": "",
                 },
             )
         ]

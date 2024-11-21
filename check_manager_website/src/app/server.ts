@@ -11,6 +11,14 @@ export type CheckTemplateMetadata = object & {
   description?: string
 }
 
+export type CheckMetadata = object & {
+  template_id?: CheckTemplateId
+  template_args?: object & {
+    label?: string
+    description?: string
+  }
+}
+
 export type CheckTemplate = {
   id: CheckTemplateId
   metadata: CheckTemplateMetadata
@@ -19,9 +27,9 @@ export type CheckTemplate = {
 
 export type Check = {
   id: CheckId
-  metadata: object
+  metadata: CheckMetadata
   schedule: CronExpression
-  outcomeFilter: object
+  outcome_filter: object
 }
 
 const client = axios.create({
@@ -45,11 +53,29 @@ export async function NewCheck(templateId: CheckTemplateId, templateArgs: object
   return response.data
 }
 
-export async function UpdateCheck(checkId: CheckId, templateId?: CheckTemplateId, templateArgs?: object, schedule?: CronExpression): Promise<Check> {
+export async function UpdateCheck(oldCheck: Check, templateId?: CheckTemplateId, templateArgs?: object, schedule?: CronExpression): Promise<Check> {
   await connection()
-  const response = await client.post(`/checks/${checkId}`, {template_id: templateId, template_args: templateArgs, schedule: schedule})
+  if (templateId === oldCheck.metadata.template_id) {
+    templateId = undefined
+  }
+
+  if (templateArgs === oldCheck.metadata.template_args) {
+    templateArgs = undefined
+  }
+  
+  if (schedule === oldCheck.schedule) {
+    schedule = undefined
+  }
+  const response = await client.patch(`/checks/${oldCheck.id}`, {template_id: templateId, template_args: templateArgs, schedule: schedule})
   return response.data
 }
+
+
+// export async function UpdateCheck(checkId: CheckId, templateId?: CheckTemplateId, templateArgs?: object, schedule?: CronExpression): Promise<Check> {
+//   await connection()
+//   const response = await client.patch(`/checks/${checkId}`, {template_id: templateId, template_args: templateArgs, schedule: schedule})
+//   return response.data
+// }
 
 export async function RemoveCheck(checkId: CheckId): Promise<void> {
   await connection()
