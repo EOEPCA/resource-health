@@ -2,8 +2,7 @@ import asyncio
 from base64 import b64encode
 import importlib
 import json
-from k8s_backend import K8sBackend
-from lib import (
+from check_backends import (
     AggregationBackend,
     AuthenticationObject,
     Check,
@@ -12,6 +11,7 @@ from lib import (
     CheckTemplateId,
     CronExpression,
     MockBackend,
+    K8sBackend,
     RestBackend,
 )
 from pathlib import Path

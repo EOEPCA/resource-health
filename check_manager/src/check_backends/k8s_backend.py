@@ -12,7 +12,7 @@ from kubernetes_asyncio.client.models.v1_job_template_spec import V1JobTemplateS
 from kubernetes_asyncio.client.models.v1_pod_template_spec import V1PodTemplateSpec
 from kubernetes_asyncio.client.models.v1_object_meta import V1ObjectMeta
 from kubernetes_asyncio.client.rest import ApiException
-from lib import (
+from check_backends.check_backend import (
     AuthenticationObject,
     Check,
     CheckBackend,

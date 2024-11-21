@@ -4,7 +4,7 @@ from fastapi import Body, FastAPI, Path, Query, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from lib import (
+from check_backends import (
     LIST_CHECK_TEMPLATES_PATH,
     LIST_CHECKS_PATH,
     NEW_CHECK_PATH,
