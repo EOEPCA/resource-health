@@ -80,7 +80,8 @@ def make_cronjob(
 
 
 class K8sBackend(CheckBackend):
-    def __init__(self: Self) -> None:
+    def __init__(self: Self, service_name: str) -> None:
+        self._service_name = service_name
         self._check_template_id_to_template: dict[CheckTemplateId, CheckTemplate] = {}
         self._auth_to_id_to_check: defaultdict[
             AuthenticationObject, dict[CheckId, Check]

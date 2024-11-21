@@ -384,10 +384,11 @@ class AggregationBackend(CheckBackend):
     def _process_results[T](
         results: list[T | BaseException], non_unique_id_message: str
     ) -> T:
+        print("Processing results...")
         successes = [
             result for result in results if not isinstance(result, BaseException)
         ]
-        # Interesting failures.
+        # Interesting failures. (i.e. all exceptions that are not MainIdNotFound)
         failures = [
             result
             for result in results
@@ -397,6 +398,7 @@ class AggregationBackend(CheckBackend):
                 or result.code != ErrorCode.MainIdNotFound
             )
         ]
+
         match (successes, failures):
             case ([success], _):
                 return success
@@ -434,16 +436,20 @@ class AggregationBackend(CheckBackend):
         template_args: Json,
         schedule: CronExpression,
     ) -> Check:
-        results = await asyncio.gather(
-            *(
-                backend.new_check(auth_obj, template_id, template_args, schedule)
-                for backend in self._backends
-            ),
-            return_exceptions=True,
+        index = template_args.pop("service_index", 0)
+        return await self._backends[index].new_check(
+            auth_obj, template_id, template_args, schedule
         )
-        return AggregationBackend._process_results(
-            results, f"Check template id {template_id} exists in multiple backends"
-        )
+        # results = await asyncio.gather(
+        #     *(
+        #         backend.new_check(auth_obj, template_id, template_args, schedule)
+        #         for backend in self._backends
+        #     ),
+        #     return_exceptions=True,
+        # )
+        # return AggregationBackend._process_results(
+        #     results, f"Check template id {template_id} exists in multiple backends"
+        # )
 
     @override
     async def update_check(

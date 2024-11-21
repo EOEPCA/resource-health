@@ -1,6 +1,6 @@
 import asyncio
 from base64 import b64encode
-from enum import Enum
+import importlib
 import json
 from k8s_backend import K8sBackend
 from lib import (
@@ -15,21 +15,14 @@ from lib import (
     RestBackend,
 )
 from pathlib import Path
-from typer import Context, Exit, Option, Typer
+from typer import Argument, Context, Exit, Option, Typer
 from typing import Optional
 from typing_extensions import Annotated
 
-__version__: str = "0.0.1"
-
-
-class Backend(str, Enum):
-    rest = "REST"
-    k8s = "K8s"
-    mock = "Mock"
+from check_cli.check_config import config_app, make_default_config, ServiceName
 
 
 app = Typer(no_args_is_help=True)
-config_app = Typer(no_args_is_help=True)
 app.add_typer(config_app, name="config")
 list_app = Typer(no_args_is_help=True)
 app.add_typer(list_app, name="list")
@@ -37,7 +30,7 @@ app.add_typer(list_app, name="list")
 
 def version_callback(value: bool):
     if value:
-        print(f"check version {__version__}")
+        print("check-manager version " + importlib.metadata.version("check-manager"))
         raise Exit()
 
 
@@ -47,7 +40,6 @@ def common(
     version: bool = Option(
         None,
         "--version",
-        "-v",
         help="Print version information.",
         callback=version_callback,
     ),
@@ -60,30 +52,12 @@ def common(
     pass
 
 
-@config_app.callback()
-def config_callback():
-    """
-    Manage your configuration.
-    """
-    if not Path(".check").is_dir() and not Path(".check/config.json").is_file():
-        print("Current directory not initialized.")
-        raise Exit()
-
-
 @list_app.callback()
 def list_callback():
     """
     List resources (templates or checks)
     """
     pass
-
-
-def make_default_config() -> dict:
-    return {
-        "version": __version__,
-        "user": None,
-        "backends": [],
-    }
 
 
 def load_config() -> Optional[dict]:
@@ -115,90 +89,27 @@ def init_config() -> None:
         json.dump(make_default_config(), c)
 
 
-@config_app.command("reset")
-def reset_config() -> None:
-    """
-    Reset the current configuration to the default.
-    """
-    config_file: Path = Path(".check/config.json")
-    with open(config_file, "w") as c:
-        json.dump(make_default_config(), c)
-
-
-@config_app.command("purge")
-def purge_config() -> None:
-    """
-    Remove configuration from the current directory.
-    """
-    from shutil import rmtree
-
-    rmtree(".check")
-
-
-@config_app.command("set")
-def set_config_value(
-    user_name: Annotated[Optional[str], Option()] = None,
-    backend: Annotated[Optional[Backend], Option(case_sensitive=False)] = None,
-) -> None:
-    """
-    Set chosen values in your configuration.
-    """
-    config_file: Path = Path(".check/config.json")
-    config_dict: dict = {}
-    with open(config_file, "r") as c:
-        config_dict = json.load(c)
-    with open(config_file, "w") as c:
-        if user_name is not None:
-            config_dict["user"] = user_name
-            print(f"User name: {user_name}")
-        if backend is not None:
-            if backend not in config_dict["backends"]:
-                config_dict["backends"].append(backend.value)
-            print(f"Backend: {str(backend.value)}")
-        json.dump(config_dict, c)
-
-
-@config_app.command("get")
-def get_config_value(
-    user_name: Annotated[bool, Option("--user-name")] = False,
-    backends: Annotated[bool, Option("--backends")] = False,
-) -> None:
-    """
-    Print chosen values from your configuration.
-    """
-    config_file: Path = Path(".check/config.json")
-    with open(config_file, "r") as c:
-        config_dict = json.load(c)
-        if user_name:
-            print(f"User name: {config_dict['user']}")
-        if backends:
-            print(f"Backends: {config_dict['backends']}")
-
-
-def load_backend() -> CheckBackend | AggregationBackend:
-    backends_list: list[str] = []
+def load_backend() -> AggregationBackend:
+    services_list: list[str] = []
     conf = load_config()
     if conf is not None:
-        backends_list = conf.get("backends", [])
+        services_list = conf.get("services", [])
 
-    backends: list[CheckBackend] = []
+    services: list[CheckBackend] = []
 
-    if Backend.k8s.value in backends_list:
-        backends.append(K8sBackend())
-    if Backend.rest.value in backends_list:
-        backends.append(RestBackend("http://127.0.0.1:8000"))
-    if Backend.mock.value in backends_list:
-        backends.append(MockBackend("local_"))
+    for service in services_list:
+        if service["name"] == ServiceName.k8s.value:
+            services.append(K8sBackend(service["arg"]))
+        if service["name"] == ServiceName.rest.value:
+            services.append(RestBackend(service["arg"]))
+        if service["name"] == ServiceName.mock.value:
+            services.append(MockBackend(service["arg"]))
 
-    if len(backends) == 0:
-        print("Backends must be configured before using this command.")
+    if len(services) == 0:
+        print("Make sure your services are correctly configured.")
         raise Exit()
 
-    backend: CheckBackend | AggregationBackend
-    if len(backends) > 1:
-        backend = AggregationBackend(backends)
-    else:
-        backend = backends[0]
+    backend = AggregationBackend(services)
 
     return backend
 
@@ -250,6 +161,14 @@ def get_user_name() -> str:
     return user_name
 
 
+def if_only_one_service():
+    conf: dict = load_config()
+    if (len(conf["services"]) > 1):
+        print("More than one service configured. Choose which one to use.")
+        raise Exit()
+    return 1
+
+
 def b64encode_file(file_name: str) -> str:
     if not Path(file_name).is_file():
         print(f"Could not find file: {file_name}")
@@ -261,8 +180,9 @@ def b64encode_file(file_name: str) -> str:
 @app.command("create")
 def create_check(
     auth_obj: Annotated[str, Option(default_factory=get_user_name)],
+    service_nr: Annotated[int, Option(default_factory=if_only_one_service)],
+    template_id: Annotated[str, Option()],
     schedule: Annotated[str, Option()],
-    template_id: Annotated[str, Option()] = "default_k8s_template",
     url: Annotated[Optional[str], Option()] = None,
     file: Annotated[Optional[str], Option()] = None,
     url_req: Annotated[Optional[str], Option()] = None,
@@ -293,6 +213,11 @@ def create_check(
             {"requirements": f"data:text/plain;base64,{b64encode_file(file_req)}"}
         )
 
+    # For AggregateBackend. Will be deleted after use.
+    template_args.update(
+        {"service_index": service_nr - 1}
+    )
+
     check_backend = load_backend()
     check: Check = asyncio.run(
         check_backend.new_check(
@@ -321,7 +246,3 @@ def delete_check(
         )
     )
     print(f"Deleted check with id:{id}")
-
-
-if __name__ == "__main__":
-    app()
