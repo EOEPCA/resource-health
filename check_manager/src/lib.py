@@ -167,9 +167,11 @@ class MockBackend(CheckBackend):
                         },
                         "script": {
                             "type": "string",
+                            "format": "data-url"
                         },
                         "requirements": {
                             "type": "string",
+                            "format": "data-url"
                         },
                     },
                     "required": ["label", "script"],
