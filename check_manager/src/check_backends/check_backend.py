@@ -19,44 +19,26 @@ from jsonschema import validate
 from pydantic import BaseModel, TypeAdapter
 from referencing.jsonschema import Schema
 
+from api_interface import (
+    Json,
+)
+from exceptions import (
+    CheckException,
+    CheckInternalError,
+    CheckIdError,
+    CheckIdNonUniqueError,
+)
+
 AuthenticationObject = NewType("AuthenticationObject", str)
 CronExpression = NewType("CronExpression", str)
 CheckTemplateId = NewType("CheckTemplateId", str)
 CheckId = NewType("CheckId", str)
-type Json = dict[str, object]
 
 
-class ErrorCode(Enum):
-    MainIdNotFound = auto()
-    NotFound = auto()
-    NonUniqueId = auto()
-    InternalError = auto()
-
-
-class CustomException(Exception):
-    def __init__(self: Self, code: ErrorCode, message: str) -> None:
-        super().__init__(message)
-        self.code = code
-
-
-ERROR_CODE_KEY: Final[str] = "code"
-ERROR_MESSAGE_KEY: Final[str] = "detail"
-
-
-def get_status_code_and_message(exception: BaseException) -> tuple[int, Json]:
-    if not isinstance(exception, CustomException):
-        exception = CustomException(ErrorCode.InternalError, "Internal server error")
-    error_json: dict[str, object] = {
-        ERROR_CODE_KEY: exception.code.name,
-        ERROR_MESSAGE_KEY: str(exception),
-    }
-    match exception.code:
-        case ErrorCode.MainIdNotFound | ErrorCode.NotFound:
-            return (404, error_json)
-        case ErrorCode.NonUniqueId | ErrorCode.InternalError:
-            return (500, error_json)
-        case unreachable:
-            assert_never(unreachable)
+# class Errors(str, Enum):
+#     CheckInternalError = "Internal error"
+#     CheckIdError = "Check ID error"
+#     CheckIdNonUniqueError = "Non unique ID error"
 
 
 class CheckTemplate(BaseModel):
@@ -96,7 +78,7 @@ class CheckBackend(ABC):
         if False:
             yield
 
-    # Raise CustomException with MainIdNotFound code if template_id doesn't exist.
+    # Raise CheckIdError if template_id doesn't exist.
     # Otherwise don't use that error code
     @abstractmethod
     async def new_check(
@@ -108,7 +90,7 @@ class CheckBackend(ABC):
     ) -> Check:
         pass
 
-    # Raise CustomException with MainIdNotFound code if check_id doesn't exist.
+    # Raise CheckIdError if check_id doesn't exist.
     # Otherwise don't use that error code
     @abstractmethod
     async def update_check(
@@ -121,7 +103,7 @@ class CheckBackend(ABC):
     ) -> Check:
         pass
 
-    # Raise CustomException with MainIdNotFound code if check_id doesn't exist.
+    # Raise CheckIdError if check_id doesn't exist.
     # Otherwise don't use that error code
     @abstractmethod
     async def remove_check(
@@ -142,125 +124,6 @@ class CheckBackend(ABC):
             yield
 
 
-class MockBackend(CheckBackend):
-    def __init__(self: Self, template_id_prefix: str = "") -> None:
-        check_templates = [
-            CheckTemplate(
-                id=CheckTemplateId(template_id_prefix + "check_template1"),
-                metadata={
-                    "label": "Dummy check template",
-                    "description": "Dummy check template description",
-                },
-                arguments={
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
-                    "title": "Bla",
-                    "description": "Bla bla",
-                    # TODO: continue this
-                    # "type": "object",
-                    # "properties": "",
-                },
-            )
-        ]
-        self._check_template_id_to_template: dict[CheckTemplateId, CheckTemplate] = {
-            template.id: template for template in check_templates
-        }
-        self._auth_to_id_to_check: defaultdict[
-            AuthenticationObject, dict[CheckId, Check]
-        ] = defaultdict(dict)
-
-    @override
-    async def aclose(self: Self) -> None:
-        pass
-
-    def _get_check_template(self: Self, template_id: CheckTemplateId) -> CheckTemplate:
-        if template_id not in self._check_template_id_to_template:
-            raise CustomException(
-                ErrorCode.NotFound, f"Template id {template_id} not found"
-            )
-        return self._check_template_id_to_template[template_id]
-
-    def _get_check(
-        self: Self, auth_obj: AuthenticationObject, check_id: CheckId
-    ) -> Check:
-        id_to_check = self._auth_to_id_to_check[auth_obj]
-        if check_id not in id_to_check:
-            raise CustomException(ErrorCode.NotFound, f"Check id {check_id} not found")
-        return id_to_check[check_id]
-
-    @override
-    async def list_check_templates(
-        self: Self,
-        ids: list[CheckTemplateId] | None = None,
-    ) -> AsyncIterable[CheckTemplate]:
-        if ids is None:
-            for template in self._check_template_id_to_template.values():
-                yield template
-        else:
-            for id in ids:
-                yield self._get_check_template(id)
-
-    @override
-    async def new_check(
-        self: Self,
-        auth_obj: AuthenticationObject,
-        template_id: CheckTemplateId,
-        template_args: Json,
-        schedule: CronExpression,
-    ) -> Check:
-        check_template = self._get_check_template(template_id)
-        validate(template_args, check_template.arguments)
-        check_id = CheckId(str(uuid.uuid4()))
-        check = Check(
-            id=check_id,
-            metadata={"template_id": template_id, "template_args": template_args},
-            schedule=schedule,
-            outcome_filter={"test.id": check_id},
-        )
-        self._auth_to_id_to_check[auth_obj][check_id] = check
-        return check
-
-    @override
-    async def update_check(
-        self: Self,
-        auth_obj: AuthenticationObject,
-        check_id: CheckId,
-        template_id: CheckTemplateId | None = None,
-        template_args: Json | None = None,
-        schedule: CronExpression | None = None,
-    ) -> Check:
-        check = self._get_check(auth_obj, check_id)
-        if template_id is not None:
-            check.metadata["template_id"] = template_id
-        if template_args is not None:
-            check.metadata["template_args"] = template_args
-        # TODO: check check if template_args and check_template are compatible
-        if schedule is not None:
-            check.schedule = schedule
-        return check
-
-    @override
-    async def remove_check(
-        self: Self, auth_obj: AuthenticationObject, check_id: CheckId
-    ) -> None:
-        id_to_check = self._auth_to_id_to_check[auth_obj]
-        if check_id not in id_to_check:
-            raise CustomException(ErrorCode.NotFound, f"Check id {check_id} not found")
-        id_to_check.pop(check_id)
-
-    @override
-    async def list_checks(
-        self: Self,
-        auth_obj: AuthenticationObject,
-        ids: list[CheckId] | None = None,
-    ) -> AsyncIterable[Check]:
-        if ids is None:
-            for check in self._auth_to_id_to_check[auth_obj].values():
-                yield check
-        else:
-            for id in ids:
-                yield self._get_check(auth_obj, id)
-
-
 class AggregationBackend(CheckBackend):
     def __init__(self, backends: list[CheckBackend]) -> None:
         self._backends = backends
@@ -277,17 +140,14 @@ class AggregationBackend(CheckBackend):
             result
             for result in results
             if isinstance(result, Exception)
-            and (
-                not isinstance(result, CustomException)
-                or result.code != ErrorCode.MainIdNotFound
-            )
+            and not isinstance(result, CheckIdError)
         ]
 
         match (successes, failures):
             case ([success], _):
                 return success
             case ([_, _, *_], _):
-                raise CustomException(ErrorCode.NonUniqueId, non_unique_id_message)
+                raise CheckIdNonUniqueError(non_unique_id_message)
             case ([], [failure, *_]):
                 raise failure
             case ([], []):

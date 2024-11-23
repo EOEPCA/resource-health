@@ -4,12 +4,18 @@ from fastapi import Body, FastAPI, Path, Query, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from check_backends import (
+from api_interface import (
+    Json,
+    ERROR_CODE_KEY,
+    ERROR_MESSAGE_KEY,
     LIST_CHECK_TEMPLATES_PATH,
     LIST_CHECKS_PATH,
     NEW_CHECK_PATH,
     REMOVE_CHECK_PATH,
     UPDATE_CHECK_PATH,
+    get_exception,
+)
+from check_backends import (
     AuthenticationObject,
     CheckBackend,
     CronExpression,
@@ -19,8 +25,29 @@ from check_backends import (
     CheckTemplate,
     Check,
     MockBackend,
-    get_status_code_and_message,
 )
+from exceptions import (
+    CheckException,
+    CheckInternalError,
+    CheckIdError,
+    CheckIdNonUniqueError,
+)
+
+
+def get_status_code_and_message(exception: BaseException) -> tuple[int, Json]:
+    if not isinstance(exception, CheckException):
+        exception = CheckInternalError("Internal server error")
+    error_json: dict[str, object] = {
+        ERROR_CODE_KEY: type(exception).__name__,
+        ERROR_MESSAGE_KEY: str(exception),
+    }
+    match exception:
+        case CheckIdError():
+            return (404, error_json)
+        case CheckIdNonUniqueError() | CheckInternalError():
+            return (500, error_json)
+        case unreachable:
+            assert_never(unreachable)
 
 
 class CheckDefinition(BaseModel):
@@ -103,10 +130,10 @@ def uvicorn_dev() -> None:
 
 
 def uvicorn_k8s() -> None:
-    from k8s_backend import K8sBackend
+    from check_backends import K8sBackend
 
     global check_backend
-    check_backend = K8sBackend()
+    check_backend = K8sBackend("Cluster")
 
     import uvicorn
 

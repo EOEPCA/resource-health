@@ -12,6 +12,12 @@ from kubernetes_asyncio.client.models.v1_job_template_spec import V1JobTemplateS
 from kubernetes_asyncio.client.models.v1_pod_template_spec import V1PodTemplateSpec
 from kubernetes_asyncio.client.models.v1_object_meta import V1ObjectMeta
 from kubernetes_asyncio.client.rest import ApiException
+import logging
+from typing import AsyncIterable, Optional, Self, override
+import uuid
+# import yaml
+
+from api_interface import Json
 from check_backends.check_backend import (
     AuthenticationObject,
     Check,
@@ -20,12 +26,13 @@ from check_backends.check_backend import (
     CheckTemplate,
     CheckTemplateId,
     CronExpression,
-    Json,
 )
-import logging
-from typing import AsyncIterable, Optional, Self
-import uuid
-# import yaml
+from exceptions import (
+    CheckException,
+    CheckInternalError,
+    CheckIdError,
+    CheckIdNonUniqueError,
+)
 
 NAMESPACE: str = "default"
 # NAMESPACE: str = "RESOURCE_HEALTH_RUNNER"
@@ -115,10 +122,10 @@ class K8sBackend(CheckBackend):
     async def aclose(self: Self) -> None:
         pass
 
-    def _get_check_template(self: Self, template_id: CheckTemplateId) -> CheckTemplate:
-        if template_id not in self._check_template_id_to_template:
-            raise KeyError(f"Template id {template_id} not found")
-        return self._check_template_id_to_template[template_id]
+#     def _get_check_template(self: Self, template_id: CheckTemplateId) -> CheckTemplate:
+#         if template_id not in self._check_template_id_to_template:
+#             raise TemplateIdError(f"Template id {template_id} not found")
+#         return self._check_template_id_to_template[template_id]
 
     def _make_check(self: Self, cronjob: V1CronJob) -> Check:
         return Check(
@@ -128,6 +135,7 @@ class K8sBackend(CheckBackend):
             outcome_filter={},
         )
 
+    @override
     async def list_check_templates(
         self: Self,
         ids: list[CheckTemplateId] | None = None,
@@ -137,8 +145,10 @@ class K8sBackend(CheckBackend):
                 yield template
         else:
             for id in ids:
-                yield self._get_check_template(id)
+                if id in self._check_template_id_to_template:
+                    yield self._check_template_id_to_template[id]
 
+    @override
     async def new_check(
         self: Self,
         auth_obj: AuthenticationObject,
@@ -165,6 +175,7 @@ class K8sBackend(CheckBackend):
                 logger.info(f"Succesfully created new cron job: {api_response}")
             except ApiException as e:
                 logger.error(f"Failed to create new cron job: {e}")
+                raise e
             check = Check(
                 id=check_id,
                 metadata={"template_id": template_id, "template_args": template_args},
@@ -173,6 +184,7 @@ class K8sBackend(CheckBackend):
             )
         return check
 
+    @override
     async def update_check(
         self: Self,
         auth_obj: AuthenticationObject,
@@ -196,9 +208,14 @@ class K8sBackend(CheckBackend):
                 )
                 logger.info(f"Succesfully deleted cron job: {api_response}")
             except ApiException as e:
-                logger.error(f"Failed to delete check with id '{check_id}': {e}")
+                logger.info(f"Failed to delete check with id '{check_id}': {e}")
+                if (e.status == 404):
+                    raise CheckIdError(f"Failed to delete check with id '{check_id}'")
+                else:
+                    raise e
         return None
 
+    @override
     async def list_checks(
         self: Self,
         auth_obj: AuthenticationObject,
@@ -217,8 +234,9 @@ class K8sBackend(CheckBackend):
                         yield self._make_check(cronjob)
 
 
-async def list_checks(check_backend: CheckBackend) -> None:
-    print("List of checks")
-    async for check in check_backend.list_checks(AuthenticationObject("dummy")):
-        print(f"-Check id: {check.id}")
-        print(f" Schedule: {check.schedule}")
+        @override
+        async def list_checks(check_backend: CheckBackend) -> None:
+            print("List of checks")
+            async for check in check_backend.list_checks(AuthenticationObject("dummy")):
+                print(f"-Check id: {check.id}")
+                print(f" Schedule: {check.schedule}")

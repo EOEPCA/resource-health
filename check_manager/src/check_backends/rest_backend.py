@@ -12,6 +12,17 @@ from typing import (
 import httpx
 from pydantic import TypeAdapter
 
+from api_interface import (
+    Json,
+    ERROR_CODE_KEY,
+    ERROR_MESSAGE_KEY,
+    LIST_CHECK_TEMPLATES_PATH,
+    LIST_CHECKS_PATH,
+    NEW_CHECK_PATH,
+    REMOVE_CHECK_PATH,
+    UPDATE_CHECK_PATH,
+    get_exception,
+)
 from check_backends.check_backend import (
     AuthenticationObject,
     CronExpression,
@@ -20,25 +31,14 @@ from check_backends.check_backend import (
     CheckId,
     CheckTemplate,
     CheckTemplateId,
-    CustomException,
-    ErrorCode,
-    ERROR_CODE_KEY,
-    ERROR_MESSAGE_KEY,
-    Json,
 )
 
-
-def get_exception(status_code: int, content: Any) -> CustomException:
-    error_code = ErrorCode[content[ERROR_CODE_KEY]]
-    message: str = content[ERROR_MESSAGE_KEY]
-    return CustomException(error_code, message)
-
-
-LIST_CHECK_TEMPLATES_PATH: Final[str] = "/check_templates/"
-NEW_CHECK_PATH: Final[str] = "/checks/"
-UPDATE_CHECK_PATH: Final[str] = "/checks/{check_id}"
-REMOVE_CHECK_PATH: Final[str] = "/checks/{check_id}"
-LIST_CHECKS_PATH: Final[str] = "/checks/"
+from exceptions import (
+    CheckException,
+    CheckInternalError,
+    CheckIdError,
+    CheckIdNonUniqueError,
+)
 
 
 class RestBackend(CheckBackend):
@@ -59,7 +59,6 @@ class RestBackend(CheckBackend):
             self._url + LIST_CHECK_TEMPLATES_PATH,
             params={"ids": ids} if ids is not None else {},
         )
-        # TODO: stream this instead of accumulating everything first
         if response.is_success:
             # using Iterable[CheckTemplate] here and trying to iterate over the result explodes for some reason
             for check_template in TypeAdapter(list[CheckTemplate]).validate_python(

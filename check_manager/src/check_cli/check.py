@@ -19,6 +19,12 @@ from typer import Argument, Context, Exit, Option, Typer
 from typing import Optional
 from typing_extensions import Annotated
 
+from exceptions import (
+    CheckException,
+    CheckInternalError,
+    CheckIdError,
+    CheckIdNonUniqueError,
+)
 from check_cli.check_config import config_app, make_default_config, ServiceName
 
 
@@ -115,12 +121,17 @@ def load_backend() -> AggregationBackend:
     return backend
 
 
-async def print_templates() -> None:
+async def print_templates(ids: Optional[list[CheckTemplateId]] = None) -> None:
     check_backend = load_backend()
-    async for template in check_backend.list_check_templates():
+    async for template in check_backend.list_check_templates(ids):
         print(f"- Template id: {template.id}")
         print(f"  Label: {template.metadata['label']}")
         print(f"  Description: {template.metadata['description']}")
+        if ids is not None:
+            ids.remove(template.id)
+    if ids is not None and len(ids) > 0:
+        for i in ids:
+            print(f"Could not find template with id: {i}")
 
 
 async def print_checks(auth_obj: AuthenticationObject) -> None:
@@ -131,11 +142,16 @@ async def print_checks(auth_obj: AuthenticationObject) -> None:
 
 
 @list_app.command("templates")
-def list_templates():
+def list_templates(ids: Annotated[Optional[list[str]], Argument()] = None):
     """
     List available templates.
     """
-    asyncio.run(print_templates())
+    if (ids):
+        asyncio.run(print_templates(
+            [CheckTemplateId(i) for i in ids]
+        ))
+    else:
+        asyncio.run(print_templates())
 
 
 @list_app.command("checks")
@@ -242,10 +258,15 @@ def delete_check(
     Delete a deployed health check.
     """
     check_backend = load_backend()
-    asyncio.run(
-        check_backend.remove_check(
-            auth_obj=AuthenticationObject(auth_obj),
-            check_id=CheckId(id),
+    try:
+        asyncio.run(
+            check_backend.remove_check(
+                auth_obj=AuthenticationObject(auth_obj),
+                check_id=CheckId(id),
+            )
         )
-    )
-    print(f"Deleted check with id:{id}")
+        print(f"Deleted check with id:{id}")
+    except CheckIdError as e:
+        print(f"No check with id:{id}")
+#     except Exception:
+#         print("Something went wrong.")
