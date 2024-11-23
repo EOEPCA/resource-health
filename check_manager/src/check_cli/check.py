@@ -66,7 +66,7 @@ def list_callback():
     pass
 
 
-def load_config() -> Optional[dict]:
+def load_config() -> dict:
     config_dir: Path = Path(".check")
     config_file: Path = config_dir / "config.json"
 
@@ -75,7 +75,12 @@ def load_config() -> Optional[dict]:
         c = open(config_file, "r")
         config_dict = json.load(c)
 
-    return config_dict
+    match config_dict:
+        case None:
+            print("Could not find configuration. Has this directory been initialized?")
+            raise Exit()
+        case dict():
+            return config_dict
 
 
 @app.command("init")
@@ -96,7 +101,7 @@ def init_config() -> None:
 
 
 def load_backend() -> AggregationBackend:
-    services_list: list[str] = []
+    services_list: list[dict] = []
     conf = load_config()
     if conf is not None:
         services_list = conf.get("services", [])
@@ -178,7 +183,7 @@ def get_auth_obj() -> str:
     return auth_obj
 
 
-def if_only_one_service():
+def if_only_one_service() -> int:
     conf: dict = load_config()
     if (len(conf["services"]) > 1):
         print("More than one service configured. Choose which one to use.")

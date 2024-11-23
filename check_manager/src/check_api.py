@@ -1,5 +1,5 @@
 import json
-from typing import Annotated, Iterable
+from typing import Annotated, Iterable, assert_never
 from fastapi import Body, FastAPI, Path, Query, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel

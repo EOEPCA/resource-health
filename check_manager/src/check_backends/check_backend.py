@@ -35,12 +35,6 @@ CheckTemplateId = NewType("CheckTemplateId", str)
 CheckId = NewType("CheckId", str)
 
 
-# class Errors(str, Enum):
-#     CheckInternalError = "Internal error"
-#     CheckIdError = "Check ID error"
-#     CheckIdNonUniqueError = "Non unique ID error"
-
-
 class CheckTemplate(BaseModel):
     id: CheckTemplateId
     # SHOULD contain { 'label' : str, 'description' : str }
@@ -180,7 +174,7 @@ class AggregationBackend(CheckBackend):
         template_args: Json,
         schedule: CronExpression,
     ) -> Check:
-        index = template_args.pop("service_index", 0)
+        index: int = template_args.pop("service_index", 0)
         return await self._backends[index].new_check(
             auth_obj, template_id, template_args, schedule
         )

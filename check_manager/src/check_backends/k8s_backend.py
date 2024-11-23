@@ -156,7 +156,8 @@ class K8sBackend(CheckBackend):
         template_args: Json,
         schedule: CronExpression,
     ) -> Check:
-        check_template = self._get_check_template(template_id)
+        # TODO: Raise specific exception if not found
+        check_template = self._check_template_id_to_template[template_id]
         validate(template_args, check_template.arguments)
         check_id = CheckId(str(uuid.uuid4()))
         await config.load_kube_config()
@@ -193,8 +194,14 @@ class K8sBackend(CheckBackend):
         template_args: Json | None = None,
         schedule: CronExpression | None = None,
     ) -> Check:
-        return Check()
+        return Check(
+            id=check_id,
+            metadata={},
+            schedule=schedule,
+            outcome_filter={},
+        )
 
+    @override
     async def remove_check(
         self: Self, auth_obj: AuthenticationObject, check_id: CheckId
     ) -> None:
@@ -232,11 +239,3 @@ class K8sBackend(CheckBackend):
                 for cronjob in cronjobs.items:
                     if cronjob.metadata.name in ids:
                         yield self._make_check(cronjob)
-
-
-        @override
-        async def list_checks(check_backend: CheckBackend) -> None:
-            print("List of checks")
-            async for check in check_backend.list_checks(AuthenticationObject("dummy")):
-                print(f"-Check id: {check.id}")
-                print(f" Schedule: {check.schedule}")
