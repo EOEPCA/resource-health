@@ -174,7 +174,7 @@ class AggregationBackend(CheckBackend):
         template_args: Json,
         schedule: CronExpression,
     ) -> Check:
-        index: int = template_args.pop("service_index", 0)
+        index: int = TypeAdapter(int).validate_python(template_args.pop("service_index", 0))
         return await self._backends[index].new_check(
             auth_obj, template_id, template_args, schedule
         )

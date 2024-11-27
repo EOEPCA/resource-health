@@ -29,6 +29,7 @@ from check_backends import (
 from exceptions import (
     CheckException,
     CheckInternalError,
+    CheckTemplateIdError,
     CheckIdError,
     CheckIdNonUniqueError,
 )
@@ -42,12 +43,10 @@ def get_status_code_and_message(exception: BaseException) -> tuple[int, Json]:
         ERROR_MESSAGE_KEY: str(exception),
     }
     match exception:
-        case CheckIdError():
+        case CheckIdError() | CheckTemplateIdError():
             return (404, error_json)
-        case CheckIdNonUniqueError() | CheckInternalError():
+        case _:
             return (500, error_json)
-        case unreachable:
-            assert_never(unreachable)
 
 
 class CheckDefinition(BaseModel):

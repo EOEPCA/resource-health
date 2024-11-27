@@ -1,5 +1,6 @@
 from collections import defaultdict
 from jsonschema import validate
+import aiohttp
 from kubernetes_asyncio import client, config
 from kubernetes_asyncio.client.api_client import ApiClient
 from kubernetes_asyncio.client.models.v1_container import V1Container
@@ -13,6 +14,7 @@ from kubernetes_asyncio.client.models.v1_pod_template_spec import V1PodTemplateS
 from kubernetes_asyncio.client.models.v1_object_meta import V1ObjectMeta
 from kubernetes_asyncio.client.rest import ApiException
 import logging
+from pydantic import TypeAdapter
 from typing import AsyncIterable, Optional, Self, override
 import uuid
 # import yaml
@@ -30,8 +32,10 @@ from check_backends.check_backend import (
 from exceptions import (
     CheckException,
     CheckInternalError,
+    CheckTemplateIdError,
     CheckIdError,
     CheckIdNonUniqueError,
+    CheckConnectionError,
 )
 
 NAMESPACE: str = "default"
@@ -122,10 +126,10 @@ class K8sBackend(CheckBackend):
     async def aclose(self: Self) -> None:
         pass
 
-#     def _get_check_template(self: Self, template_id: CheckTemplateId) -> CheckTemplate:
-#         if template_id not in self._check_template_id_to_template:
-#             raise TemplateIdError(f"Template id {template_id} not found")
-#         return self._check_template_id_to_template[template_id]
+    def _get_check_template(self: Self, template_id: CheckTemplateId) -> CheckTemplate:
+        if (template_id not in self._check_template_id_to_template):
+            raise CheckTemplateIdError(template_id)
+        return self._check_template_id_to_template[template_id]
 
     def _make_check(self: Self, cronjob: V1CronJob) -> Check:
         return Check(
@@ -156,10 +160,11 @@ class K8sBackend(CheckBackend):
         template_args: Json,
         schedule: CronExpression,
     ) -> Check:
-        # TODO: Raise specific exception if not found
-        check_template = self._check_template_id_to_template[template_id]
+        check_template = self._get_check_template(template_id)
         validate(template_args, check_template.arguments)
         check_id = CheckId(str(uuid.uuid4()))
+        script = TypeAdapter(str).validate_python(template_args["script"])
+        requirements = TypeAdapter(str | None).validate_python(template_args.get("requirements"))
         await config.load_kube_config()
         async with ApiClient() as api_client:
             api_instance = client.BatchV1Api(api_client)
@@ -169,14 +174,17 @@ class K8sBackend(CheckBackend):
                     body=make_cronjob(
                         name=check_id,
                         schedule=schedule,
-                        script=template_args["script"],
-                        requirements=template_args.get("requirements", None),
+                        script=script,
+                        requirements=requirements,
                     ),
                 )
                 logger.info(f"Succesfully created new cron job: {api_response}")
             except ApiException as e:
                 logger.error(f"Failed to create new cron job: {e}")
                 raise e
+            except aiohttp.ClientConnectionError as e:
+                logger.error(f"Failed to create new cron job: {e}")
+                raise CheckConnectionError("Cannot connect to cluster")
             check = Check(
                 id=check_id,
                 metadata={"template_id": template_id, "template_args": template_args},
@@ -214,10 +222,13 @@ class K8sBackend(CheckBackend):
                     namespace=NAMESPACE,
                 )
                 logger.info(f"Succesfully deleted cron job: {api_response}")
+            except aiohttp.ClientConnectionError as e:
+                logger.error(f"Failed to delete cron job: {e}")
+                raise CheckConnectionError("Cannot connect to cluster")
             except ApiException as e:
                 logger.info(f"Failed to delete check with id '{check_id}': {e}")
                 if (e.status == 404):
-                    raise CheckIdError(f"Failed to delete check with id '{check_id}'")
+                    raise CheckIdError(f"Check with id '{check_id}' not found")
                 else:
                     raise e
         return None
@@ -231,7 +242,14 @@ class K8sBackend(CheckBackend):
         await config.load_kube_config()
         async with ApiClient() as api_client:
             api_instance = client.BatchV1Api(api_client)
-            cronjobs = await api_instance.list_namespaced_cron_job(NAMESPACE)
+            try:
+                cronjobs = await api_instance.list_namespaced_cron_job(NAMESPACE)
+            except ApiException as e:
+                logger.error(f"Failed to list cron jobs: {e}")
+                raise e
+            except aiohttp.ClientConnectionError as e:
+                logger.error(f"Failed to list cron jobs: {e}")
+                raise CheckConnectionError("Cannot connect to cluster")
             if ids is None:
                 for cronjob in cronjobs.items:
                     yield self._make_check(cronjob)

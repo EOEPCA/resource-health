@@ -22,8 +22,10 @@ from typing_extensions import Annotated
 from exceptions import (
     CheckException,
     CheckInternalError,
+    CheckTemplateIdError,
     CheckIdError,
     CheckIdNonUniqueError,
+    CheckConnectionError,
 )
 from check_cli.check_config import config_app, make_default_config, ServiceName
 
@@ -126,9 +128,29 @@ def load_backend() -> AggregationBackend:
     return backend
 
 
+class ExceptionHandler:
+    """ Async iterator wrapper to handle exceptions during iteration """
+    def __init__(self, iter):
+        self.iter = iter
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        while True:
+            try:
+                return await anext(self.iter)
+            except StopAsyncIteration as stop:
+                raise stop
+            except CheckConnectionError as e:
+                print(f"Encountered an error when trying to connect to service: {str(e)}")
+                continue
+
+
 async def print_templates(ids: Optional[list[CheckTemplateId]] = None) -> None:
     check_backend = load_backend()
-    async for template in check_backend.list_check_templates(ids):
+    template_list = ExceptionHandler(check_backend.list_check_templates(ids))
+    async for template in template_list:
         print(f"- Template id: {template.id}")
         print(f"  Label: {template.metadata['label']}")
         print(f"  Description: {template.metadata['description']}")
@@ -141,7 +163,8 @@ async def print_templates(ids: Optional[list[CheckTemplateId]] = None) -> None:
 
 async def print_checks(auth_obj: AuthenticationObject) -> None:
     check_backend = load_backend()
-    async for check in check_backend.list_checks(auth_obj):
+    check_list = ExceptionHandler(check_backend.list_checks(auth_obj))
+    async for check in check_list:
         print(f"- Check id: {check.id}")
         print(f"  Schedule: {check.schedule}")
 
@@ -241,14 +264,26 @@ def create_check(
     )
 
     check_backend = load_backend()
-    check: Check = asyncio.run(
-        check_backend.new_check(
-            auth_obj=AuthenticationObject(auth_obj),
-            template_id=CheckTemplateId(template_id),
-            template_args=template_args,
-            schedule=CronExpression(schedule),
+
+    try:
+        check: Check = asyncio.run(
+            check_backend.new_check(
+                auth_obj=AuthenticationObject(auth_obj),
+                template_id=CheckTemplateId(template_id),
+                template_args=template_args,
+                schedule=CronExpression(schedule),
+            )
         )
-    )
+    except CheckTemplateIdError as e:
+        print(f"Could not find template with id {e.args[0]}")
+        raise Exit()
+    except CheckConnectionError as e:
+        print(f"Encountered an error when trying to connect to service: {str(e)}")
+        raise Exit()
+    except CheckInternalError as e:
+        print(f"Internal error: {e.args[0]}")
+        raise Exit()
+
     print("Created health check")
     print(f"- Check id: {check.id}")
     print(f"  Schedule: {check.schedule}")
@@ -273,5 +308,7 @@ def delete_check(
         print(f"Deleted check with id:{id}")
     except CheckIdError as e:
         print(f"No check with id:{id}")
-#     except Exception:
-#         print("Something went wrong.")
+        raise Exit()
+    except CheckConnectionError as e:
+        print(f"Encountered an error when trying to connect to service: {str(e)}")
+        raise Exit()

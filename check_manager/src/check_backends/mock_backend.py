@@ -27,6 +27,7 @@ from check_backends.check_backend import (
 from exceptions import (
     CheckException,
     CheckInternalError,
+    CheckTemplateIdError,
     CheckIdError,
     CheckIdNonUniqueError,
 )
@@ -63,6 +64,8 @@ class MockBackend(CheckBackend):
         pass
 
     def _get_check_template(self: Self, template_id: CheckTemplateId) -> CheckTemplate:
+        if (template_id not in self._check_template_id_to_template):
+            raise CheckTemplateIdError(template_id)
         return self._check_template_id_to_template[template_id]
 
     def _get_check(
