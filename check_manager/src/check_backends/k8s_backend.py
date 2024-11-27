@@ -132,9 +132,18 @@ class K8sBackend(CheckBackend):
         return self._check_template_id_to_template[template_id]
 
     def _make_check(self: Self, cronjob: V1CronJob) -> Check:
+        env = cronjob.spec.job_template.spec.template.spec.containers[0].env
+        script = [x.value for x in env if x.name == "RESOURCE_HEALTH_RUNNER_SCRIPT"]
+        req = [x.value for x in env if x.name == "RESOURCE_HEALTH_RUNNER_REQUIREMENTS"]
+        metadata = {}
+        if len(script) > 0:
+            metadata.update({"script": script[0]})
+        if len(req) > 0:
+            metadata.update({"requirements": req[0]})
         return Check(
             id=CheckId(cronjob.metadata.name),
-            metadata=cronjob.metadata.to_dict(),
+            # metadata=cronjob.metadata.to_dict(),
+            metadata=metadata,
             schedule=CronExpression(cronjob.spec.schedule),
             outcome_filter={},
         )
@@ -237,12 +246,7 @@ class K8sBackend(CheckBackend):
             except aiohttp.ClientConnectionError as e:
                 logger.error(f"Failed to patch cron job: {e}")
                 raise CheckConnectionError("Cannot connect to cluster")
-            check = Check(
-                id=check_id,
-                metadata={"template_id": template_id, "template_args": template_args},
-                schedule=schedule,
-                outcome_filter={"test.id": check_id},
-            )
+            check = self._make_check(api_response)
         return check
 
     @override
