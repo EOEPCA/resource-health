@@ -281,7 +281,7 @@ def create_check(
         print(f"Encountered an error when trying to connect to service: {str(e)}")
         raise Exit()
     except CheckInternalError as e:
-        print(f"Internal error: {e.args[0]}")
+        print(f"Error: {e.args[0]}")
         raise Exit()
 
     print("Created health check")
@@ -311,4 +311,7 @@ def delete_check(
         raise Exit()
     except CheckConnectionError as e:
         print(f"Encountered an error when trying to connect to service: {str(e)}")
+        raise Exit()
+    except CheckInternalError as e:
+        print(f"Error: {e.args[0]}")
         raise Exit()

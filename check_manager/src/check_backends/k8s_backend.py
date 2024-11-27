@@ -46,8 +46,8 @@ logger = logging.getLogger("HEALTH_CHECK")
 
 def make_cronjob(
     name: str,
-    schedule: str,
-    script: str,
+    schedule: Optional[str] = None,
+    script: Optional[str] = None,
     requirements: Optional[str] = None,
 ) -> V1CronJob:
     cronjob = V1CronJob(
@@ -181,6 +181,8 @@ class K8sBackend(CheckBackend):
                 logger.info(f"Succesfully created new cron job: {api_response}")
             except ApiException as e:
                 logger.error(f"Failed to create new cron job: {e}")
+                if (e.status == 422):
+                    raise CheckInternalError(f"Unprocessable content")
                 raise e
             except aiohttp.ClientConnectionError as e:
                 logger.error(f"Failed to create new cron job: {e}")
@@ -202,12 +204,46 @@ class K8sBackend(CheckBackend):
         template_args: Json | None = None,
         schedule: CronExpression | None = None,
     ) -> Check:
-        return Check(
-            id=check_id,
-            metadata={},
-            schedule=schedule,
-            outcome_filter={},
-        )
+        script = None
+        requirements = None
+        if template_args is not None:
+            if template_id is not None:
+                check_template = self._get_check_template(template_id)
+                validate(template_args, check_template.arguments)
+            # if ("script" in template_args.keys()):
+            #     script = TypeAdapter(str).validate_python(template_args["script"])
+            script = TypeAdapter(str | None).validate_python(template_args.get("script"))
+            requirements = TypeAdapter(str | None).validate_python(template_args.get("requirements"))
+        await config.load_kube_config()
+        async with ApiClient() as api_client:
+            api_instance = client.BatchV1Api(api_client)
+            try:
+                api_response = await api_instance.patch_namespaced_cron_job(
+                    name=check_id,
+                    namespace=NAMESPACE,
+                    body=make_cronjob(
+                        name=check_id,
+                        schedule=schedule,
+                        script=script,
+                        requirements=requirements,
+                    ),
+                )
+                logger.info(f"Succesfully patched cron job: {api_response}")
+            except ApiException as e:
+                logger.error(f"Failed to patch cron job: {e}")
+                if e.status == 422:
+                    raise CheckInternalError(f"Unprocessable content")
+                raise e
+            except aiohttp.ClientConnectionError as e:
+                logger.error(f"Failed to patch cron job: {e}")
+                raise CheckConnectionError("Cannot connect to cluster")
+            check = Check(
+                id=check_id,
+                metadata={"template_id": template_id, "template_args": template_args},
+                schedule=schedule,
+                outcome_filter={"test.id": check_id},
+            )
+        return check
 
     @override
     async def remove_check(
@@ -227,7 +263,7 @@ class K8sBackend(CheckBackend):
                 raise CheckConnectionError("Cannot connect to cluster")
             except ApiException as e:
                 logger.info(f"Failed to delete check with id '{check_id}': {e}")
-                if (e.status == 404):
+                if e.status == 404:
                     raise CheckIdError(f"Check with id '{check_id}' not found")
                 else:
                     raise e
