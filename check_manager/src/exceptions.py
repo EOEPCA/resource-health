@@ -1,5 +1,4 @@
 from abc import ABC
-from httpx import HTTPError
 # from jsonschema.exceptions import ValidationError
 
 
@@ -23,5 +22,5 @@ class CheckIdNonUniqueError(CheckException, KeyError):
     """Check Id not unique"""
 
 
-class CheckConnectionError(CheckException, HTTPError):
+class CheckConnectionError(CheckException, ConnectionError):
     """HTTP request failed"""
