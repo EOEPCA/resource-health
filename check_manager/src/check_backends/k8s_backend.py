@@ -123,6 +123,7 @@ class K8sBackend(CheckBackend):
             template.id: template for template in check_templates
         }
 
+    @override
     async def aclose(self: Self) -> None:
         pass
 
