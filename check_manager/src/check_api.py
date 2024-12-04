@@ -1,16 +1,22 @@
 import json
-from typing import Annotated, Iterable
+from typing import Annotated, Iterable, assert_never
 from fastapi import Body, FastAPI, Path, Query, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
-from lib import (
+from api_interface import (
+    Json,
+    ERROR_CODE_KEY,
+    ERROR_MESSAGE_KEY,
     LIST_CHECK_TEMPLATES_PATH,
     LIST_CHECKS_PATH,
     NEW_CHECK_PATH,
     REMOVE_CHECK_PATH,
     UPDATE_CHECK_PATH,
+    get_exception,
+)
+from check_backends import (
     AuthenticationObject,
     CheckBackend,
     CronExpression,
@@ -20,9 +26,28 @@ from lib import (
     CheckTemplate,
     Check,
     MockBackend,
-    get_status_code_and_message,
+)
+from exceptions import (
+    CheckException,
+    CheckInternalError,
+    CheckTemplateIdError,
+    CheckIdError,
+    CheckIdNonUniqueError,
 )
 
+
+def get_status_code_and_message(exception: BaseException) -> tuple[int, Json]:
+    if not isinstance(exception, CheckException):
+        exception = CheckInternalError("Internal server error")
+    error_json: dict[str, object] = {
+        ERROR_CODE_KEY: type(exception).__name__,
+        ERROR_MESSAGE_KEY: str(exception),
+    }
+    match exception:
+        case CheckIdError() | CheckTemplateIdError():
+            return (404, error_json)
+        case _:
+            return (500, error_json)
 
 class CheckDefinition(BaseModel):
     check_template_id: CheckTemplateId
@@ -44,7 +69,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 @app.exception_handler(Exception)
 async def exception_handler(request: Request, exc: Exception):
@@ -101,7 +125,6 @@ async def list_checks(
     # TODO: stream this instead of accumulating everything first
     return [check async for check in check_backend.list_checks(auth_obj, ids)]
 
-
 def uvicorn_dev() -> None:
     with open("openapi.json", mode="w+") as file:
         json.dump(app.openapi(), file, indent=2)
@@ -112,10 +135,10 @@ def uvicorn_dev() -> None:
 
 
 def uvicorn_k8s() -> None:
-    from k8s_backend import K8sBackend
+    from check_backends import K8sBackend
 
     global check_backend
-    check_backend = K8sBackend()
+    check_backend = K8sBackend("Cluster")
 
     import uvicorn
 

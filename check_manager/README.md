@@ -9,20 +9,20 @@
 
 ### CLI
 
-From src run
+Run
 
 ```bash
-uv run check_cli.py --help
+uv run check --help
 ```
 
 for instuctions how to use the CLI.
 
 ### API server
 
-From src run
+Run
 
 ```bash
-uv run fastapi dev check_api.py
+uv run check-api-server-dev
 ```
 
 Upon executing the above, the openapi spec is written to `openapi.json`, and the api is launched.
