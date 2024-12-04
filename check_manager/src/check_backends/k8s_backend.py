@@ -105,7 +105,7 @@ class K8sBackend(CheckBackend):
                     "description": "Default template for checks in the Kubernetes backend.",
                 },
                 arguments={
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$schema": "http://json-schema.org/draft-07/schema",
                     "type": "object",
                     "properties": {
                         "script": {
