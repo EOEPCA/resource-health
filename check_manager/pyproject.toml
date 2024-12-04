@@ -1,16 +1,24 @@
 [project]
-name = "check-api"
+name = "check-manager"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi[standard]",
+    "httpx>=0.27.2",
     "jsonschema>=4.23.0",
     "pydantic>=2.9.2",
+    "kubernetes_asyncio>=31.1.0",
+    "typer>=0.13.0",
 ]
 
 [tool.uv]
 dev-dependencies = [
     "types-jsonschema>=4.23.0.20240813",
 ]
+
+[project.scripts]
+check = "check_cli.check:app"
+check-api-server-dev = "check_api:uvicorn_dev"
+check-api-server-k8s = "check_api:uvicorn_k8s"
