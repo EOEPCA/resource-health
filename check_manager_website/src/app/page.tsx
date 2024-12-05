@@ -2,7 +2,7 @@
 
 import { JSX, useState } from 'react'
 import Form from '@rjsf/chakra-ui';
-import { Check, CheckId, CheckTemplate, CheckTemplateId, ListChecks, ListCheckTemplates, NewCheck, RemoveCheck, UpdateCheck } from "src/app/server"
+import { Check, CheckId, CheckTemplate, CheckTemplateId, ListChecks, ListCheckTemplates, NewCheck, RemoveCheck, UpdateCheck } from "@/app/check_api_wrapper"
 import validator from '@rjsf/validator-ajv8';
 import { Button, CSSReset, FormControl, FormLabel, Grid, GridItem, Heading, Input, Select, Text, theme, ThemeProvider } from '@chakra-ui/react';
 
