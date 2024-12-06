@@ -1,6 +1,9 @@
+// This is important to make sure that ListCheckTemplates aren't called only when building the website
+'use client'
+
 import { StrictRJSFSchema } from '@rjsf/utils'
 import axios from 'axios'
-import { connection } from 'next/server'
+import { env } from 'next-runtime-env';
 
 export type CheckTemplateId = string
 export type CheckId = string
@@ -32,29 +35,25 @@ export type Check = {
   outcome_filter: object
 }
 
-const client = axios.create({
-  baseURL: "http://127.0.0.1:8000",
-  headers: {
-    // "Cache-Control": "no-cache",
-    // "Access-Control-Allow-Origin": "*",
+function GetBaseURL(): string {
+  const url = env('NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT')
+  if (!url) {
+    throw new Error(`environment variable NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT must be set`)
   }
-})
+  return url
+}
 
 export async function ListCheckTemplates(ids?: CheckTemplateId[]): Promise<CheckTemplate[]> {
-  // To make this request be performed upon the client connection, not on build as per https://nextjs.org/docs/app/api-reference/functions/connection
-  await connection()
-  const response = await client.get("/check_templates/", {params: ids})
+  const response = await axios.get(GetBaseURL() + "/check_templates/", {params: ids})
   return response.data
 }
 
 export async function NewCheck(templateId: CheckTemplateId, templateArgs: object, schedule: CronExpression): Promise<Check> {
-  await connection()
-  const response = await client.post("/checks/", {template_id: templateId, template_args: templateArgs, schedule: schedule})
+  const response = await axios.post(GetBaseURL() + "/checks/", {template_id: templateId, template_args: templateArgs, schedule: schedule})
   return response.data
 }
 
 export async function UpdateCheck(oldCheck: Check, templateId?: CheckTemplateId, templateArgs?: object, schedule?: CronExpression): Promise<Check> {
-  await connection()
   if (templateId === oldCheck.metadata.template_id) {
     templateId = undefined
   }
@@ -66,24 +65,15 @@ export async function UpdateCheck(oldCheck: Check, templateId?: CheckTemplateId,
   if (schedule === oldCheck.schedule) {
     schedule = undefined
   }
-  const response = await client.patch(`/checks/${oldCheck.id}`, {template_id: templateId, template_args: templateArgs, schedule: schedule})
+  const response = await axios.patch(GetBaseURL() + `/checks/${oldCheck.id}`, {template_id: templateId, template_args: templateArgs, schedule: schedule})
   return response.data
 }
 
-
-// export async function UpdateCheck(checkId: CheckId, templateId?: CheckTemplateId, templateArgs?: object, schedule?: CronExpression): Promise<Check> {
-//   await connection()
-//   const response = await client.patch(`/checks/${checkId}`, {template_id: templateId, template_args: templateArgs, schedule: schedule})
-//   return response.data
-// }
-
 export async function RemoveCheck(checkId: CheckId): Promise<void> {
-  await connection()
-  await client.delete(`/checks/${checkId}`)
+  await axios.delete(GetBaseURL() + `/checks/${checkId}`)
 }
 
 export async function ListChecks(ids?: CheckId[]): Promise<Check[]> {
-  await connection()
-  const response = await client.get("/checks/", {params: ids})
+  const response = await axios.get(GetBaseURL() + "/checks/", {params: ids})
   return response.data
 }

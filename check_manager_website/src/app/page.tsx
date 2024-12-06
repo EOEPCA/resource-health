@@ -23,33 +23,48 @@ function FindCheckTemplate(templates: CheckTemplate[], templateId: CheckTemplate
 
 
 export default function Home(): JSX.Element {
+  const [error, setError] = useState<Error | null>(null)
   const [checkTemplates, setCheckTemplates] = useState<CheckTemplate[] | null>(null)
-  if (checkTemplates === null) {
-    ListCheckTemplates().then(setCheckTemplates)
-  }
   const [checks, setChecks] = useState<Check[] | null>(null)
+  if (error !== null) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CSSReset />
+        <main className="flex min-h-screen flex-col items-start p-24">
+          <Heading>Error occurred</Heading>
+          <Text>{`${error.name}: ${error.message}`}</Text>
+        </main>
+      </ThemeProvider>
+    )
+  }
+  if (checkTemplates === null) {
+    ListCheckTemplates().then(setCheckTemplates).catch(setError)
+  }
   if (checks === null) {
-    ListChecks().then(setChecks)
+    ListChecks().then(setChecks).catch(setError)
   }
   if (checkTemplates === null || checks === null) {
     return (
-      <main className="prose lg:prose-xl flex min-h-screen flex-col items-start p-24">
-        <Text>Loading</Text>
-      </main>
+      <ThemeProvider theme={theme}>
+        <CSSReset />
+        <main className="flex min-h-screen flex-col items-start p-24">
+          <Text>Loading</Text>
+        </main>
+      </ThemeProvider>
     )
   }
   return (
-    // <main className="prose lg:prose-xl flex min-h-screen flex-col items-start p-24">
     <ThemeProvider theme={theme}>
       <CSSReset />
       <main className="flex min-h-screen flex-col items-start p-24">
         {/* <CheckTemplatesListDiv templates={checkTemplates} /> */}
-        <CreateCheckDiv templates={checkTemplates} onCreateCheck={(check) => setChecks([...checks, check])} />
+        <CreateCheckDiv templates={checkTemplates} onCreateCheck={(check) => setChecks([...checks, check])} setError={setError} />
         <ChecksDiv
           checks={checks}
           templates={checkTemplates}
           onCheckUpdate={(updatedCheck) => setChecks(checks.map((check) => check.id === updatedCheck.id ? updatedCheck : check))}
           onCheckRemove={(checkId) => setChecks(checks.filter((check) => check.id !== checkId))}
+          setError={setError}
         />
       </main>
     </ThemeProvider>
@@ -78,7 +93,7 @@ function CheckTemplatesListDiv({templates}: {templates: CheckTemplate[]}): JSX.E
   )
 }
 
-function CreateCheckDiv({templates, onCreateCheck}: {templates: CheckTemplate[], onCreateCheck: (check: Check) => void}): JSX.Element {
+function CreateCheckDiv({templates, onCreateCheck, setError}: {templates: CheckTemplate[], onCreateCheck: (check: Check) => void, setError: (error: Error) => void}): JSX.Element {
   const [templateId, setTemplateId] = useState(templates[0].id)
   // const [templateArgs, setTemplateArgs] = useState({})
   const [schedule, setSchedule] = useState("")
@@ -118,21 +133,21 @@ function CreateCheckDiv({templates, onCreateCheck}: {templates: CheckTemplate[],
         schema={template.arguments}
         validator={validator}
         onChange={log('changed')}
-        onSubmit={(data) => {NewCheck(templateId, data.formData, schedule).then((newCheck) => {setCheck(newCheck); onCreateCheck(newCheck)})}}
+        onSubmit={(data) => {NewCheck(templateId, data.formData, schedule).then((newCheck) => {setCheck(newCheck); onCreateCheck(newCheck)}).catch(setError)}}
         onError={log('errors')}
       />
       {/* <div>
         <FormLabel>Tamplate args</FormLabel>
         {for}
       </div> */}
-      {/* <button type="button" className="underline text-blue-500" onClick={() => NewCheck(templateId, templateArgs, schedule).then((newCheck) => {setCheck(newCheck); onCreateCheck(newCheck)})}>Create Check</button> */}
+      {/* <button type="button" className="underline text-blue-500" onClick={() => NewCheck(templateId, templateArgs, schedule).then((newCheck) => {setCheck(newCheck); onCreateCheck(newCheck)}).catch(setError)}>Create Check</button> */}
       {/* {check && <Text className="whitespace-pre">New Check {StringifyPretty(check)}</Text>} */}
     </div>
   )
 }
 
-function ChecksDiv({checks, templates, onCheckUpdate, onCheckRemove}: {checks: Check[], templates: CheckTemplate[], onCheckUpdate: (check: Check) => void, onCheckRemove: (checkId: CheckId) => void}): JSX.Element {
-  function CheckDiv({check, templates, onCheckUpdate, onCheckRemove}: {check: Check, templates: CheckTemplate[], onCheckUpdate: (check: Check) => void, onCheckRemove: (checkId: CheckId) => void}): JSX.Element {
+function ChecksDiv({checks, templates, onCheckUpdate, onCheckRemove, setError}: {checks: Check[], templates: CheckTemplate[], onCheckUpdate: (check: Check) => void, onCheckRemove: (checkId: CheckId) => void, setError: (error: Error) => void}): JSX.Element {
+  function CheckDiv({check, templates, onCheckUpdate, onCheckRemove, setError}: {check: Check, templates: CheckTemplate[], onCheckUpdate: (check: Check) => void, onCheckRemove: (checkId: CheckId) => void, setError: (error: Error) => void}): JSX.Element {
     if (check.metadata.template_id === undefined)
       throw Error("Can't deal with checks without template id, at least for now")
     const [templateId, setTemplateId] = useState(check.metadata.template_id)
@@ -189,7 +204,7 @@ function ChecksDiv({checks, templates, onCheckUpdate, onCheckRemove}: {checks: C
             }}
             validator={validator}
             onChange={log('changed')}
-            onSubmit={(data) => {UpdateCheck(check, templateId, data.formData, schedule).then((updatedCheck) => { /*setNewCheck(updatedCheck);*/ onCheckUpdate(updatedCheck)})}}
+            onSubmit={(data) => {UpdateCheck(check, templateId, data.formData, schedule).then((updatedCheck) => { /*setNewCheck(updatedCheck);*/ onCheckUpdate(updatedCheck)}).catch(setError)}}
             onError={log('errors')}
           />
         </FormControl>
@@ -214,7 +229,7 @@ function ChecksDiv({checks, templates, onCheckUpdate, onCheckRemove}: {checks: C
   return (
     <div>
       <Heading>Check List</Heading>
-      {checks.map((check) => <CheckDiv key={check.id} check={check} templates={templates} onCheckUpdate={onCheckUpdate} onCheckRemove={onCheckRemove} />)}
+      {checks.map((check) => <CheckDiv key={check.id} check={check} templates={templates} onCheckUpdate={onCheckUpdate} onCheckRemove={onCheckRemove} setError={setError} />)}
     </div>
   )
 }
