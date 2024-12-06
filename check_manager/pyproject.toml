@@ -21,4 +21,5 @@ dev-dependencies = [
 [project.scripts]
 check = "check_cli.check:app"
 check-api-server-dev = "check_api:uvicorn_dev"
+check-api-server-dummy-prod = "check_api:unicorn_dummy_prod"
 check-api-server-k8s = "check_api:uvicorn_k8s"

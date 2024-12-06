@@ -133,6 +133,11 @@ def uvicorn_dev() -> None:
 
     uvicorn.run("check_api:app", reload=True)
 
+def unicorn_dummy_prod() -> None:
+    import uvicorn
+
+    uvicorn.run("check_api:app", host="0.0.0.0", reload=True)
+
 
 def uvicorn_k8s() -> None:
     from check_backends import K8sBackend
@@ -142,7 +147,8 @@ def uvicorn_k8s() -> None:
 
     import uvicorn
 
-    uvicorn.run(app)
+    # This is the host fastapi run uses, see https://fastapi.tiangolo.com/it/fastapi-cli/#fastapi-run
+    uvicorn.run(app, host="0.0.0.0")
 
 
 if __name__ == "__main__":
