@@ -3,6 +3,7 @@ from typing import Annotated, Iterable, assert_never
 from fastapi import Body, FastAPI, Path, Query, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 
 from api_interface import (
     Json,
@@ -48,7 +49,6 @@ def get_status_code_and_message(exception: BaseException) -> tuple[int, Json]:
         case _:
             return (500, error_json)
 
-
 class CheckDefinition(BaseModel):
     check_template_id: CheckTemplateId
     check_template_args: Json
@@ -62,6 +62,13 @@ check_backend: CheckBackend = MockBackend(template_id_prefix="remote_")
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.exception_handler(Exception)
 async def exception_handler(request: Request, exc: Exception):
@@ -117,7 +124,6 @@ async def list_checks(
 ) -> Iterable[Check]:
     # TODO: stream this instead of accumulating everything first
     return [check async for check in check_backend.list_checks(auth_obj, ids)]
-
 
 def uvicorn_dev() -> None:
     with open("openapi.json", mode="w+") as file:
