@@ -3,7 +3,7 @@ kind: Service
 metadata:
   name: {{ include "resource-health.fullname" . }}-telemetry-api
   labels:
-    app.kubernetes.io/component: "api"
+    app.kubernetes.io/component: "telemetryaccess"
     {{- include "resource-health.labels" . | nindent 4 }}
 spec:
   type: {{ .Values.telemetry_api.serviceType }}
@@ -13,5 +13,5 @@ spec:
       protocol: TCP
       name: http
   selector:
-    app.kubernetes.io/component: "api"
+    app.kubernetes.io/component: "telemetryaccess"
     {{- include "resource-health.selectorLabels" . | nindent 4 }}
