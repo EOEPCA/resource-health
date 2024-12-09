@@ -395,9 +395,9 @@ opensearch:
             type: "internalusers"
             config_version: 2
 
-          ## NOTE: Example user
-          # sensmetry:
-          #   hash: "$2y$12$RnLnOIT2j7YQzyn9O8BRruOFcPbvqkSZVmT0kqioJCcOsK.ZIuVwG"
+          ## NOTE: Example admin user
+          # <USER NAME>:
+          #   hash: "<PASSWORD HASH>"
           #   reserved: true
           #   backend_roles:
           #   - "admin"
@@ -416,7 +416,7 @@ opensearch:
             - "admin"
             users:
             - "otel-collector"
-            - "resourcehealth-web"
+            - "opensearch-admin"
             description: "Maps admin to all_access"
 
           kibana_server:
