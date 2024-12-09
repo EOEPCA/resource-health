@@ -71,6 +71,16 @@ api:
   servicePort: 80
   replicaCount: 2
 
+telemetry_api:
+  image:
+    repository: docker.io/eoepca/resourcehealth_telemetry_api
+    pullPolicy: IfNotPresent
+    tag: "v0.2.0"
+  serviceType: ClusterIP
+  containerPort: 80
+  servicePort: 80
+  replicaCount: 2
+
 web:
   image:
     repository: docker.io/eoepca/resourcehealth_web
