@@ -76,7 +76,7 @@ resource-health:
       tag: "v0.1.0"
     serviceType: ClusterIP
     containerPort: 8000
-    servicePort: 80
+    servicePort: 8000
     replicaCount: 2
 
   telemetry_api:
@@ -86,7 +86,7 @@ resource-health:
       tag: "v0.2.0"
     serviceType: ClusterIP
     containerPort: 8080
-    servicePort: 80
+    servicePort: 8080
     replicaCount: 2
 
   web:
@@ -99,9 +99,7 @@ resource-health:
     servicePort: 80
     replicaCount: 2
     environmentSecrets: []
-    environmentFixed:
-      - name: OPENSEARCH_ENDPOINT
-        value: "https://opensearch-cluster-master-headless:9200"
+    environmentFixed: []
     tls:
       client:
         commonName: resourcehealth-web

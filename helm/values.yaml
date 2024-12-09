@@ -68,7 +68,7 @@ api:
     tag: "v0.1.0"
   serviceType: ClusterIP
   containerPort: 8000
-  servicePort: 80
+  servicePort: 8000
   replicaCount: 2
 
 telemetry_api:
@@ -78,7 +78,7 @@ telemetry_api:
     tag: "v0.2.0"
   serviceType: ClusterIP
   containerPort: 8080
-  servicePort: 80
+  servicePort: 8080
   replicaCount: 2
 
 web:

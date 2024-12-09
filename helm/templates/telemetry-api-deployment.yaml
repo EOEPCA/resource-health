@@ -3,13 +3,13 @@ kind: Deployment
 metadata:
   name: {{ include "resource-health.fullname" . }}-telemetry-api
   labels:
-    app.kubernetes.io/component: "api"
+    app.kubernetes.io/component: "telemetryaccess"
     {{- include "resource-health.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.telemetry_api.replicaCount }}
   selector:
     matchLabels:
-      app.kubernetes.io/component: "api"
+      app.kubernetes.io/component: "telemetryaccess"
       {{- include "resource-health.selectorLabels" . | nindent 6 }}
   template:
     metadata:
@@ -18,7 +18,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        app.kubernetes.io/component: "api"
+        app.kubernetes.io/component: "telemetryaccess"
         {{- include "resource-health.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
@@ -28,6 +28,11 @@ spec:
       serviceAccountName: {{ include "resource-health.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      volumes:
+        - name: client-tls
+          secret:
+            ## TODO: Implement more restricted privileges
+            secretName: opensearch-admin-certificate
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
@@ -38,6 +43,10 @@ spec:
             - name: http
               containerPort: {{ .Values.telemetry_api.containerPort }}
               protocol: TCP
+          volumeMounts:
+          - name: client-tls
+            readOnly: true
+            mountPath: "/certs"
           ## TODO: add probe endpoints
           # livenessProbe:
           #   httpGet:
