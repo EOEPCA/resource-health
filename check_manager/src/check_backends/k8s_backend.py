@@ -46,7 +46,7 @@ logger = logging.getLogger("HEALTH_CHECK")
 
 async def load_config() -> None:
     if "KUBERNETES_SERVICE_HOST" in environ:
-        await config.load_incluster_config()
+        config.load_incluster_config()
     else:
         await config.load_kube_config()
 
