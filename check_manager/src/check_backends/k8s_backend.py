@@ -14,6 +14,7 @@ from kubernetes_asyncio.client.models.v1_pod_template_spec import V1PodTemplateS
 from kubernetes_asyncio.client.models.v1_object_meta import V1ObjectMeta
 from kubernetes_asyncio.client.rest import ApiException
 import logging
+from os import environ
 from pydantic import TypeAdapter
 from typing import AsyncIterable, Optional, Self, override
 import uuid
@@ -41,6 +42,13 @@ from exceptions import (
 NAMESPACE: str = "resource-health"
 
 logger = logging.getLogger("HEALTH_CHECK")
+
+
+async def load_config() -> None:
+    if "KUBERNETES_SERVICE_HOST" in environ:
+        await config.load_incluster_config()
+    else:
+        await config.load_kube_config()
 
 
 def make_cronjob(
@@ -174,7 +182,7 @@ class K8sBackend(CheckBackend):
         check_id = CheckId(str(uuid.uuid4()))
         script = TypeAdapter(str).validate_python(template_args["script"])
         requirements = TypeAdapter(str | None).validate_python(template_args.get("requirements"))
-        await config.load_kube_config()
+        await load_config()
         async with ApiClient() as api_client:
             api_instance = client.BatchV1Api(api_client)
             try:
@@ -223,7 +231,7 @@ class K8sBackend(CheckBackend):
             #     script = TypeAdapter(str).validate_python(template_args["script"])
             script = TypeAdapter(str | None).validate_python(template_args.get("script"))
             requirements = TypeAdapter(str | None).validate_python(template_args.get("requirements"))
-        await config.load_kube_config()
+        await load_config()
         async with ApiClient() as api_client:
             api_instance = client.BatchV1Api(api_client)
             try:
@@ -253,7 +261,7 @@ class K8sBackend(CheckBackend):
     async def remove_check(
         self: Self, auth_obj: AuthenticationObject, check_id: CheckId
     ) -> None:
-        await config.load_kube_config()
+        await load_config()
         async with ApiClient() as api_client:
             api_instance = client.BatchV1Api(api_client)
             try:
@@ -279,7 +287,7 @@ class K8sBackend(CheckBackend):
         auth_obj: AuthenticationObject,
         ids: list[CheckId] | None = None,
     ) -> AsyncIterable[Check]:
-        await config.load_kube_config()
+        await load_config()
         async with ApiClient() as api_client:
             api_instance = client.BatchV1Api(api_client)
             try:
