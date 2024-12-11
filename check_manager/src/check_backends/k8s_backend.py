@@ -38,8 +38,7 @@ from exceptions import (
     CheckConnectionError,
 )
 
-NAMESPACE: str = "default"
-# NAMESPACE: str = "RESOURCE_HEALTH_RUNNER"
+NAMESPACE: str = "resource-health"
 
 logger = logging.getLogger("HEALTH_CHECK")
 
