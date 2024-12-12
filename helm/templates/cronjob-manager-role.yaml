@@ -8,4 +8,4 @@ metadata:
 rules:
 - apiGroups: ["batch"] # "" indicates the core API group
   resources: ["cronjobs"]
-  verbs: ["get", "watch", "list"] #], "create", "patch", "delete"]
+  verbs: ["get", "watch", "list", "create", "patch", "delete"]
