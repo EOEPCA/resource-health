@@ -137,9 +137,6 @@ class K8sBackend(CheckBackend):
                     "$schema": "http://json-schema.org/draft-07/schema",
                     "type": "object",
                     "properties": {
-                        "user.id": {
-                            "type": "string",
-                        },
                         "health_check.name": {
                             "type": "string",
                         },
@@ -151,7 +148,6 @@ class K8sBackend(CheckBackend):
                         },
                     },
                     "required": [
-                        "user.id",
                         "health_check.name",
                         "script",
                     ],
@@ -212,7 +208,7 @@ class K8sBackend(CheckBackend):
         check_template = self._get_check_template(template_id)
         validate(template_args, check_template.arguments)
         check_id = CheckId(str(uuid.uuid4()))
-        user_id = TypeAdapter(str).validate_python(template_args["user.id"])
+        user_id = "Health BB user"
         health_check_name = TypeAdapter(str).validate_python(template_args["health_check.name"])
         script = TypeAdapter(str).validate_python(template_args["script"])
         requirements = TypeAdapter(str | None).validate_python(template_args.get("requirements"))
