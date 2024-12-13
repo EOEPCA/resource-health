@@ -60,8 +60,8 @@ def make_cronjob(
     health_check_name: Optional[str] = None,
 ) -> V1CronJob:
     OTEL_RESOURCE_ATTRIBUTES: str = (
-            f"k8s.cronjob.name={name}"
-            f"user.id={user_id}"
+            f"k8s.cronjob.name={name},"
+            f"user.id={user_id},"
             f"health_check.name={health_check_name}"
     )
     cronjob = V1CronJob(
