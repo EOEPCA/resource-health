@@ -56,7 +56,14 @@ def make_cronjob(
     schedule: Optional[str] = None,
     script: Optional[str] = None,
     requirements: Optional[str] = None,
+    user_id: Optional[str] = None,
+    health_check_name: Optional[str] = None,
 ) -> V1CronJob:
+    OTEL_RESOURCE_ATTRIBUTES: str = (
+            f"k8s.cronjob.name={name}"
+            f"user.id={user_id}"
+            f"health_check.name={health_check_name}"
+    )
     cronjob = V1CronJob(
         api_version="batch/v1",
         kind="CronJob",
@@ -73,6 +80,10 @@ def make_cronjob(
                                     image="victorlinrothsensmetry/healthcheck:v0.0.1",
                                     image_pull_policy="IfNotPresent",
                                     env=[
+                                        V1EnvVar(
+                                            name="OTEL_RESOURCE_ATTRIBUTES",
+                                            value=OTEL_RESOURCE_ATTRIBUTES,
+                                        ),
                                         V1EnvVar(
                                             name="RESOURCE_HEALTH_RUNNER_SCRIPT",
                                             value=script,
@@ -115,6 +126,12 @@ class K8sBackend(CheckBackend):
                     "$schema": "http://json-schema.org/draft-07/schema",
                     "type": "object",
                     "properties": {
+                        "user.id": {
+                            "type": "string",
+                        },
+                        "health_check.name": {
+                            "type": "string",
+                        },
                         "script": {
                             "type": "string",
                         },
@@ -122,7 +139,11 @@ class K8sBackend(CheckBackend):
                             "type": "string",
                         },
                     },
-                    "required": ["script"],
+                    "required": [
+                        "user.id",
+                        "health_check.name",
+                        "script",
+                    ],
                 },
             ),
         ]
@@ -180,6 +201,8 @@ class K8sBackend(CheckBackend):
         check_template = self._get_check_template(template_id)
         validate(template_args, check_template.arguments)
         check_id = CheckId(str(uuid.uuid4()))
+        user_id = TypeAdapter(str | None).validate_python(template_args.get("user.id"))
+        health_check_name = TypeAdapter(str | None).validate_python(template_args.get("health_check.name"))
         script = TypeAdapter(str).validate_python(template_args["script"])
         requirements = TypeAdapter(str | None).validate_python(template_args.get("requirements"))
         await load_config()
@@ -191,6 +214,8 @@ class K8sBackend(CheckBackend):
                     body=make_cronjob(
                         name=check_id,
                         schedule=schedule,
+                        user_id=user_id,
+                        health_check_name=health_check_name,
                         script=script,
                         requirements=requirements,
                     ),
