@@ -45,6 +45,11 @@ spec:
               value: "/tls/tls.key"
             - name: OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE
               value: "/tls/tls.crt"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: >-
+                k8s.cronjob.name={{ include "resource-health.fullname" $top }}-healthchecks-cronjob-{{ $index }},
+                user.id=Health BB user,
+                health_check.name={{$check.name}}
             - name: RESOURCE_HEALTH_RUNNER_REQUIREMENTS
               value: {{ $check.requirements }}
             - name: RESOURCE_HEALTH_RUNNER_SCRIPT
