@@ -2,7 +2,7 @@
 
 import { JSX, useState } from 'react'
 import Form from '@rjsf/chakra-ui';
-import { Check, CheckId, CheckTemplate, CheckTemplateId, ListChecks, ListCheckTemplates, NewCheck, RemoveCheck, UpdateCheck } from "@/app/check_api_wrapper"
+import { Check, CheckId, CheckTemplate, CheckTemplateId, GetSpans, GetSpansQueryParams, ListChecks, ListCheckTemplates, NewCheck, ReduceSpans, RemoveCheck, SpansResponse, UpdateCheck } from "@/app/check_api_wrapper"
 import validator from '@rjsf/validator-ajv8';
 import { Button, CSSReset, FormControl, FormLabel, Grid, GridItem, Heading, Input, Select, Text, theme, ThemeProvider } from '@chakra-ui/react';
 
@@ -53,11 +53,16 @@ export default function Home(): JSX.Element {
       </ThemeProvider>
     )
   }
+  const now = new Date()
+  const before = new Date()
+  // before.setMonth(before.getMonth() - 1);
+  before.setDate(before.getDate() - 5);
   return (
     <ThemeProvider theme={theme}>
       <CSSReset />
       <main className="flex min-h-screen flex-col items-start p-24">
         {/* <CheckTemplatesListDiv templates={checkTemplates} /> */}
+        <ResultsSummaryDiv fromTime={before} toTime={now} setError={setError}/>
         <CreateCheckDiv templates={checkTemplates} onCreateCheck={(check) => setChecks([...checks, check])} setError={setError} />
         <ChecksDiv
           checks={checks}
@@ -146,6 +151,100 @@ function CreateCheckDiv({templates, onCreateCheck, setError}: {templates: CheckT
   )
 }
 
+type SpansSummary = {
+  traceIds: Set<string>
+  failedTraceIds: Set<string>
+  totalDurationSecs: number
+  durationCount: number
+  totalTestCount: number
+}
+
+async function ComputeSpansSummary(getSpansQueryParams: GetSpansQueryParams): Promise<SpansSummary> {
+  return ReduceSpans<SpansSummary>(
+    getSpansQueryParams,
+    ({traceIds, failedTraceIds, totalDurationSecs, durationCount, totalTestCount}, spanResult) => {
+      for (const resourceSpans of spanResult.resourceSpans) {
+        for (const scopeSpans of resourceSpans.scopeSpans) {
+          for (const span of scopeSpans.spans) {
+            traceIds.add(span.traceId)
+            if (span.status?.code === 2) {
+              failedTraceIds.add(span.traceId)
+            }
+            if (span.parentSpanId === "") {
+              totalDurationSecs += (span.endTimeUnixNano - span.startTimeUnixNano) / 1_000_000_000
+              durationCount++
+            }
+            for (const attribute of span.attributes) {
+              if (attribute.key === 'test.case.result.status') {
+                totalTestCount++
+                break
+              }
+            }
+          }
+        }
+      }
+      return {traceIds, failedTraceIds, totalDurationSecs, durationCount, totalTestCount}
+    },
+    {traceIds: new Set<string>(), failedTraceIds: new Set<string>(), totalDurationSecs: 0, durationCount: 0, totalTestCount: 0}
+  )
+}
+
+function ResultsSummaryDiv({fromTime, toTime, setError}: {fromTime?: Date, toTime?: Date, setError: (error: Error) => void}): JSX.Element {
+  // const [spansResponse, setSpansResponse] = useState<SpansResponse | null>(null)
+  // if (spansResponse === null) {
+  //   GetSpans({fromTime: fromTime, toTime: toTime}).then(setSpansResponse).catch(setError)
+  // }
+  // const traceIds = new Set<string>()
+  // const failedTraceIds = new Set<string>()
+  // if (spansResponse !== null) {
+  //   for (const resourceSpansArray of spansResponse.results) {
+  //     for (const resourceSpans of resourceSpansArray.resourceSpans) {
+  //       for (const scopeSpans of resourceSpans.scopeSpans) {
+  //         for (const span of scopeSpans.spans) {
+  //           traceIds.add(span.traceId)
+  //           if (span.status?.code === 2) {
+  //             failedTraceIds.add(span.traceId)
+  //           }
+  //         }
+  //       }
+  //     }
+  //   }
+  // }
+
+
+
+  const [spansSummary, setSpansSummary] = useState<SpansSummary | null>(null)
+  if (spansSummary === null) {
+    ComputeSpansSummary({
+      fromTime: fromTime,
+      toTime: toTime,
+      resourceAttributes: {
+        "user.id": "Health BB user",
+        "health_check.name": "hourly-simple-openeo-check"
+      }
+    }).then(setSpansSummary).catch(setError)
+  }
+  // if (spansSummary?.traceIds.size !== spansSummary?.durationCount) {
+  //   throw new Error(`The number of trace ids (${spansSummary?.traceIds.size}) and the number of root spans (${spansSummary?.durationCount}) must be the same`)
+  // }
+  return (
+    <div>
+      <Heading>Status summary</Heading>
+      <Text>From {fromTime?.toLocaleString()} to {toTime?.toLocaleString()}</Text>
+      {spansSummary === null ?
+        <Text>Loading ...</Text> : (
+          <>
+            <Text>Number of runs {spansSummary.durationCount}</Text>
+            <Text>Number of runs with a problem {spansSummary.failedTraceIds.size}</Text>
+            <Text>Average duration {spansSummary.durationCount === 0 ? "N/A" : (spansSummary.totalDurationSecs / spansSummary.durationCount).toLocaleString()} s</Text>
+            <Text>Total test count {spansSummary.totalTestCount}</Text>
+          </>
+        )
+      }
+    </div>
+  )
+}
+
 function ChecksDiv({checks, templates, onCheckUpdate, onCheckRemove, setError}: {checks: Check[], templates: CheckTemplate[], onCheckUpdate: (check: Check) => void, onCheckRemove: (checkId: CheckId) => void, setError: (error: Error) => void}): JSX.Element {
   function CheckDiv({check, templates, onCheckUpdate, onCheckRemove, setError}: {check: Check, templates: CheckTemplate[], onCheckUpdate: (check: Check) => void, onCheckRemove: (checkId: CheckId) => void, setError: (error: Error) => void}): JSX.Element {
     if (check.metadata.template_id === undefined)
@@ -226,10 +325,22 @@ function ChecksDiv({checks, templates, onCheckUpdate, onCheckRemove, setError}: 
     )
   }
 
+  // const [spans, setSpans] = useState<SpansResponse | null>(null)
+
+  // if (spans === null) {
+  //   GetSpans({}).then(setSpans)
+  // }
+
   return (
     <div>
       <Heading>Check List</Heading>
       {checks.map((check) => <CheckDiv key={check.id} check={check} templates={templates} onCheckUpdate={onCheckUpdate} onCheckRemove={onCheckRemove} setError={setError} />)}
+      <Heading>Spans</Heading>
+      {/* {spans && (
+        <Text className="whitespace-pre">
+          {StringifyPretty(spans.results)}
+        </Text>
+      )} */}
     </div>
   )
 }

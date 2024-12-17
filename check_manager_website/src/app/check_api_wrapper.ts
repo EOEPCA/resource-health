@@ -35,7 +35,7 @@ export type Check = {
   outcome_filter: object
 }
 
-function GetBaseURL(): string {
+function GetCheckManagerURL(): string {
   const url = env('NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT')
   if (!url) {
     throw new Error(`environment variable NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT must be set`)
@@ -43,13 +43,22 @@ function GetBaseURL(): string {
   return url
 }
 
+function GetTelemetryURL(): string {
+  // MUST include /v1 (or some other version) at the end
+  const url = env('NEXT_PUBLIC_TELEMETRY_ENDPOINT')
+  if (!url) {
+    throw new Error(`environment variable NEXT_PUBLIC_TELEMETRY_ENDPOINT must be set`)
+  }
+  return url
+}
+
 export async function ListCheckTemplates(ids?: CheckTemplateId[]): Promise<CheckTemplate[]> {
-  const response = await axios.get(GetBaseURL() + "/check_templates/", {params: ids})
+  const response = await axios.get(GetCheckManagerURL() + "/check_templates/", {params: ids})
   return response.data
 }
 
 export async function NewCheck(templateId: CheckTemplateId, templateArgs: object, schedule: CronExpression): Promise<Check> {
-  const response = await axios.post(GetBaseURL() + "/checks/", {template_id: templateId, template_args: templateArgs, schedule: schedule})
+  const response = await axios.post(GetCheckManagerURL() + "/checks/", {template_id: templateId, template_args: templateArgs, schedule: schedule})
   return response.data
 }
 
@@ -65,15 +74,118 @@ export async function UpdateCheck(oldCheck: Check, templateId?: CheckTemplateId,
   if (schedule === oldCheck.schedule) {
     schedule = undefined
   }
-  const response = await axios.patch(GetBaseURL() + `/checks/${oldCheck.id}`, {template_id: templateId, template_args: templateArgs, schedule: schedule})
+  const response = await axios.patch(GetCheckManagerURL() + `/checks/${oldCheck.id}`, {template_id: templateId, template_args: templateArgs, schedule: schedule})
   return response.data
 }
 
 export async function RemoveCheck(checkId: CheckId): Promise<void> {
-  await axios.delete(GetBaseURL() + `/checks/${checkId}`)
+  await axios.delete(GetCheckManagerURL() + `/checks/${checkId}`)
 }
 
 export async function ListChecks(ids?: CheckId[]): Promise<Check[]> {
-  const response = await axios.get(GetBaseURL() + "/checks/", {params: ids})
+  const response = await axios.get(GetCheckManagerURL() + "/checks/", {params: ids})
   return response.data
+}
+
+type Span = {
+  traceId: string
+  spanId: string
+  parentSpanId: string
+  startTimeUnixNano: number
+  endTimeUnixNano: number
+  status: {
+    // UNSET = 0
+    // OK = 1
+    // ERROR = 2
+    // According to https://opentelemetry-python.readthedocs.io/en/latest/api/trace.status.html
+    code?: 0 | 1 | 2
+    message?: string
+  }
+  attributes: {
+    key: string
+    value: {
+      stringValue: string
+    } | {
+      intValue: string
+    } | unknown
+  }[]
+}
+
+type SpanResult = {
+  resourceSpans: {
+    resource: {
+      attributes: object[]
+    },
+    scopeSpans: {
+      scope: object
+      spans: Span[]
+    }[]
+  }[]
+}
+
+type Attributes = Record<string, string | number | boolean>
+export type SpansResponse = {
+  results: SpanResult[]
+  next_page_token?: string
+}
+
+export type GetSpansQueryParams = {
+  traceId?: string
+  spanId?: string
+  fromTime?: Date
+  toTime?: Date
+  resourceAttributes?: Attributes
+  scopeAttributes?: Attributes
+  spanAttributes?: Attributes
+}
+
+function AttributesDictToList(attributes?: Attributes): string[] {
+  if (attributes === undefined) {
+    return []
+  }
+  return Object.entries(attributes).map(([key, value]) => `${key}=${value}`)
+}
+
+export async function GetSpans({traceId, spanId, fromTime, toTime, resourceAttributes, scopeAttributes, spanAttributes, pageToken}: GetSpansQueryParams & { pageToken?: string}): Promise<SpansResponse> {
+  if (traceId === undefined && spanId !== undefined) {
+    throw new Error("spanId must only be set if traceId is also set")
+  }
+  console.warn(`From time ${fromTime?.toISOString()}`)
+  console.warn(`To time ${toTime?.toISOString()}`)
+  // return GetTelemetryURL() + `/spans` + (traceId === undefined ? "" : `/${traceId}`) + (spanId === undefined ? "" : `/${spanId}`)
+  const response = await axios.get(
+    GetTelemetryURL() + `/spans` + (traceId === undefined ? "" : `/${traceId}`) + (spanId === undefined ? "" : `/${spanId}`),
+    {
+      params: {
+        from_time: fromTime?.toISOString(),
+        to_time: toTime?.toISOString(),
+        resource_attributes: AttributesDictToList(resourceAttributes),
+        scope_attributes: AttributesDictToList(scopeAttributes),
+        span_attributes: AttributesDictToList(spanAttributes),
+        page_token: pageToken
+      },
+      paramsSerializer: {
+        // Omit brackets when serialize array into the URL.
+        // Based on https://stackoverflow.com/a/76517213
+        indexes: null,
+      }
+    }
+  )
+  return response.data
+}
+
+export async function ReduceSpans<T>(getSpansQueryParams: GetSpansQueryParams, callbackFn: (accumulator: T, currentValue: SpanResult) => T, initialValue: T): Promise<T> {
+  let pageToken: string | undefined = undefined
+  let accumulator: T = initialValue
+  let numRequests = 0
+  do {
+    const {results, next_page_token} = await GetSpans({pageToken: pageToken, ...getSpansQueryParams})
+    numRequests++
+    pageToken = next_page_token
+    for (const spanResult of results) {
+      accumulator = callbackFn(accumulator, spanResult)
+    }
+    console.warn(numRequests)
+  } while (pageToken)
+  return accumulator
 }
