@@ -28,11 +28,17 @@ export type CheckTemplate = {
   arguments: StrictRJSFSchema
 }
 
+type Attributes = Record<string, string | number | boolean>
+
 export type Check = {
   id: CheckId
   metadata: CheckMetadata
   schedule: CronExpression
-  outcome_filter: object
+  outcome_filter: {
+    resource_attributes?: Attributes
+    scope_attributes?: Attributes
+    span_attributes?: Attributes
+  }
 }
 
 function GetCheckManagerURL(): string {
@@ -123,7 +129,6 @@ type SpanResult = {
   }[]
 }
 
-type Attributes = Record<string, string | number | boolean>
 export type SpansResponse = {
   results: SpanResult[]
   next_page_token?: string

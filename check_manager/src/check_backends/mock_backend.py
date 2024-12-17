@@ -113,7 +113,8 @@ class MockBackend(CheckBackend):
             id=check_id,
             metadata={"template_id": template_id, "template_args": template_args},
             schedule=schedule,
-            outcome_filter={"test.id": check_id},
+            # Just return some filter which I know will have some results
+            outcome_filter={"resource_attributes": {"k8s.cronjob.name": "resource-health-healthchecks-cronjob-3"}},
         )
         self._auth_to_id_to_check[auth_obj][check_id] = check
         return check
