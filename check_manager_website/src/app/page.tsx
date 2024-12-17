@@ -2,12 +2,13 @@
 
 import { JSX, useState } from 'react'
 import Form from '@rjsf/chakra-ui';
-import { Check, CheckId, CheckTemplate, CheckTemplateId, GetSpans, GetSpansQueryParams, ListChecks, ListCheckTemplates, NewCheck, ReduceSpans, RemoveCheck, SpansResponse, UpdateCheck } from "@/app/check_api_wrapper"
+import { Check, CheckId, CheckTemplate, CheckTemplateId, GetSpansQueryParams, ListChecks, ListCheckTemplates, NewCheck, ReduceSpans, RemoveCheck, UpdateCheck } from "@/app/check_api_wrapper"
 import validator from '@rjsf/validator-ajv8';
-import { Button, CSSReset, FormControl, FormLabel, Grid, GridItem, Heading, Input, Select, Text, theme, ThemeProvider } from '@chakra-ui/react';
+import { Button, CSSReset, FormControl, FormLabel, Grid, GridItem, Heading, Input, Select, Table, TableContainer, Tbody, Td, Text, Th, Thead, theme, ThemeProvider, Tr } from '@chakra-ui/react';
 
 
 const log = (type: string) => console.log.bind(console, type);
+const LOADING_STRING = "Loading ..."
 
 function StringifyPretty(json: object): string {
   return JSON.stringify(json, null, 2)
@@ -48,7 +49,7 @@ export default function Home(): JSX.Element {
       <ThemeProvider theme={theme}>
         <CSSReset />
         <main className="flex min-h-screen flex-col items-start p-24">
-          <Text>Loading</Text>
+          <Text>{LOADING_STRING}</Text>
         </main>
       </ThemeProvider>
     )
@@ -62,10 +63,12 @@ export default function Home(): JSX.Element {
       <CSSReset />
       <main className="flex min-h-screen flex-col items-start p-24">
         {/* <CheckTemplatesListDiv templates={checkTemplates} /> */}
-        <ResultsSummaryDiv fromTime={before} toTime={now} setError={setError}/>
+        {/* <ResultsSummaryDiv fromTime={before} toTime={now} setError={setError}/> */}
         <CreateCheckDiv templates={checkTemplates} onCreateCheck={(check) => setChecks([...checks, check])} setError={setError} />
         <ChecksDiv
           checks={checks}
+          fromTime={before}
+          toTime={now}
           templates={checkTemplates}
           onCheckUpdate={(updatedCheck) => setChecks(checks.map((check) => check.id === updatedCheck.id ? updatedCheck : check))}
           onCheckRemove={(checkId) => setChecks(checks.filter((check) => check.id !== checkId))}
@@ -159,6 +162,10 @@ type SpansSummary = {
   totalTestCount: number
 }
 
+function GetAverageDuration(spansSummary: SpansSummary): string {
+  return spansSummary.durationCount === 0 ? "N/A" : (spansSummary.totalDurationSecs / spansSummary.durationCount).toLocaleString() + " s"
+}
+
 async function ComputeSpansSummary(getSpansQueryParams: GetSpansQueryParams): Promise<SpansSummary> {
   return ReduceSpans<SpansSummary>(
     getSpansQueryParams,
@@ -189,30 +196,134 @@ async function ComputeSpansSummary(getSpansQueryParams: GetSpansQueryParams): Pr
   )
 }
 
-function ResultsSummaryDiv({fromTime, toTime, setError}: {fromTime?: Date, toTime?: Date, setError: (error: Error) => void}): JSX.Element {
-  // const [spansResponse, setSpansResponse] = useState<SpansResponse | null>(null)
-  // if (spansResponse === null) {
-  //   GetSpans({fromTime: fromTime, toTime: toTime}).then(setSpansResponse).catch(setError)
+// function ResultsSummaryDiv({fromTime, toTime, setError}: {fromTime?: Date, toTime?: Date, setError: (error: Error) => void}): JSX.Element {
+//   // const [spansResponse, setSpansResponse] = useState<SpansResponse | null>(null)
+//   // if (spansResponse === null) {
+//   //   GetSpans({fromTime: fromTime, toTime: toTime}).then(setSpansResponse).catch(setError)
+//   // }
+//   // const traceIds = new Set<string>()
+//   // const failedTraceIds = new Set<string>()
+//   // if (spansResponse !== null) {
+//   //   for (const resourceSpansArray of spansResponse.results) {
+//   //     for (const resourceSpans of resourceSpansArray.resourceSpans) {
+//   //       for (const scopeSpans of resourceSpans.scopeSpans) {
+//   //         for (const span of scopeSpans.spans) {
+//   //           traceIds.add(span.traceId)
+//   //           if (span.status?.code === 2) {
+//   //             failedTraceIds.add(span.traceId)
+//   //           }
+//   //         }
+//   //       }
+//   //     }
+//   //   }
+//   // }
+
+
+
+//   const [spansSummary, setSpansSummary] = useState<SpansSummary | null>(null)
+//   if (spansSummary === null) {
+//     ComputeSpansSummary({
+//       fromTime: fromTime,
+//       toTime: toTime,
+//       resourceAttributes: {
+//         "user.id": "Health BB user",
+//         "health_check.name": "hourly-simple-openeo-check"
+//       }
+//     }).then(setSpansSummary).catch(setError)
+//   }
+//   // if (spansSummary?.traceIds.size !== spansSummary?.durationCount) {
+//   //   throw new Error(`The number of trace ids (${spansSummary?.traceIds.size}) and the number of root spans (${spansSummary?.durationCount}) must be the same`)
+//   // }
+//   return (
+//     <div>
+//       <Heading>Status summary</Heading>
+//       <Text>From {fromTime?.toLocaleString()} to {toTime?.toLocaleString()}</Text>
+//       {spansSummary === null ?
+//         <Text>{LOADING_STRING}</Text> : (
+//           <>
+//             <Text>Number of runs {spansSummary.durationCount}</Text>
+//             <Text>Number of runs with a problem {spansSummary.failedTraceIds.size}</Text>
+//             <Text>Average duration {GetAverageDuration(spansSummary)}</Text>
+//             <Text>Total test count {spansSummary.totalTestCount}</Text>
+//           </>
+//         )
+//       }
+//     </div>
+//   )
+// }
+
+type CheckDivCommonProps = {
+  fromTime?: Date
+  toTime?: Date
+  templates: CheckTemplate[]
+  onCheckUpdate: (check: Check) => void
+  onCheckRemove: (checkId: CheckId) => void
+  setError: (error: Error) => void
+}
+
+function ChecksDiv({checks, ...commonProps}: {checks: Check[]} & CheckDivCommonProps): JSX.Element {
+  // const [spans, setSpans] = useState<SpansResponse | null>(null)
+
+  // if (spans === null) {
+  //   GetSpans({}).then(setSpans)
   // }
-  // const traceIds = new Set<string>()
-  // const failedTraceIds = new Set<string>()
-  // if (spansResponse !== null) {
-  //   for (const resourceSpansArray of spansResponse.results) {
-  //     for (const resourceSpans of resourceSpansArray.resourceSpans) {
-  //       for (const scopeSpans of resourceSpans.scopeSpans) {
-  //         for (const span of scopeSpans.spans) {
-  //           traceIds.add(span.traceId)
-  //           if (span.status?.code === 2) {
-  //             failedTraceIds.add(span.traceId)
-  //           }
-  //         }
-  //       }
-  //     }
-  //   }
-  // }
 
+  return (
+    <div>
+      <Heading>Check List</Heading>
+      <TableContainer>
+        <Table variant='simple'>
+          <Thead>
+            <Tr>
+              <Th>Check info</Th>
+              <Th>Run count</Th>
+              <Th>Problematic run count</Th>
+              <Th>Average duration</Th>
+              <Th>Total test count</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {SummaryRowDiv(commonProps)}
+            {checks.map((check) => <CheckDiv key={check.id} check={check} {...commonProps} />)}
+          </Tbody>
+        </Table>
+      </TableContainer>
+      {/* <Heading>Spans</Heading> */}
+      {/* {spans && (
+        <Text className="whitespace-pre">
+          {StringifyPretty(spans.results)}
+        </Text>
+      )} */}
+    </div>
+  )
+}
 
+function SummaryRowDiv({fromTime, toTime, setError}: {fromTime?: Date, toTime?: Date, setError: (error: Error) => void}): JSX.Element {
+  const [spansSummary, setSpansSummary] = useState<SpansSummary | null>(null)
+  if (spansSummary === null) {
+    ComputeSpansSummary({
+      fromTime: fromTime,
+      toTime: toTime,
+    }).then(setSpansSummary).catch(setError)
+  }
+  return (
+    <Tr>
+      <Td>From all checks (not only those in the table)</Td>
+      <Td>{spansSummary?.durationCount ?? LOADING_STRING}</Td>
+      <Td>{spansSummary?.failedTraceIds.size ?? LOADING_STRING}</Td>
+      <Td>{spansSummary !== null ? GetAverageDuration(spansSummary) : LOADING_STRING}</Td>
+      <Td>{spansSummary?.totalTestCount ?? LOADING_STRING}</Td>
+    </Tr>
+  )
+}
 
+function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRemove, setError}: {check: Check} & CheckDivCommonProps): JSX.Element {
+  if (check.metadata.template_id === undefined)
+    throw Error("Can't deal with checks without template id, at least for now")
+  const [templateId, setTemplateId] = useState(check.metadata.template_id)
+  const [schedule, setSchedule] = useState(check.schedule)
+  const template = FindCheckTemplate(templates, templateId)
+  const [isDisabled, setIsDisabled] = useState(true)
   const [spansSummary, setSpansSummary] = useState<SpansSummary | null>(null)
   if (spansSummary === null) {
     ComputeSpansSummary({
@@ -224,123 +335,82 @@ function ResultsSummaryDiv({fromTime, toTime, setError}: {fromTime?: Date, toTim
       }
     }).then(setSpansSummary).catch(setError)
   }
-  // if (spansSummary?.traceIds.size !== spansSummary?.durationCount) {
-  //   throw new Error(`The number of trace ids (${spansSummary?.traceIds.size}) and the number of root spans (${spansSummary?.durationCount}) must be the same`)
-  // }
+  // const [newCheck, setNewCheck] = useState<Check>(check)
+  // const [template, setTemplate] = useState<CheckTemplate>(FindCheckTemplate(templates, templateId))
+  // setTemplate(FindCheckTemplate(templates, templateId))
   return (
-    <div>
-      <Heading>Status summary</Heading>
-      <Text>From {fromTime?.toLocaleString()} to {toTime?.toLocaleString()}</Text>
-      {spansSummary === null ?
-        <Text>Loading ...</Text> : (
-          <>
-            <Text>Number of runs {spansSummary.durationCount}</Text>
-            <Text>Number of runs with a problem {spansSummary.failedTraceIds.size}</Text>
-            <Text>Average duration {spansSummary.durationCount === 0 ? "N/A" : (spansSummary.totalDurationSecs / spansSummary.durationCount).toLocaleString()} s</Text>
-            <Text>Total test count {spansSummary.totalTestCount}</Text>
-          </>
-        )
-      }
-    </div>
-  )
-}
-
-function ChecksDiv({checks, templates, onCheckUpdate, onCheckRemove, setError}: {checks: Check[], templates: CheckTemplate[], onCheckUpdate: (check: Check) => void, onCheckRemove: (checkId: CheckId) => void, setError: (error: Error) => void}): JSX.Element {
-  function CheckDiv({check, templates, onCheckUpdate, onCheckRemove, setError}: {check: Check, templates: CheckTemplate[], onCheckUpdate: (check: Check) => void, onCheckRemove: (checkId: CheckId) => void, setError: (error: Error) => void}): JSX.Element {
-    if (check.metadata.template_id === undefined)
-      throw Error("Can't deal with checks without template id, at least for now")
-    const [templateId, setTemplateId] = useState(check.metadata.template_id)
-    const [schedule, setSchedule] = useState(check.schedule)
-    const template = FindCheckTemplate(templates, templateId)
-    const [isDisabled, setIsDisabled] = useState(true)
-    // const [newCheck, setNewCheck] = useState<Check>(check)
-    // const [template, setTemplate] = useState<CheckTemplate>(FindCheckTemplate(templates, templateId))
-    // setTemplate(FindCheckTemplate(templates, templateId))
-    return (
-      <details>
-        <summary>{check.metadata.template_args?.label || check.id}</summary>
-        {/* <Text>{check.metadata.description}</Text> */}
-        <Grid gap={6} marginBottom={6}>
-          <div>
-            <FormLabel>Check id</FormLabel>
-            <Text>{check.id}</Text>
-          </div>
-          <div>
-            <FormLabel>Outcome Filter</FormLabel>
-            <Text className="whitespace-pre">{StringifyPretty(check.outcome_filter)}</Text>
-          </div>
-          {/* <Text></Text> */}
-        </Grid>
-        <FormControl isDisabled={isDisabled}>
+    <Tr>
+      <Td>
+        <details>
+          <summary>{check.metadata.template_args?.label || check.id}</summary>
+          {/* <Text>{check.metadata.description}</Text> */}
           <Grid gap={6} marginBottom={6}>
-            <GridItem>
-              <FormLabel>Check Template Id</FormLabel>
-              {/* <Text>{templateId}</Text> */}
-              <Select>
-                {templates.map((template) => (<option key={template.id} onClick={() => setTemplateId(template.id)}>{template.id}</option>))}
-              </Select>
-            </GridItem>
-            <GridItem>
-              <FormLabel>Schedule</FormLabel>
-              <Input
-                value={schedule}
-                onChange={e => setSchedule(e.target.value)}
-              />
-            </GridItem>
+            <div>
+              <FormLabel>Check id</FormLabel>
+              <Text>{check.id}</Text>
+            </div>
+            <div>
+              <FormLabel>Outcome Filter</FormLabel>
+              <Text className="whitespace-pre">{StringifyPretty(check.outcome_filter)}</Text>
+            </div>
+            {/* <Text></Text> */}
           </Grid>
-          <Form
-            schema={template.arguments}
-            formData={check.metadata.template_args}
-            uiSchema={{
-              "ui:readonly": isDisabled,
-              "ui:options": {
-                submitButtonOptions: {
-                  props: {
-                    disabled: isDisabled
-                  },
+          <FormControl isDisabled={isDisabled}>
+            <Grid gap={6} marginBottom={6}>
+              <GridItem>
+                <FormLabel>Check Template Id</FormLabel>
+                {/* <Text>{templateId}</Text> */}
+                <Select>
+                  {templates.map((template) => (<option key={template.id} onClick={() => setTemplateId(template.id)}>{template.id}</option>))}
+                </Select>
+              </GridItem>
+              <GridItem>
+                <FormLabel>Schedule</FormLabel>
+                <Input
+                  value={schedule}
+                  onChange={e => setSchedule(e.target.value)}
+                />
+              </GridItem>
+            </Grid>
+            <Form
+              schema={template.arguments}
+              formData={check.metadata.template_args}
+              uiSchema={{
+                "ui:readonly": isDisabled,
+                "ui:options": {
+                  submitButtonOptions: {
+                    props: {
+                      disabled: isDisabled
+                    },
+                  }
                 }
+              }}
+              validator={validator}
+              onChange={log('changed')}
+              onSubmit={(data) => {UpdateCheck(check, templateId, data.formData, schedule).then((updatedCheck) => { /*setNewCheck(updatedCheck);*/ onCheckUpdate(updatedCheck)}).catch(setError)}}
+              onError={log('errors')}
+            />
+          </FormControl>
+          {/* <Text className="whitespace-pre">{StringifyPretty(check)}</Text> */}
+          <Button
+            type="button"
+            onClick={() => {
+              if (!isDisabled) {
+                setTemplateId(check.metadata.template_id!)
+                setSchedule(check.schedule)
               }
+              setIsDisabled(!isDisabled)
             }}
-            validator={validator}
-            onChange={log('changed')}
-            onSubmit={(data) => {UpdateCheck(check, templateId, data.formData, schedule).then((updatedCheck) => { /*setNewCheck(updatedCheck);*/ onCheckUpdate(updatedCheck)}).catch(setError)}}
-            onError={log('errors')}
-          />
-        </FormControl>
-        {/* <Text className="whitespace-pre">{StringifyPretty(check)}</Text> */}
-        <Button
-          type="button"
-          onClick={() => {
-            if (!isDisabled) {
-              setTemplateId(check.metadata.template_id!)
-              setSchedule(check.schedule)
-            }
-            setIsDisabled(!isDisabled)
-          }}
-        >
-          {isDisabled ? "Enable Editing" : "Disable Editing (and delete unsaved changes)"}
-        </Button>
-        <Button type="button" onClick={() => {RemoveCheck(check.id); onCheckRemove(check.id)}}>Remove Check</Button>
-      </details>
-    )
-  }
-
-  // const [spans, setSpans] = useState<SpansResponse | null>(null)
-
-  // if (spans === null) {
-  //   GetSpans({}).then(setSpans)
-  // }
-
-  return (
-    <div>
-      <Heading>Check List</Heading>
-      {checks.map((check) => <CheckDiv key={check.id} check={check} templates={templates} onCheckUpdate={onCheckUpdate} onCheckRemove={onCheckRemove} setError={setError} />)}
-      <Heading>Spans</Heading>
-      {/* {spans && (
-        <Text className="whitespace-pre">
-          {StringifyPretty(spans.results)}
-        </Text>
-      )} */}
-    </div>
+          >
+            {isDisabled ? "Enable Editing" : "Disable Editing (and delete unsaved changes)"}
+          </Button>
+          <Button type="button" onClick={() => {RemoveCheck(check.id); onCheckRemove(check.id)}}>Remove Check</Button>
+        </details>
+      </Td>
+      <Td>{spansSummary?.durationCount ?? LOADING_STRING}</Td>
+      <Td>{spansSummary?.failedTraceIds.size ?? LOADING_STRING}</Td>
+      <Td>{spansSummary !== null ? GetAverageDuration(spansSummary) : LOADING_STRING}</Td>
+      <Td>{spansSummary?.totalTestCount ?? LOADING_STRING}</Td>
+    </Tr>
   )
 }
