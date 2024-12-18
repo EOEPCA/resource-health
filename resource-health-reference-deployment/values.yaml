@@ -103,7 +103,7 @@ resource-health:
       - name: NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT
         value: http://resource-health-api:8000
       - name: NEXT_PUBLIC_TELEMETRY_ENDPOINT
-        value: http://resource-health-telemetry-api:8080
+        value: http://resource-health-telemetry-api:8080/v1
     tls:
       client:
         commonName: resourcehealth-web
