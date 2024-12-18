@@ -1,7 +1,7 @@
 from os import environ
 import requests
 
-WORKSPACE_HOST: str = environ["WORKSPACE_TEST_HOST"]
+WORKSPACE_HOST: str = environ["WORKSPACE_HOST"]
 
 
 def test_ping_workspace_api() -> None:
