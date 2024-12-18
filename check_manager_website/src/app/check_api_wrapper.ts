@@ -155,9 +155,6 @@ export async function GetSpans({traceId, spanId, fromTime, toTime, resourceAttri
   if (traceId === undefined && spanId !== undefined) {
     throw new Error("spanId must only be set if traceId is also set")
   }
-  console.warn(`From time ${fromTime?.toISOString()}`)
-  console.warn(`To time ${toTime?.toISOString()}`)
-  // return GetTelemetryURL() + `/spans` + (traceId === undefined ? "" : `/${traceId}`) + (spanId === undefined ? "" : `/${spanId}`)
   const response = await axios.get(
     GetTelemetryURL() + `/spans` + (traceId === undefined ? "" : `/${traceId}`) + (spanId === undefined ? "" : `/${spanId}`),
     {
@@ -182,15 +179,12 @@ export async function GetSpans({traceId, spanId, fromTime, toTime, resourceAttri
 export async function ReduceSpans<T>(getSpansQueryParams: GetSpansQueryParams, callbackFn: (accumulator: T, currentValue: SpanResult) => T, initialValue: T): Promise<T> {
   let pageToken: string | undefined = undefined
   let accumulator: T = initialValue
-  let numRequests = 0
   do {
     const {results, next_page_token} = await GetSpans({pageToken: pageToken, ...getSpansQueryParams})
-    numRequests++
     pageToken = next_page_token
     for (const spanResult of results) {
       accumulator = callbackFn(accumulator, spanResult)
     }
-    console.warn(numRequests)
   } while (pageToken)
   return accumulator
 }
