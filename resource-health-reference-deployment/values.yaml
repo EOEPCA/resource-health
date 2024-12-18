@@ -101,9 +101,9 @@ resource-health:
     environmentSecrets: []
     environmentFixed:
       - name: NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT
-        value: https://api:8000
+        value: https://resource-health-api:8000
       - name: NEXT_PUBLIC_TELEMETRY_ENDPOINT
-        value: https://telemetry_api:8080
+        value: https://resource-health-telemetry-api:8080
     tls:
       client:
         commonName: resourcehealth-web
