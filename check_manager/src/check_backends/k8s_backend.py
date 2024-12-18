@@ -173,15 +173,17 @@ class K8sBackend(CheckBackend):
         env = cronjob.spec.job_template.spec.template.spec.containers[0].env
         script = [x.value for x in env if x.name == "RESOURCE_HEALTH_RUNNER_SCRIPT"]
         req = [x.value for x in env if x.name == "RESOURCE_HEALTH_RUNNER_REQUIREMENTS"]
-        metadata = {}
+
+        template_args = {}
         if len(script) > 0:
-            metadata.update({"script": script[0]})
+            template_args.update({"script": script[0]})
         if len(req) > 0:
-            metadata.update({"requirements": req[0]})
+            template_args.update({"requirements": req[0]})
         return Check(
             id=CheckId(cronjob.metadata.name),
             # metadata=cronjob.metadata.to_dict(),
-            metadata=metadata,
+            # TODO: TEMPLATE ID MUST NOT BE HARDCODED
+            metadata={"template_id": "default_k8s_template", "template_args": template_args},
             schedule=CronExpression(cronjob.spec.schedule),
             outcome_filter={"resource_attributes": {"k8s.cronjob.name": cronjob.metadata.name}},
         )
