@@ -129,7 +129,8 @@ def load_backend() -> AggregationBackend:
 
 
 class ExceptionHandler:
-    """ Async iterator wrapper to handle exceptions during iteration """
+    """Async iterator wrapper to handle exceptions during iteration"""
+
     def __init__(self, iter):
         self.iter = iter
 
@@ -143,7 +144,9 @@ class ExceptionHandler:
             except StopAsyncIteration as stop:
                 raise stop
             except CheckConnectionError as e:
-                print(f"Encountered an error when trying to connect to service: {str(e)}")
+                print(
+                    f"Encountered an error when trying to connect to service: {str(e)}"
+                )
                 continue
 
 
@@ -174,10 +177,8 @@ def list_templates(ids: Annotated[Optional[list[str]], Argument()] = None):
     """
     List available templates.
     """
-    if (ids):
-        asyncio.run(print_templates(
-            [CheckTemplateId(i) for i in ids]
-        ))
+    if ids:
+        asyncio.run(print_templates([CheckTemplateId(i) for i in ids]))
     else:
         asyncio.run(print_templates())
 
@@ -208,7 +209,7 @@ def get_auth_obj() -> str:
 
 def if_only_one_service() -> int:
     conf: dict = load_config()
-    if (len(conf["services"]) > 1):
+    if len(conf["services"]) > 1:
         print("More than one service configured. Choose which one to use.")
         raise Exit()
     return 1
@@ -228,6 +229,7 @@ def create_check(
     service_nr: Annotated[int, Option(default_factory=if_only_one_service)],
     template_id: Annotated[str, Option()],
     schedule: Annotated[str, Option()],
+    health_check_name: Annotated[str, Option()],
     url: Annotated[Optional[str], Option()] = None,
     file: Annotated[Optional[str], Option()] = None,
     url_req: Annotated[Optional[str], Option()] = None,
@@ -236,7 +238,8 @@ def create_check(
     """
     Create and deploy a new health check.
     """
-    template_args: dict = {"script": None}
+    template_args: dict = {"script": None, "health_check.name": health_check_name}
+
     if url is not None and file is not None:
         print("Use one of '--url' or '--file'.")
         raise Exit()
@@ -259,9 +262,7 @@ def create_check(
         )
 
     # For AggregateBackend. Will be deleted after use.
-    template_args.update(
-        {"service_index": service_nr - 1}
-    )
+    template_args.update({"service_index": service_nr - 1})
 
     check_backend = load_backend()
 

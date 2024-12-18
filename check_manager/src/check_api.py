@@ -49,6 +49,7 @@ def get_status_code_and_message(exception: BaseException) -> tuple[int, Json]:
         case _:
             return (500, error_json)
 
+
 class CheckDefinition(BaseModel):
     check_template_id: CheckTemplateId
     check_template_args: Json
@@ -69,6 +70,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 @app.exception_handler(Exception)
 async def exception_handler(request: Request, exc: Exception):
@@ -125,6 +127,7 @@ async def list_checks(
     # TODO: stream this instead of accumulating everything first
     return [check async for check in check_backend.list_checks(auth_obj, ids)]
 
+
 def uvicorn_dev() -> None:
     with open("openapi.json", mode="w+") as file:
         json.dump(app.openapi(), file, indent=2)
@@ -132,6 +135,7 @@ def uvicorn_dev() -> None:
     import uvicorn
 
     uvicorn.run("check_api:app", reload=True)
+
 
 def unicorn_dummy_prod() -> None:
     import uvicorn
