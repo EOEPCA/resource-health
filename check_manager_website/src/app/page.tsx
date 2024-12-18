@@ -248,11 +248,12 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
       spanAttributes: check.outcome_filter.span_attributes
     }).then(setSpansSummary).catch(setError)
   }
+  const check_label = check.metadata.template_args === undefined ? check.id : check.metadata.template_args['health_check.name'] ?? check.id
   return (
     <Tr>
       <Td>
         <details>
-          <summary>{check.metadata.template_args?.label || check.id}</summary>
+          <summary>{check_label}</summary>
           <Grid gap={6} marginBottom={6}>
             <div>
               <FormLabel>Check id</FormLabel>

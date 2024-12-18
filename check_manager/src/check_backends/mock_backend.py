@@ -45,14 +45,14 @@ class MockBackend(CheckBackend):
                     "$schema": "http://json-schema.org/draft-07/schema",
                     "type": "object",
                     "properties": {
-                        "label": {"type": "string"},
+                        "health_check.name": {"type": "string"},
                         "script": {"type": "string", "format": "textarea"},
                         "requirements": {
                             "type": "string",
                             "format": "textarea"
                         },
                     },
-                    "required": ["label", "script"],
+                    "required": ["health_check.name", "script"],
                 },
             )
         ]

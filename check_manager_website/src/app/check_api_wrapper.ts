@@ -17,7 +17,7 @@ export type CheckTemplateMetadata = object & {
 export type CheckMetadata = object & {
   template_id?: CheckTemplateId
   template_args?: object & {
-    label?: string
+    ['health_check.name']?: string
     description?: string
   }
 }
