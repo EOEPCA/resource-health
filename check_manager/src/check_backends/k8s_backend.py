@@ -142,9 +142,11 @@ class K8sBackend(CheckBackend):
                         },
                         "script": {
                             "type": "string",
+                            "format": "textarea"
                         },
                         "requirements": {
                             "type": "string",
+                            "format": "textarea"
                         },
                     },
                     "required": [
@@ -181,7 +183,7 @@ class K8sBackend(CheckBackend):
             # metadata=cronjob.metadata.to_dict(),
             metadata=metadata,
             schedule=CronExpression(cronjob.spec.schedule),
-            outcome_filter={},
+            outcome_filter={"resource_attributes": {"k8s.cronjob.name": cronjob.metadata.name}},
         )
 
     @override
@@ -244,7 +246,7 @@ class K8sBackend(CheckBackend):
                 id=check_id,
                 metadata={"template_id": template_id, "template_args": template_args},
                 schedule=schedule,
-                outcome_filter={"test.id": check_id},
+                outcome_filter={"resource_attributes": {"k8s.cronjob.name": check_id}},
             )
         return check
 
