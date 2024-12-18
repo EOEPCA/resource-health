@@ -37,7 +37,7 @@ docker build -t check_manager_website -f Dockerfile .
 Run the image with
 
 ```bash
-docker run -e NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT=http://localhost:8000 -p 3000:3000 -it check_manager_website
+docker run -e NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT=http://localhost:8000 -e NEXT_PUBLIC_TELEMETRY_ENDPOINT=http://localhost:12345/v1 -p 3000:3000 -it check_manager_website
 ```
 
 Where `NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT` points to the REST API endpoint.
