@@ -142,9 +142,11 @@ class K8sBackend(CheckBackend):
                         },
                         "script": {
                             "type": "string",
+                            "format": "textarea"
                         },
                         "requirements": {
                             "type": "string",
+                            "format": "textarea"
                         },
                     },
                     "required": [

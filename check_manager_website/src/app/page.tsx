@@ -6,7 +6,6 @@ import { Check, CheckId, CheckTemplate, CheckTemplateId, GetSpansQueryParams, Li
 import validator from '@rjsf/validator-ajv8';
 import { Button, CSSReset, FormControl, FormLabel, Grid, GridItem, Heading, Input, Select, Table, TableContainer, Tbody, Td, Text, Th, Thead, theme, ThemeProvider, Tr } from '@chakra-ui/react';
 
-
 const log = (type: string) => console.log.bind(console, type);
 const LOADING_STRING = "Loading ..."
 
@@ -62,9 +61,6 @@ export default function Home(): JSX.Element {
     <ThemeProvider theme={theme}>
       <CSSReset />
       <main className="flex min-h-screen flex-col items-start p-24">
-        {/* <CheckTemplatesListDiv templates={checkTemplates} /> */}
-        {/* <ResultsSummaryDiv fromTime={before} toTime={now} setError={setError}/> */}
-        {/* <CreateCheckDiv templates={checkTemplates} onCreateCheck={(check) => setChecks([...checks, check])} setError={setError} /> */}
         <ChecksDiv
           checks={checks}
           fromTime={before}
@@ -181,20 +177,16 @@ function CreateCheckDiv({templates, onCreateCheck, setError}: {templates: CheckT
   const [templateId, setTemplateId] = useState(templates[0].id)
   // Only used as a hacky way to force clearing of form data
   const [key, setKey] = useState(0)
-  // const [templateArgs, setTemplateArgs] = useState({})
   const [schedule, setSchedule] = useState("")
-  // const [check, setCheck] = useState<Check | null>(null)
   const template = FindCheckTemplate(templates, templateId)
   return (
     <Tr>
       <Td>
         <details>
           <summary>Create new check</summary>
-          {/* <Heading>Create Check</Heading> */}
           <Grid gap={6} marginBottom={6}>
             <GridItem>
               <FormLabel>Check Template</FormLabel>
-              {/* <Text>{templateId}</Text> */}
               <Select>
                 {templates.map((template) => (
                   <option
@@ -233,12 +225,6 @@ function CreateCheckDiv({templates, onCreateCheck, setError}: {templates: CheckT
             }}
             onError={log('errors')}
           />
-          {/* <div>
-            <FormLabel>Tamplate args</FormLabel>
-            {for}
-          </div> */}
-          {/* <button type="button" className="underline text-blue-500" onClick={() => NewCheck(templateId, templateArgs, schedule).then((newCheck) => {setCheck(newCheck); onCreateCheck(newCheck)}).catch(setError)}>Create Check</button> */}
-          {/* {check && <Text className="whitespace-pre">New Check {StringifyPretty(check)}</Text>} */}
         </details>
       </Td>
     </Tr>
@@ -267,7 +253,6 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
       <Td>
         <details>
           <summary>{check.metadata.template_args?.label || check.id}</summary>
-          {/* <Text>{check.metadata.description}</Text> */}
           <Grid gap={6} marginBottom={6}>
             <div>
               <FormLabel>Check id</FormLabel>
@@ -277,13 +262,11 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
               <FormLabel>Outcome Filter</FormLabel>
               <Text className="whitespace-pre">{StringifyPretty(check.outcome_filter)}</Text>
             </div>
-            {/* <Text></Text> */}
           </Grid>
           <FormControl isDisabled={isDisabled}>
             <Grid gap={6} marginBottom={6}>
               <GridItem>
                 <FormLabel>Check Template Id</FormLabel>
-                {/* <Text>{templateId}</Text> */}
                 <Select>
                   {templates.map((template) => (<option key={template.id} onClick={() => setTemplateId(template.id)}>{template.id}</option>))}
                 </Select>
@@ -311,11 +294,10 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
               }}
               validator={validator}
               onChange={log('changed')}
-              onSubmit={(data) => {setIsDisabled(!isDisabled); UpdateCheck(check, templateId, data.formData, schedule).then((updatedCheck) => { /*setNewCheck(updatedCheck);*/ onCheckUpdate(updatedCheck)}).catch(setError)}}
+              onSubmit={(data) => {setIsDisabled(!isDisabled); UpdateCheck(check, templateId, data.formData, schedule).then((updatedCheck) => { onCheckUpdate(updatedCheck)}).catch(setError)}}
               onError={log('errors')}
             />
           </FormControl>
-          {/* <Text className="whitespace-pre">{StringifyPretty(check)}</Text> */}
           <Button
             type="button"
             onClick={() => {

@@ -51,10 +51,11 @@ class MockBackend(CheckBackend):
                         },
                         "script": {
                             "type": "string",
-                            "format": "data-url"
+                            "format": "textarea"
                         },
                         "requirements": {
                             "type": "string",
+                            "format": "textarea"
                         },
                     },
                     "required": ["label", "script"],
