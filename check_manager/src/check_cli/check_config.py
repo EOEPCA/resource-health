@@ -1,4 +1,3 @@
-
 from enum import Enum
 import json
 from pathlib import Path
@@ -137,10 +136,10 @@ def remove_service(
     config_dict: dict = {}
     with open(config_file, "r") as c:
         config_dict = json.load(c)
-    service = config_dict["services"][index-1]
+    service = config_dict["services"][index - 1]
     print("Removed service")
     print_service(service, index)
-    del config_dict["services"][index-1]
+    del config_dict["services"][index - 1]
     with open(config_file, "w") as c:
         json.dump(config_dict, c)
 
@@ -154,4 +153,4 @@ def list_services() -> None:
     with open(config_file, "r") as c:
         config_dict = json.load(c)
         for index, service in enumerate(config_dict["services"]):
-            print_service(service, index+1)
+            print_service(service, index + 1)

@@ -133,8 +133,7 @@ class AggregationBackend(CheckBackend):
         failures = [
             result
             for result in results
-            if isinstance(result, Exception)
-            and not isinstance(result, CheckIdError)
+            if isinstance(result, Exception) and not isinstance(result, CheckIdError)
         ]
 
         match (successes, failures):
@@ -174,7 +173,9 @@ class AggregationBackend(CheckBackend):
         template_args: Json,
         schedule: CronExpression,
     ) -> Check:
-        index: int = TypeAdapter(int).validate_python(template_args.pop("service_index", 0))
+        index: int = TypeAdapter(int).validate_python(
+            template_args.pop("service_index", 0)
+        )
         return await self._backends[index].new_check(
             auth_obj, template_id, template_args, schedule
         )
