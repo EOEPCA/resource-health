@@ -62,9 +62,9 @@ def make_cronjob(
     OTEL_RESOURCE_ATTRIBUTES: Optional[str] = None
     if user_id and health_check_name:
         OTEL_RESOURCE_ATTRIBUTES = (
-                f"k8s.cronjob.name={name},"
-                f"user.id={user_id},"
-                f"health_check.name={health_check_name}"
+            f"k8s.cronjob.name={name},"
+            f"user.id={user_id},"
+            f"health_check.name={health_check_name}"
         )
     cronjob = V1CronJob(
         api_version="batch/v1",
@@ -163,7 +163,7 @@ class K8sBackend(CheckBackend):
         pass
 
     def _get_check_template(self: Self, template_id: CheckTemplateId) -> CheckTemplate:
-        if (template_id not in self._check_template_id_to_template):
+        if template_id not in self._check_template_id_to_template:
             raise CheckTemplateIdError(template_id)
         return self._check_template_id_to_template[template_id]
 
@@ -209,9 +209,13 @@ class K8sBackend(CheckBackend):
         validate(template_args, check_template.arguments)
         check_id = CheckId(str(uuid.uuid4()))
         user_id = "Health BB user"
-        health_check_name = TypeAdapter(str).validate_python(template_args["health_check.name"])
+        health_check_name = TypeAdapter(str).validate_python(
+            template_args["health_check.name"]
+        )
         script = TypeAdapter(str).validate_python(template_args["script"])
-        requirements = TypeAdapter(str | None).validate_python(template_args.get("requirements"))
+        requirements = TypeAdapter(str | None).validate_python(
+            template_args.get("requirements")
+        )
         await load_config()
         async with ApiClient() as api_client:
             api_instance = client.BatchV1Api(api_client)
@@ -230,7 +234,7 @@ class K8sBackend(CheckBackend):
                 logger.info(f"Succesfully created new cron job: {api_response}")
             except ApiException as e:
                 logger.error(f"Failed to create new cron job: {e}")
-                if (e.status == 422):
+                if e.status == 422:
                     raise CheckInternalError(f"Unprocessable content")
                 raise e
             except aiohttp.ClientConnectionError as e:
@@ -259,8 +263,12 @@ class K8sBackend(CheckBackend):
             if template_id is not None:
                 check_template = self._get_check_template(template_id)
                 validate(template_args, check_template.arguments)
-            script = TypeAdapter(str | None).validate_python(template_args.get("script"))
-            requirements = TypeAdapter(str | None).validate_python(template_args.get("requirements"))
+            script = TypeAdapter(str | None).validate_python(
+                template_args.get("script")
+            )
+            requirements = TypeAdapter(str | None).validate_python(
+                template_args.get("requirements")
+            )
         await load_config()
         async with ApiClient() as api_client:
             api_instance = client.BatchV1Api(api_client)

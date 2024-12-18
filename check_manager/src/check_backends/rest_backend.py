@@ -143,7 +143,8 @@ class RestBackend(CheckBackend):
     ) -> AsyncIterable[Check]:
         try:
             response = await self._client.get(
-                self._url + LIST_CHECKS_PATH, params={"ids": ids} if ids is not None else {}
+                self._url + LIST_CHECKS_PATH,
+                params={"ids": ids} if ids is not None else {},
             )
         except httpx.HTTPError as e:
             raise CheckConnectionError(e.args[0])

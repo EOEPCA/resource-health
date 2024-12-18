@@ -1,4 +1,3 @@
-
 from collections import defaultdict
 from typing import (
     Any,
@@ -46,13 +45,8 @@ class MockBackend(CheckBackend):
                     "$schema": "http://json-schema.org/draft-07/schema",
                     "type": "object",
                     "properties": {
-                        "label": {
-                            "type": "string"
-                        },
-                        "script": {
-                            "type": "string",
-                            "format": "data-url"
-                        },
+                        "label": {"type": "string"},
+                        "script": {"type": "string", "format": "data-url"},
                         "requirements": {
                             "type": "string",
                         },
@@ -73,7 +67,7 @@ class MockBackend(CheckBackend):
         pass
 
     def _get_check_template(self: Self, template_id: CheckTemplateId) -> CheckTemplate:
-        if (template_id not in self._check_template_id_to_template):
+        if template_id not in self._check_template_id_to_template:
             raise CheckTemplateIdError(template_id)
         return self._check_template_id_to_template[template_id]
 
