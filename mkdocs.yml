@@ -7,6 +7,7 @@ nav:
   - EOEPCA Documentation: https://eoepca.readthedocs.io/
   - Resource Health:
     - index.md
+    - service-offer.md
     - Getting Started:
       - getting-started/quick-start.md
     - Design:
