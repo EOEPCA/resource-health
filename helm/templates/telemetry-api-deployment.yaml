@@ -1,15 +1,15 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "resource-health.fullname" . }}-mock-api
+  name: {{ include "resource-health.fullname" . }}-telemetry-api
   labels:
-    app.kubernetes.io/component: "mockapi"
+    app.kubernetes.io/component: "telemetryapi"
     {{- include "resource-health.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.mock_api.replicaCount }}
+  replicas: {{ .Values.telemetry_api.replicaCount }}
   selector:
     matchLabels:
-      app.kubernetes.io/component: "mockapi"
+      app.kubernetes.io/component: "telemetryapi"
       {{- include "resource-health.selectorLabels" . | nindent 6 }}
   template:
     metadata:
@@ -18,7 +18,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        app.kubernetes.io/component: "mockapi"
+        app.kubernetes.io/component: "telemetryapi"
         {{- include "resource-health.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
@@ -28,47 +28,34 @@ spec:
       serviceAccountName: {{ include "resource-health.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      
       volumes:
-        - name: tls
+        - name: client-tls
           secret:
-            secretName: {{ include "resource-health.fullname" . }}-mock-api-certificate
-      
+            ## TODO: Implement more restricted privileges
+            secretName: opensearch-admin-certificate
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.mock_api.image.repository }}:{{ .Values.mock_api.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.mock_api.image.pullPolicy }}
-          env:
-          {{- range .Values.mock_api.environmentFixed }}
-          - name: {{ toYaml .name | trim }}
-            value: {{ toYaml .value | trim }}
-          {{- end }}
-          - name: OTEL_EXPORTER_OTLP_CERTIFICATE
-            value: "/tls/ca.crt"
-          - name: OTEL_EXPORTER_OTLP_CLIENT_KEY
-            value: "/tls/tls.key"
-          - name: OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE
-            value: "/tls/tls.crt"
-
-          volumeMounts:
-          - name: tls
-            readOnly: true
-            mountPath: "/tls"
-          
+          image: "{{ .Values.telemetry_api.image.repository }}:{{ .Values.telemetry_api.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.telemetry_api.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: {{ .Values.mock_api.containerPort }}
+              containerPort: {{ .Values.telemetry_api.containerPort }}
               protocol: TCP
-          #livenessProbe:
-          #  httpGet:
-          #    path: /live
-          #    port: http
-          #readinessProbe:
-          #  httpGet:
-          #    path: /ready
-          #    port: http
+          volumeMounts:
+          - name: client-tls
+            readOnly: true
+            mountPath: "/certs"
+          ## TODO: add probe endpoints
+          livenessProbe:
+            httpGet:
+              path: /docs
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /docs
+              port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}

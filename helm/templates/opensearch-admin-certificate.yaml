@@ -4,7 +4,6 @@ kind: Certificate
 metadata:
   name: opensearch-admin-certificate
   labels:
-    app.kubernetes.io/component: "mockapi"
     {{- include "resource-health-reference-deployment.labels" . | nindent 4 }}
 spec:
   secretName: opensearch-admin-certificate

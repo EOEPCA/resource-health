@@ -3,7 +3,6 @@ kind: Certificate
 metadata:
   name: otel-collector-certificate
   labels:
-    app.kubernetes.io/component: "mockapi"
     {{- include "resource-health-reference-deployment.labels" . | nindent 4 }}
 spec:
   secretName: otel-collector-certificate

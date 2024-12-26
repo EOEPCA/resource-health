@@ -29,9 +29,7 @@ spec:
             image: "{{ $image.repository }}:{{ $image.tag | default $top.Chart.AppVersion }}"
             imagePullPolicy: {{ $image.pullPolicy }}
             args: [
-              {{ $check.requirements }},
-              {{ $check.script }},
-              pytest --export-traces --suppress-tests-failed-exit-code script.py --user-id defaultuser
+              pytest, --export-traces, --suppress-tests-failed-exit-code, tests.py, --user-id, defaultuser
             ]
             env:
             {{- range $check.env }}
@@ -39,12 +37,23 @@ spec:
               value: {{ toYaml .value | trim }}
             {{- end }}
 
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ $check.overrideOTLPEndpoint | default $top.Values.global.defaultOTLPEndpoint }}
             - name: OTEL_EXPORTER_OTLP_CERTIFICATE
               value: "/tls/ca.crt"
             - name: OTEL_EXPORTER_OTLP_CLIENT_KEY
               value: "/tls/tls.key"
             - name: OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE
               value: "/tls/tls.crt"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: >-
+                k8s.cronjob.name={{ include "resource-health.fullname" $top }}-healthchecks-cronjob-{{ $index }},
+                user.id=Health BB user,
+                health_check.name={{$check.name}}
+            - name: RESOURCE_HEALTH_RUNNER_REQUIREMENTS
+              value: {{ $check.requirements }}
+            - name: RESOURCE_HEALTH_RUNNER_SCRIPT
+              value: {{ $check.script }}
 
             volumeMounts:
             - name: tls

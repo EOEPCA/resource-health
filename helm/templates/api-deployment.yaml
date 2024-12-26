@@ -1,15 +1,15 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "resource-health.fullname" . }}-api
+  name: {{ include "resource-health.fullname" . }}-check-api
   labels:
-    app.kubernetes.io/component: "api"
+    app.kubernetes.io/component: "checkapi"
     {{- include "resource-health.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.api.replicaCount }}
+  replicas: {{ .Values.check_api.replicaCount }}
   selector:
     matchLabels:
-      app.kubernetes.io/component: "api"
+      app.kubernetes.io/component: "checkapi"
       {{- include "resource-health.selectorLabels" . | nindent 6 }}
   template:
     metadata:
@@ -18,7 +18,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        app.kubernetes.io/component: "api"
+        app.kubernetes.io/component: "checkapi"
         {{- include "resource-health.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
@@ -32,19 +32,19 @@ spec:
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.api.image.pullPolicy }}
+          image: "{{ .Values.check_api.image.repository }}:{{ .Values.check_api.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.check_api.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: {{ .Values.api.containerPort }}
+              containerPort: {{ .Values.check_api.containerPort }}
               protocol: TCP
           livenessProbe:
             httpGet:
-              path: /
+              path: /docs
               port: http
           readinessProbe:
             httpGet:
-              path: /
+              path: /docs
               port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
