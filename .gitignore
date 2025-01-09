@@ -6,3 +6,5 @@ build
 .gitignore
 tmp/*
 *.tgz
+.check
+tmp/*
