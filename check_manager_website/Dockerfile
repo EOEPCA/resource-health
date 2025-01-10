@@ -4,7 +4,7 @@ ENV NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT=
 
 WORKDIR /app
 
-COPY ./tsconfig.json ./yarn.lock ./.yarnrc.yml ./next-env.d.ts ./postcss.config.mjs ./.gitignore ./next.config.mjs ./next.config.ts ./tailwind.config.ts ./.eslintrc.json ./package.json /app/
+COPY ./tsconfig.json ./yarn.lock ./.yarnrc.yml ./postcss.config.mjs ./.gitignore ./next.config.mjs ./next.config.ts ./tailwind.config.ts ./.eslintrc.json ./package.json /app/
 COPY ./src/ /app/src/
 
 RUN corepack enable && yarn install --immutable

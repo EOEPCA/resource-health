@@ -47,14 +47,27 @@ spec:
           - name: client-tls
             readOnly: true
             mountPath: "/certs"
+          env:
+          {{- range .Values.telemetry_api.environmentSecrets }}
+            - name: {{ toYaml .name | trim }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ toYaml .secret | trim }}
+                  key: {{ toYaml .key | trim }}
+          {{- end }}
+          {{- range .Values.telemetry_api.environmentFixed }}
+            - name: {{ toYaml .name | trim }}
+              value: {{ toYaml .value | trim }}
+          {{- end }}
+
           ## TODO: add probe endpoints
           livenessProbe:
             httpGet:
-              path: /docs
+              path: /livez
               port: http
           readinessProbe:
             httpGet:
-              path: /docs
+              path: /readyz
               port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

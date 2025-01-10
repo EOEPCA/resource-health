@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: {{ include "resource-health-reference-deployment.fullname" . }}-demo-cronjob-serviceaccount
-  labels:
-    app.kubernetes.io/component: "mockapi"
-    {{- include "resource-health-reference-deployment.labels" . | nindent 4 }}
