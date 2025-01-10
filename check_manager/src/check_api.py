@@ -128,6 +128,17 @@ async def list_checks(
     # TODO: stream this instead of accumulating everything first
     return [check async for check in check_backend.list_checks(auth_obj, ids)]
 
+@app.get("/healthz", include_in_schema=False)
+async def healthz() -> str:
+    return "OK"
+
+@app.get("/livez", include_in_schema=False)
+async def livez() -> str:
+    return "OK"
+
+@app.get("/readyz", include_in_schema=False)
+async def readyz() -> str:
+    return "OK"
 
 def uvicorn_dev() -> None:
     with open("openapi.json", mode="w+") as file:
