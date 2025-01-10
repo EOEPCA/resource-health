@@ -79,7 +79,7 @@ def make_cronjob(
                             containers=[
                                 V1Container(
                                     name="healthcheck",
-                                    image="victorlinrothsensmetry/healthcheck:v0.0.1",
+                                    image="docker.io/eoepca/healthcheck_runner:2.0.0-beta2",
                                     image_pull_policy="IfNotPresent",
                                 ),
                             ],
