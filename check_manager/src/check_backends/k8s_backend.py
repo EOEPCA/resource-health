@@ -114,6 +114,13 @@ def make_cronjob(
                 value=requirements,
             )
         )
+    if environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"):
+        env.append(
+            V1EnvVar(
+                name="OTEL_EXPORTER_OTLP_ENDPOINT",
+                value=environ["OTEL_EXPORTER_OTLP_ENDPOINT"]
+            )
+        )
     if len(env) > 0:
         cronjob.spec.job_template.spec.template.spec.containers[0].env = env
     return cronjob

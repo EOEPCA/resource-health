@@ -39,6 +39,8 @@ spec:
               containerPort: {{ .Values.check_api.containerPort }}
               protocol: TCP
           env:
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.check_api.overrideOTLPEndpoint | default .Values.global.defaultOTLPEndpoint }}
           {{- range .Values.check_api.environmentSecrets }}
             - name: {{ toYaml .name | trim }}
               valueFrom:
