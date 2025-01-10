@@ -89,7 +89,7 @@ resource-health:
   #   image:
   #     repository: docker.io/eoepca/resourcehealth_telemetry_api
   #     pullPolicy: IfNotPresent
-  #     tag: "2.0.0-beta2.02"
+  #     tag: "2.0.0-beta2.03"
   #   serviceType: ClusterIP
   #   containerPort: 8080
   #   servicePort: 8080
