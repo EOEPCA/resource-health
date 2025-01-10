@@ -19,12 +19,12 @@ To test out a basic (non-instrumented) check run either serve the image locally 
 or use [this published trivial_check.py](https://gist.githubusercontent.com/tilowiklundSensmetry/74dea6500a5bd0b8bbce551249eb6786/raw/f7a614be2809576c4b4b0f3fcc1a1d34ac6af789/trivial_check.py) and [requirements.txt file](https://gist.githubusercontent.com/Jonas-Puksta-Sensmetry/cffc6a422d5bf5af7c4718ec75888950/raw/7e3a24902abd220bd5b3c12c7b3758185db5b13d/requirements.txt).
 
 ```
-docker run --rm temporary_runner_image:v0.0.1 "https://gist.githubusercontent.com/Jonas-Puksta-Sensmetry/cffc6a422d5bf5af7c4718ec75888950/raw/7e3a24902abd220bd5b3c12c7b3758185db5b13d/requirements.txt" "https://gist.githubusercontent.com/tilowiklundSensmetry/74dea6500a5bd0b8bbce551249eb6786/raw/f7a614be2809576c4b4b0f3fcc1a1d34ac6af789/trivial_check.py" "pytest script.py"
+docker run --rm --env RESOURCE_HEALTH_RUNNER_REQUIREMENTS="https://gist.githubusercontent.com/Jonas-Puksta-Sensmetry/cffc6a422d5bf5af7c4718ec75888950/raw/7e3a24902abd220bd5b3c12c7b3758185db5b13d/requirements.txt" --env RESOURCE_HEALTH_RUNNER_SCRIPT="https://gist.githubusercontent.com/tilowiklundSensmetry/74dea6500a5bd0b8bbce551249eb6786/raw/f7a614be2809576c4b4b0f3fcc1a1d34ac6af789/trivial_check.py" temporary_runner_image:v0.0.1
 ```
 
 The image includes the OpenTelemety instrumentation for PyTest. If you have an OpenTelemetry endpoint accessible on the host machine you can, for example, run
 ```
-docker run --network host --rm temporary_runner_image:v0.0.1 "https://gist.githubusercontent.com/Jonas-Puksta-Sensmetry/cffc6a422d5bf5af7c4718ec75888950/raw/7e3a24902abd220bd5b3c12c7b3758185db5b13d/requirements.txt" "https://gist.githubusercontent.com/tilowiklundSensmetry/74dea6500a5bd0b8bbce551249eb6786/raw/f7a614be2809576c4b4b0f3fcc1a1d34ac6af789/trivial_check.py" "pytest --export-traces script.py"
+docker run --network host --rm --env RESOURCE_HEALTH_RUNNER_REQUIREMENTS="https://gist.githubusercontent.com/Jonas-Puksta-Sensmetry/cffc6a422d5bf5af7c4718ec75888950/raw/7e3a24902abd220bd5b3c12c7b3758185db5b13d/requirements.txt" --env RESOURCE_HEALTH_RUNNER_SCRIPT="https://gist.githubusercontent.com/tilowiklundSensmetry/74dea6500a5bd0b8bbce551249eb6786/raw/f7a614be2809576c4b4b0f3fcc1a1d34ac6af789/trivial_check.py" temporary_runner_image:v0.0.1
 ```
 
 It is currently published as `docker.io/tilowiklundsensmetry/healthcheck`.

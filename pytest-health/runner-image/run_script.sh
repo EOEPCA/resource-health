@@ -3,15 +3,12 @@
 cd /app
 
 ## TODO: Make optional by adding a default
-## TODO: Consider using environment variables instead of command line arguments
 
-# requirements.txt
-wget -O requirements.txt "${1}"
-pip3 install --break-system-packages -r requirements.txt
+# Install requirements
+if [[ ! -z "$RESOURCE_HEALTH_RUNNER_REQUIREMENTS" ]]; then
+	pip3 install -r <(upcat "$RESOURCE_HEALTH_RUNNER_REQUIREMENTS")
+fi
 
-# python script
-wget -O script.py "${2}"
+# Run tests
+opentelemetry-instrument --traces_exporter otlp --logs_exporter otlp "$@"
 
-# command to launch the script
-echo $3
-eval "$3"

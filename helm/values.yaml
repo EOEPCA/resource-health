@@ -7,91 +7,113 @@ global:
   defaultHealthCheckImage:
     repository: docker.io/eoepca/healthcheck_runner
     pullPolicy: IfNotPresent
-    tag: "v0.1.0-demo"
+    tag: "2.0.0-beta2"
 
-mockapi:
+  ## TODO: Remove this default and make sure it is set or unused
+  defaultOTLPEndpoint: https://resource-health-opentelemetry-collector:4317
+
+mock_api:
   image:
     repository: docker.io/eoepca/mock_service
     pullPolicy: IfNotPresent
-    tag: "v0.1.0-demo"
+    tag: "2.0.0-beta2"
   serviceType: ClusterIP
   containerPort: 5000
   servicePort: 5000
   replicaCount: 2
   environmentFixed:
     - name: OTEL_EXPORTER_OTLP_ENDPOINT
-      value: https://opentelemetry-collector:4317
+      value: https://resource-health-opentelemetry-collector:4317
   tls:
-    commonName: mockapi.resource-health.svc.cluster.local
+    commonName: resource-health-mock-api
     # issuerRef:
     #   kind: ClusterIssuer
-    #   name: null ## INSTRUCTION: certificate issuer
+    #   name: null ## INSTRUCTION: Set to name of certificate issuer for the internal cluster domain
 
 healthchecks:
-  checks:
-  - name: hourly-mockapi-check
-    # image:
-    #   repository: docker.io/eoepca/healthcheck_runner
-    #   pullPolicy: IfNotPresent
-    #   tag: "v0.1.0-demo"
-    schedule: "@hourly"
-    requirements: "https://gist.githubusercontent.com/Jonas-Puksta-Sensmetry/cffc6a422d5bf5af7c4718ec75888950/raw/7e3a24902abd220bd5b3c12c7b3758185db5b13d/requirements.txt"
-    script: "https://gist.githubusercontent.com/Jonas-Puksta-Sensmetry/cffc6a422d5bf5af7c4718ec75888950/raw/7e3a24902abd220bd5b3c12c7b3758185db5b13d/test_stuff.py"
-    env:
-      - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: https://opentelemetry-collector:4317
-      - name: MOCK_API_HOST
-        value: http://resource-health-mockapi:5000
+  checks: []
+  # - name: hourly-mockapi-check
+  #   # image:
+  #   #   repository: docker.io/eoepca/healthcheck_runner
+  #   #   pullPolicy: IfNotPresent
+  #   #   tag: "v0.1.0-demo"
+  #   schedule: "@hourly"
+  #   # This is an empty requirements file
+  #   requirements: "https://gist.githubusercontent.com/tilowiklundSensmetry/a9fefe2873b731b483f554607a82deaa/raw/1136a82ca3c8f28b1ad4d895871514185927dd1c/requirements.txt"
+  #   script: "https://raw.githubusercontent.com/EOEPCA/resource-health/refs/tags/v0.1.0-demo/pytest-health/instrumentation/examples/mock_api_check.py"
+  #   # overrideOTLPEndpoint: https://resource-health-opentelemetry-collector:4317
+  #   env:
+  #     - name: MOCK_API_HOST
+  #       value: http://resource-health-mockapi:5000
 
-  - name: daily-trivial-check
-    # image:
-    #   repository: docker.io/eoepca/healthcheck_runner
-    #   pullPolicy: IfNotPresent
-    #   tag: "vx.y.z"
-    ## Every day at 08:00
-    schedule: "0 8 * * *"
-    requirements: "https://gist.githubusercontent.com/Jonas-Puksta-Sensmetry/cffc6a422d5bf5af7c4718ec75888950/raw/7e3a24902abd220bd5b3c12c7b3758185db5b13d/requirements.txt"
-    script: "https://gist.githubusercontent.com/tilowiklundSensmetry/74dea6500a5bd0b8bbce551249eb6786/raw/f7a614be2809576c4b4b0f3fcc1a1d34ac6af789/trivial_check.py"
-    env:
-      - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: https://opentelemetry-collector:4317
-
+  # - name: daily-trivial-check
+  #   ## Every day at 08:00
+  #   schedule: "0 8 * * *"
+  #   # This is an empty requirements file
+  #   requirements: "https://gist.githubusercontent.com/tilowiklundSensmetry/a9fefe2873b731b483f554607a82deaa/raw/1136a82ca3c8f28b1ad4d895871514185927dd1c/requirements.txt"
+  #   script: "https://raw.githubusercontent.com/EOEPCA/resource-health/refs/tags/v0.1.0-demo/pytest-health/instrumentation/examples/trivial_check.py"
+  
   tls:
-    commonName: healthchecks.resource-health.svc.cluster.local
+    commonName: healthchecks
     # issuerRef:
     #   kind: ClusterIssuer
-    #   name: null ## INSTRUCTION: certificate issuer
+    #   name: null ## INSTRUCTION: Set to name of certificate issuer for the internal cluster domain
 
-api:
+check_api:
   image:
-    repository: nginx
+    repository: docker.io/eoepca/resourcehealth_check_api
     pullPolicy: IfNotPresent
-    tag: "1.27.0"
+    tag: "2.0.0-beta2.06"
   serviceType: ClusterIP
-  containerPort: 80
-  servicePort: 80
+  containerPort: 8000
+  servicePort: 8000
   replicaCount: 2
+  environmentFixed: []
+  # - name: ...
+  #   secret: ...
+  #   key: ...
+  environmentSecrets: []
+  # - name: ...
+  #   value: ...
+
+telemetry_api:
+  image:
+    repository: docker.io/eoepca/resourcehealth_telemetry_api
+    pullPolicy: IfNotPresent
+    tag: "2.0.0-beta2.03"
+  serviceType: ClusterIP
+  containerPort: 8080
+  servicePort: 8080
+  replicaCount: 2
+  environmentFixed: []
+  # - name: ...
+  #   secret: ...
+  #   key: ...
+  environmentSecrets: []
+  # - name: ...
+  #   value: ...
 
 web:
   image:
     repository: docker.io/eoepca/resourcehealth_web
     pullPolicy: IfNotPresent
-    tag: "v0.1.4"
+    tag: "2.0.0-beta2.02"
   serviceType: ClusterIP
   containerPort: 3000
   servicePort: 80
   replicaCount: 2
+  environmentSecrets: []
   environmentFixed:
-    - name: OPENSEARCH_ENDPOINT
-      value: "https://opensearch-cluster-master-headless:9200"
-
+    - name: NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT
+      value: http://resource-health-check-api:8000
+    - name: NEXT_PUBLIC_TELEMETRY_ENDPOINT
+      value: http://resource-health-telemetry-api:8080/v1
   tls:
     client:
-      commonName: resourcehealth-web
+      commonName: resource-health-web
       # issuerRef:
       #   kind: ClusterIssuer
-      #   name: null ## INSTRUCTION: certificate issuer
-
+      #   name: null ## INSTRUCTION: Set to name of certificate issuer for the internal cluster domain
 
 imagePullSecrets: []
 nameOverride: ""
@@ -119,27 +141,18 @@ securityContext: {}
   # runAsNonRoot: true
   # runAsUser: 1000
 
+## NOTE: Currently not used
 ingress:
   enabled: false
-  className: "traefik"
-  annotations: {}
-  host: "kubernetes"
+  # className: "traefik"
+  # annotations: {}
+  # host: "kubernetes"
   # tls: []
   #  - secretName: chart-example-tls
   #    hosts:
   #      - chart-example.local
 
 resources: {}
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  # limits:
-  #   cpu: 100m
-  #   memory: 128Mi
-  # requests:
-  #   cpu: 100m
-  #   memory: 128Mi
 
 nodeSelector: {}
 

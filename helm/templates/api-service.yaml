@@ -1,17 +1,17 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "resource-health.fullname" . }}-api
+  name: resource-health-check-api
   labels:
-    app.kubernetes.io/component: "api"
+    app.kubernetes.io/component: "checkapi"
     {{- include "resource-health.labels" . | nindent 4 }}
 spec:
-  type: {{ .Values.api.serviceType }}
+  type: {{ .Values.check_api.serviceType }}
   ports:
-    - port: {{ .Values.api.servicePort }}
-      targetPort: {{ .Values.api.containerPort }}
+    - port: {{ .Values.check_api.servicePort }}
+      targetPort: {{ .Values.check_api.containerPort }}
       protocol: TCP
       name: http
   selector:
-    app.kubernetes.io/component: "api"
+    app.kubernetes.io/component: "checkapi"
     {{- include "resource-health.selectorLabels" . | nindent 4 }}

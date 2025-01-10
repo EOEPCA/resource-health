@@ -1,15 +1,15 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "resource-health.fullname" . }}-check-api
+  name: {{ include "resource-health.fullname" . }}-telemetry-api
   labels:
-    app.kubernetes.io/component: "checkapi"
+    app.kubernetes.io/component: "telemetryapi"
     {{- include "resource-health.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.check_api.replicaCount }}
+  replicas: {{ .Values.telemetry_api.replicaCount }}
   selector:
     matchLabels:
-      app.kubernetes.io/component: "checkapi"
+      app.kubernetes.io/component: "telemetryapi"
       {{- include "resource-health.selectorLabels" . | nindent 6 }}
   template:
     metadata:
@@ -18,7 +18,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        app.kubernetes.io/component: "checkapi"
+        app.kubernetes.io/component: "telemetryapi"
         {{- include "resource-health.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
@@ -28,39 +28,46 @@ spec:
       serviceAccountName: {{ include "resource-health.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      volumes:
+        - name: client-tls
+          secret:
+            ## TODO: Implement more restricted privileges
+            secretName: opensearch-admin-certificate
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.check_api.image.repository }}:{{ .Values.check_api.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.check_api.image.pullPolicy }}
+          image: "{{ .Values.telemetry_api.image.repository }}:{{ .Values.telemetry_api.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.telemetry_api.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: {{ .Values.check_api.containerPort }}
+              containerPort: {{ .Values.telemetry_api.containerPort }}
               protocol: TCP
+          volumeMounts:
+          - name: client-tls
+            readOnly: true
+            mountPath: "/certs"
           env:
-            - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: {{ .Values.check_api.overrideOTLPEndpoint | default .Values.global.defaultOTLPEndpoint }}
-            - name: CHECK_MANAGER_COLLECTOR_TLS_SECRET
-              value: {{ include "resource-health.fullname" . }}-healthchecks-certificate
-          {{- range .Values.check_api.environmentSecrets }}
+          {{- range .Values.telemetry_api.environmentSecrets }}
             - name: {{ toYaml .name | trim }}
               valueFrom:
                 secretKeyRef:
                   name: {{ toYaml .secret | trim }}
                   key: {{ toYaml .key | trim }}
           {{- end }}
-          {{- range .Values.check_api.environmentFixed }}
+          {{- range .Values.telemetry_api.environmentFixed }}
             - name: {{ toYaml .name | trim }}
               value: {{ toYaml .value | trim }}
           {{- end }}
+
+          ## TODO: add probe endpoints
           livenessProbe:
             httpGet:
-              path: /docs
+              path: /livez
               port: http
           readinessProbe:
             httpGet:
-              path: /docs
+              path: /readyz
               port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

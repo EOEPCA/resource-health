@@ -34,7 +34,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: {{ include "resource-health.fullname" . }}-api
+                name: {{ include "resource-health.fullname" . }}-check-api
                 port:
-                  number: {{ .Values.api.servicePort }}
+                  number: {{ .Values.check_api.servicePort }}
 {{- end }}
