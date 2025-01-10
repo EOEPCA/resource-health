@@ -4,6 +4,7 @@ from fastapi import Body, FastAPI, Path, Query, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+from os import environ
 
 from api_interface import (
     Json,
@@ -134,13 +135,13 @@ def uvicorn_dev() -> None:
 
     import uvicorn
 
-    uvicorn.run("check_api:app", reload=True)
+    uvicorn.run("check_api:app", reload=True, root_path=environ.get("FAST_API_ROOT_PATH") or "")
 
 
 def unicorn_dummy_prod() -> None:
     import uvicorn
 
-    uvicorn.run("check_api:app", host="0.0.0.0", reload=True)
+    uvicorn.run("check_api:app", host="0.0.0.0", reload=True, root_path=environ.get("FAST_API_ROOT_PATH") or "")
 
 
 def uvicorn_k8s() -> None:
@@ -152,7 +153,7 @@ def uvicorn_k8s() -> None:
     import uvicorn
 
     # This is the host fastapi run uses, see https://fastapi.tiangolo.com/it/fastapi-cli/#fastapi-run
-    uvicorn.run(app, host="0.0.0.0")
+    uvicorn.run(app, host="0.0.0.0", root_path=environ.get("FAST_API_ROOT_PATH") or "")
 
 
 if __name__ == "__main__":
