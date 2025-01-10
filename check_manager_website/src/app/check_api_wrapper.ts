@@ -59,12 +59,12 @@ function GetTelemetryURL(): string {
 }
 
 export async function ListCheckTemplates(ids?: CheckTemplateId[]): Promise<CheckTemplate[]> {
-  const response = await axios.get(GetCheckManagerURL() + "/check_templates/", {params: ids})
+  const response = await axios.get(GetCheckManagerURL() + "/check_templates/", {params: ids, withCredentials: true})
   return response.data
 }
 
 export async function NewCheck(templateId: CheckTemplateId, templateArgs: object, schedule: CronExpression): Promise<Check> {
-  const response = await axios.post(GetCheckManagerURL() + "/checks/", {template_id: templateId, template_args: templateArgs, schedule: schedule})
+  const response = await axios.post(GetCheckManagerURL() + "/checks/", {template_id: templateId, template_args: templateArgs, schedule: schedule, withCredentials: true})
   return response.data
 }
 
@@ -80,16 +80,16 @@ export async function UpdateCheck(oldCheck: Check, templateId?: CheckTemplateId,
   if (schedule === oldCheck.schedule) {
     schedule = undefined
   }
-  const response = await axios.patch(GetCheckManagerURL() + `/checks/${oldCheck.id}`, {template_id: templateId, template_args: templateArgs, schedule: schedule})
+  const response = await axios.patch(GetCheckManagerURL() + `/checks/${oldCheck.id}`, {template_id: templateId, template_args: templateArgs, schedule: schedule, withCredentials: true})
   return response.data
 }
 
 export async function RemoveCheck(checkId: CheckId): Promise<void> {
-  await axios.delete(GetCheckManagerURL() + `/checks/${checkId}`)
+  await axios.delete(GetCheckManagerURL() + `/checks/${checkId}`, {withCredentials: true})
 }
 
 export async function ListChecks(ids?: CheckId[]): Promise<Check[]> {
-  const response = await axios.get(GetCheckManagerURL() + "/checks/", {params: ids})
+  const response = await axios.get(GetCheckManagerURL() + "/checks/", {params: ids, withCredentials: true})
   return response.data
 }
 
@@ -170,7 +170,8 @@ export async function GetSpans({traceId, spanId, fromTime, toTime, resourceAttri
         // Omit brackets when serialize array into the URL.
         // Based on https://stackoverflow.com/a/76517213
         indexes: null,
-      }
+      },
+      withCredentials: true
     }
   )
   return response.data
