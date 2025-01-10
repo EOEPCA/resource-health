@@ -38,6 +38,18 @@ spec:
             - name: http
               containerPort: {{ .Values.check_api.containerPort }}
               protocol: TCP
+          env:
+          {{- range .Values.check_api.environmentSecrets }}
+            - name: {{ toYaml .name | trim }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ toYaml .secret | trim }}
+                  key: {{ toYaml .key | trim }}
+          {{- end }}
+          {{- range .Values.check_api.environmentFixed }}
+            - name: {{ toYaml .name | trim }}
+              value: {{ toYaml .value | trim }}
+          {{- end }}
           livenessProbe:
             httpGet:
               path: /docs
