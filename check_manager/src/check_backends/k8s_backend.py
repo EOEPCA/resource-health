@@ -12,6 +12,9 @@ from kubernetes_asyncio.client.models.v1_pod_spec import V1PodSpec
 from kubernetes_asyncio.client.models.v1_job_template_spec import V1JobTemplateSpec
 from kubernetes_asyncio.client.models.v1_pod_template_spec import V1PodTemplateSpec
 from kubernetes_asyncio.client.models.v1_object_meta import V1ObjectMeta
+from kubernetes_asyncio.client.models.v1_volume_mount import V1VolumeMount
+from kubernetes_asyncio.client.models.v1_volume import V1Volume
+from kubernetes_asyncio.client.models.v1_secret_volume_source import V1SecretVolumeSource
 from kubernetes_asyncio.client.rest import ApiException
 import logging
 from os import environ
@@ -93,6 +96,8 @@ def make_cronjob(
     if schedule:
         cronjob.spec.schedule = schedule
     env = []
+    volumes = []
+    volume_mounts = []
     if script:
         env.append(
             V1EnvVar(
@@ -121,8 +126,46 @@ def make_cronjob(
                 value=environ["OTEL_EXPORTER_OTLP_ENDPOINT"]
             )
         )
+    if environ.get("CHECK_MANAGER_COLLECTOR_TLS_SECRET"):
+        env.append(
+            V1EnvVar(
+                name="OTEL_EXPORTER_OTLP_CERTIFICATE",
+                value="/tls/ca.crt"
+            )
+        )
+        env.append(
+            V1EnvVar(
+                name="OTEL_EXPORTER_OTLP_CLIENT_KEY",
+                value="/tls/tls.key"
+            )
+        )
+        env.append(
+            V1EnvVar(
+                name="OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE",
+                value="/tls/tls.crt"
+            )
+        )
+        volume_mounts.append(
+            V1VolumeMount(
+                name="tls",
+                mount_path="/tls",
+                read_only=True
+            )
+        )
+        volumes.append(
+            V1Volume(
+                name="tls",
+                secret=V1SecretVolumeSource(
+                    secret_name=environ["CHECK_MANAGER_COLLECTOR_TLS_SECRET"]
+                )
+            )
+        )
     if len(env) > 0:
         cronjob.spec.job_template.spec.template.spec.containers[0].env = env
+    if len(volume_mounts) > 0:
+        cronjob.spec.job_template.spec.template.spec.containers[0].volume_mounts = volume_mounts
+    if len(volumes) > 0:
+        cronjob.spec.job_template.spec.template.spec.volumes = volumes
     return cronjob
 
 
