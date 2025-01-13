@@ -76,6 +76,7 @@ def make_cronjob(
             name=name,
             annotations={
                 "health_check_label": health_check_name,
+                "template_id": "default_k8s_template",
             },
         ),
         spec=V1CronJobSpec(
@@ -237,11 +238,13 @@ class K8sBackend(CheckBackend):
 
         if cronjob.metadata.annotations and "health_check_label" in cronjob.metadata.annotations:
             template_args.update({"health_check.name": cronjob.metadata.annotations["health_check_label"]})
+        template_id = "unknown"
+        if cronjob.metadata.annotations and "template_id" in cronjob.metadata.annotations:
+            template_id = cronjob.metadata.annotations["template_id"]
         return Check(
             id=CheckId(cronjob.metadata.name),
             # metadata=cronjob.metadata.to_dict(),
-            # TODO: TEMPLATE ID MUST NOT BE HARDCODED
-            metadata={"template_id": "default_k8s_template", "template_args": template_args},
+            metadata={"template_id": template_id, "template_args": template_args},
             schedule=CronExpression(cronjob.spec.schedule),
             outcome_filter={"resource_attributes": {"k8s.cronjob.name": cronjob.metadata.name}},
         )
