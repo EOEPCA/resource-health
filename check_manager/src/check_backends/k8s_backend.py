@@ -72,7 +72,12 @@ def make_cronjob(
     cronjob = V1CronJob(
         api_version="batch/v1",
         kind="CronJob",
-        metadata=V1ObjectMeta(name=name),
+        metadata=V1ObjectMeta(
+            name=name,
+            annotations={
+                "health_check_label": health_check_name,
+            },
+        ),
         spec=V1CronJobSpec(
             schedule=schedule,
             job_template=V1JobTemplateSpec(
@@ -229,6 +234,9 @@ class K8sBackend(CheckBackend):
             template_args.update({"script": script[0]})
         if len(req) > 0:
             template_args.update({"requirements": req[0]})
+
+        if cronjob.metadata.annotations and "health_check_label" in cronjob.metadata.annotations:
+            template_args.update({"health_check.name": cronjob.metadata.annotations["health_check_label"]})
         return Check(
             id=CheckId(cronjob.metadata.name),
             # metadata=cronjob.metadata.to_dict(),
