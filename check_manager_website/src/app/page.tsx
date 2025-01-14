@@ -236,7 +236,7 @@ function CreateCheckDiv({templates, onCreateCheck, setError}: {templates: CheckT
 }
 
 function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRemove, setError}: {check: Check} & CheckDivCommonProps): JSX.Element {
-  const [templateId, setTemplateId] = useState(check.metadata.template_id ? undefined : check.metadata.template_id)
+  const [templateId, setTemplateId] = useState(check.metadata.template_id)
   const [schedule, setSchedule] = useState(check.schedule)
   const [isDisabled, setIsDisabled] = useState(true)
   const [spansSummary, setSpansSummary] = useState<SpansSummary | null>(null)
