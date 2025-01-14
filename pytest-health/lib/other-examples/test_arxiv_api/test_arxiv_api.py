@@ -5,7 +5,7 @@ import requests
 
 
 search_query: str = environ["SEARCH_QUERY"]
-max_results: int = 10
+max_results: int = environ["MAX_RESULTS"]
 
 query: str = f"search_query={search_query}&max_results={max_results}"
 url: str = f"http://export.arxiv.org/api/query?{query}"
