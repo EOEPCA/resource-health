@@ -1,7 +1,7 @@
 import atoma
 import pytest
-from os import environ
-# import requests
+# from os import environ
+import requests
 
 
 # search_query: str = environ["SEARCH_QUERY"]
