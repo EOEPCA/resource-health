@@ -21,6 +21,7 @@ from os import environ
 from pydantic import TypeAdapter
 from typing import AsyncIterable, Optional, Self, override
 import uuid
+import json
 # import yaml
 
 from api_interface import Json
@@ -178,6 +179,7 @@ def default_k8s_template(
         health_check_name=health_check_name,
     )
     cronjob.metadata.annotations["template_id"] = "default_k8s_template"
+    cronjob.metadata.annotations["template_args"] = json.dumps(template_args)
     env = cronjob.spec.job_template.spec.template.spec.containers[0].env or []
     if script:
         env.append(
@@ -215,6 +217,7 @@ def simple_ping(
         health_check_name=health_check_name,
     )
     cronjob.metadata.annotations["template_id"] = "simple_ping"
+    cronjob.metadata.annotations["template_args"] = json.dumps(template_args)
     env = cronjob.spec.job_template.spec.template.spec.containers[0].env or []
     env.append(
         V1EnvVar(
@@ -327,7 +330,7 @@ class K8sBackend(CheckBackend):
         script = [x.value for x in env if x.name == "RESOURCE_HEALTH_RUNNER_SCRIPT"]
         req = [x.value for x in env if x.name == "RESOURCE_HEALTH_RUNNER_REQUIREMENTS"]
 
-        template_args = {}
+        template_args = json.loads(cronjob.metadata.annotations.get("template_args") or "{}") 
         if len(script) > 0:
             template_args.update({"script": script[0]})
         if len(req) > 0:
