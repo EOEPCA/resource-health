@@ -187,11 +187,14 @@ function CreateCheckDiv({templates, onCreateCheck, setError}: {templates: CheckT
           <Grid gap={6} marginBottom={6}>
             <GridItem>
               <FormLabel>Check Template</FormLabel>
-              <Select>
+              <Select
+                value={template.id}
+                onChange={e => setTemplateId(e.target.value)}
+              >
                 {templates.map((template) => (
                   <option
                     key={template.id}
-                    onClick={() => setTemplateId(template.id)}
+                    value={template.id}
                   >
                     {template.metadata.label || template.id}
                   </option>
@@ -210,6 +213,7 @@ function CreateCheckDiv({templates, onCreateCheck, setError}: {templates: CheckT
             </GridItem>
           </Grid>
           <Form
+            idPrefix={"create_check_"}
             key={key}
             schema={template.arguments}
             validator={validator}
@@ -255,8 +259,11 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
         <Grid gap={6} marginBottom={6}>
           <GridItem>
             <FormLabel>Check Template Id</FormLabel>
-            <Select>
-              {templates.map((template) => (<option key={template.id} onClick={() => setTemplateId(template.id)}>{template.id}</option>))}
+            <Select
+              value={template.id}
+              onChange={e => setTemplateId(e.target.value)}
+            >
+              {templates.map((template) => (<option key={template.id} value={template.id}>{template.id}</option>))}
             </Select>
           </GridItem>
           <GridItem>
@@ -268,6 +275,7 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
           </GridItem>
         </Grid>
         <Form
+          idPrefix={"existing_check_" + check.id + "_"}
           schema={template.arguments}
           formData={check.metadata.template_args}
           uiSchema={{

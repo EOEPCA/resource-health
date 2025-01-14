@@ -59,8 +59,6 @@ def make_cronjob(
     schedule: Optional[str] = None,
     user_id: Optional[str] = None,
     health_check_name: Optional[str] = None,
-    script: Optional[str] = None,
-    requirements: Optional[str] = None,
 ) -> V1CronJob:
     OTEL_RESOURCE_ATTRIBUTES: Optional[str] = None
     if user_id and health_check_name:
@@ -76,7 +74,6 @@ def make_cronjob(
             name=name,
             annotations={
                 "health_check_label": health_check_name,
-                "template_id": "default_k8s_template",
             },
         ),
         spec=V1CronJobSpec(
@@ -104,25 +101,11 @@ def make_cronjob(
     env = []
     volumes = []
     volume_mounts = []
-    if script:
-        env.append(
-            V1EnvVar(
-                name="RESOURCE_HEALTH_RUNNER_SCRIPT",
-                value=script,
-            )
-        )
     if OTEL_RESOURCE_ATTRIBUTES:
         env.append(
             V1EnvVar(
                 name="OTEL_RESOURCE_ATTRIBUTES",
                 value=OTEL_RESOURCE_ATTRIBUTES,
-            )
-        )
-    if requirements:
-        env.append(
-            V1EnvVar(
-                name="RESOURCE_HEALTH_RUNNER_REQUIREMENTS",
-                value=requirements,
             )
         )
     if environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"):
@@ -175,6 +158,79 @@ def make_cronjob(
     return cronjob
 
 
+def default_k8s_template(
+    template_args: Json,
+    schedule: CronExpression,
+) -> Check:
+    check_id = CheckId(str(uuid.uuid4()))
+    user_id = "Health BB user"
+    health_check_name = TypeAdapter(str).validate_python(
+        template_args["health_check.name"]
+    )
+    script = TypeAdapter(str).validate_python(template_args["script"])
+    requirements = TypeAdapter(str | None).validate_python(
+        template_args.get("requirements")
+    )
+    cronjob = make_cronjob(
+        name=check_id,
+        schedule=schedule,
+        user_id=user_id,
+        health_check_name=health_check_name,
+    )
+    cronjob.metadata.annotations["template_id"] = "default_k8s_template"
+    env = cronjob.spec.job_template.spec.template.spec.containers[0].env or []
+    if script:
+        env.append(
+            V1EnvVar(
+                name="RESOURCE_HEALTH_RUNNER_SCRIPT",
+                value=script,
+            )
+        )
+    if requirements:
+        env.append(
+            V1EnvVar(
+                name="RESOURCE_HEALTH_RUNNER_REQUIREMENTS",
+                value=requirements,
+            )
+        )
+    cronjob.spec.job_template.spec.template.spec.containers[0].env = env
+    return cronjob
+
+
+def simple_ping(
+    template_args: Json,
+    schedule: CronExpression,
+) -> Check:
+    check_id = CheckId(str(uuid.uuid4()))
+    user_id = "Health BB user"
+    health_check_name = TypeAdapter(str).validate_python(
+        template_args["health_check.name"]
+    )
+    endpoint = TypeAdapter(str).validate_python(template_args["endpoint"])
+    cronjob = make_cronjob(
+        name=check_id,
+        schedule=schedule,
+        user_id=user_id,
+        health_check_name=health_check_name,
+    )
+    cronjob.metadata.annotations["template_id"] = "simple_ping"
+    env = cronjob.spec.job_template.spec.template.spec.containers[0].env or []
+    env.append(
+        V1EnvVar(
+            name="RESOURCE_HEALTH_RUNNER_SCRIPT",
+            value="data:text/plain;base64,ZnJvbSBvcyBpbXBvcnQgZW52aXJvbgppbXBvcnQgcmVxdWVzdHMKCkdFTkVSSUNfRU5EUE9JTlQ6IHN0ciA9IGVudmlyb25bIkdFTkVSSUNfRU5EUE9JTlQiXQoKCmRlZiB0ZXN0X3BpbmcoKSAtPiBOb25lOgogICAgcmVzcG9uc2UgPSByZXF1ZXN0cy5nZXQoCiAgICAgICAgR0VORVJJQ19FTkRQT0lOVCwKICAgICkKICAgIGFzc2VydCByZXNwb25zZS5zdGF0dXNfY29kZSA9PSAyMDAK",
+        )
+    )
+    env.append(
+        V1EnvVar(
+            name="GENERIC_ENDPOINT",
+            value=endpoint,
+        )
+    )
+    cronjob.spec.job_template.spec.template.spec.containers[0].env = env
+    return cronjob
+
+
 class K8sBackend(CheckBackend):
     def __init__(self: Self, service_name: str) -> None:
         self._service_name = service_name
@@ -211,9 +267,37 @@ class K8sBackend(CheckBackend):
                     ],
                 },
             ),
+            CheckTemplate(
+                id=CheckTemplateId("simple_ping"),
+                metadata={
+                    "label": "Simple ping template",
+                    "description": "Simple template with preset script for pinging single endpoint.",
+                },
+                arguments={
+                    "$schema": "http://json-schema.org/draft-07/schema",
+                    "type": "object",
+                    "properties": {
+                        "health_check.name": {
+                            "type": "string",
+                        },
+                        "endpoint": {
+                            "type": "string",
+                            "format": "textarea"
+                        },
+                    },
+                    "required": [
+                        "health_check.name",
+                        "endpoint",
+                    ],
+                },
+            ),
         ]
         self._check_template_id_to_template = {
             template.id: template for template in check_templates
+        }
+        self._make_cronjob = {
+            CheckTemplateId("default_k8s_template"): default_k8s_template,
+            CheckTemplateId("simple_ping"): simple_ping,
         }
 
     @override
@@ -272,14 +356,9 @@ class K8sBackend(CheckBackend):
     ) -> Check:
         check_template = self._get_check_template(template_id)
         validate(template_args, check_template.arguments)
-        check_id = CheckId(str(uuid.uuid4()))
-        user_id = "Health BB user"
-        health_check_name = TypeAdapter(str).validate_python(
-            template_args["health_check.name"]
-        )
-        script = TypeAdapter(str).validate_python(template_args["script"])
-        requirements = TypeAdapter(str | None).validate_python(
-            template_args.get("requirements")
+        cronjob = self._make_cronjob[template_id](
+            template_args=template_args,
+            schedule=schedule
         )
         await load_config()
         async with ApiClient() as api_client:
@@ -287,14 +366,7 @@ class K8sBackend(CheckBackend):
             try:
                 api_response = await api_instance.create_namespaced_cron_job(
                     namespace=NAMESPACE,
-                    body=make_cronjob(
-                        name=check_id,
-                        schedule=schedule,
-                        user_id=user_id,
-                        health_check_name=health_check_name,
-                        script=script,
-                        requirements=requirements,
-                    ),
+                    body=cronjob,
                 )
                 logger.info(f"Succesfully created new cron job: {api_response}")
             except ApiException as e:
@@ -305,12 +377,7 @@ class K8sBackend(CheckBackend):
             except aiohttp.ClientConnectionError as e:
                 logger.error(f"Failed to create new cron job: {e}")
                 raise CheckConnectionError("Cannot connect to cluster")
-            check = Check(
-                id=check_id,
-                metadata={"template_id": template_id, "template_args": template_args},
-                schedule=schedule,
-                outcome_filter={"resource_attributes": {"k8s.cronjob.name": check_id}},
-            )
+            check = self._make_check(cronjob)
         return check
 
     @override
