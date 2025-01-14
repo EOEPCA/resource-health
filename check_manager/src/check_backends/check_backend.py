@@ -84,18 +84,18 @@ class CheckBackend(ABC):
     ) -> Check:
         pass
 
-    # Raise CheckIdError if check_id doesn't exist.
-    # Otherwise don't use that error code
-    @abstractmethod
-    async def update_check(
-        self: Self,
-        auth_obj: AuthenticationObject,
-        check_id: CheckId,
-        template_id: CheckTemplateId | None = None,
-        template_args: Json | None = None,
-        schedule: CronExpression | None = None,
-    ) -> Check:
-        pass
+    # # Raise CheckIdError if check_id doesn't exist.
+    # # Otherwise don't use that error code
+    # @abstractmethod
+    # async def update_check(
+    #     self: Self,
+    #     auth_obj: AuthenticationObject,
+    #     check_id: CheckId,
+    #     template_id: CheckTemplateId | None = None,
+    #     template_args: Json | None = None,
+    #     schedule: CronExpression | None = None,
+    # ) -> Check:
+    #     pass
 
     # Raise CheckIdError if check_id doesn't exist.
     # Otherwise don't use that error code
@@ -190,27 +190,27 @@ class AggregationBackend(CheckBackend):
         #     results, f"Check template id {template_id} exists in multiple backends"
         # )
 
-    @override
-    async def update_check(
-        self: Self,
-        auth_obj: AuthenticationObject,
-        check_id: CheckId,
-        template_id: CheckTemplateId | None = None,
-        template_args: Json | None = None,
-        schedule: CronExpression | None = None,
-    ) -> Check:
-        results = await asyncio.gather(
-            *(
-                backend.update_check(
-                    auth_obj, check_id, template_id, template_args, schedule
-                )
-                for backend in self._backends
-            ),
-            return_exceptions=True,
-        )
-        return AggregationBackend._process_results(
-            results, f"Check id {check_id} exists in multiple backends"
-        )
+    # @override
+    # async def update_check(
+    #     self: Self,
+    #     auth_obj: AuthenticationObject,
+    #     check_id: CheckId,
+    #     template_id: CheckTemplateId | None = None,
+    #     template_args: Json | None = None,
+    #     schedule: CronExpression | None = None,
+    # ) -> Check:
+    #     results = await asyncio.gather(
+    #         *(
+    #             backend.update_check(
+    #                 auth_obj, check_id, template_id, template_args, schedule
+    #             )
+    #             for backend in self._backends
+    #         ),
+    #         return_exceptions=True,
+    #     )
+    #     return AggregationBackend._process_results(
+    #         results, f"Check id {check_id} exists in multiple backends"
+    #     )
 
     @override
     async def remove_check(

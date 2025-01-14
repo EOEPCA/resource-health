@@ -2,7 +2,7 @@
 
 import { JSX, useState } from 'react'
 import Form from '@rjsf/chakra-ui';
-import { Check, CheckId, CheckTemplate, CheckTemplateId, GetSpansQueryParams, ListChecks, ListCheckTemplates, NewCheck, ReduceSpans, RemoveCheck, UpdateCheck } from "@/app/check_api_wrapper"
+import { Check, CheckId, CheckTemplate, CheckTemplateId, GetSpansQueryParams, ListChecks, ListCheckTemplates, NewCheck, ReduceSpans, RemoveCheck } from "@/app/check_api_wrapper"
 import validator from '@rjsf/validator-ajv8';
 import { Button, CSSReset, FormControl, FormLabel, Grid, GridItem, Heading, Input, Select, Table, TableContainer, Tbody, Td, Text, Textarea, Th, Thead, theme, ThemeProvider, Tr } from '@chakra-ui/react';
 
@@ -282,6 +282,7 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
             "ui:readonly": isDisabled,
             "ui:options": {
               submitButtonOptions: {
+                norender: true,
                 props: {
                   disabled: isDisabled
                 },
@@ -290,11 +291,11 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
           }}
           validator={validator}
           onChange={log('changed')}
-          onSubmit={(data) => {setIsDisabled(!isDisabled); UpdateCheck(check, templateId, data.formData, schedule).then((updatedCheck) => { onCheckUpdate(updatedCheck)}).catch(setError)}}
+          // onSubmit={(data) => {setIsDisabled(!isDisabled); UpdateCheck(check, templateId, data.formData, schedule).then((updatedCheck) => { onCheckUpdate(updatedCheck)}).catch(setError)}}
           onError={log('errors')}
         />
       </FormControl>
-      <Button
+      {/* <Button
         type="button"
         onClick={() => {
           if (!isDisabled) {
@@ -305,7 +306,7 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
         }}
       >
         {isDisabled ? "Enable Editing" : "Disable Editing (and delete unsaved changes)"}
-      </Button>
+      </Button> */}
       <Button type="button" onClick={() => {RemoveCheck(check.id); onCheckRemove(check.id)}}>Remove Check</Button>
     </>)
   }

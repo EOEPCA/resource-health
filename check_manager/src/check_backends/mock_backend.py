@@ -114,24 +114,24 @@ class MockBackend(CheckBackend):
         self._auth_to_id_to_check[auth_obj][check_id] = check
         return check
 
-    @override
-    async def update_check(
-        self: Self,
-        auth_obj: AuthenticationObject,
-        check_id: CheckId,
-        template_id: CheckTemplateId | None = None,
-        template_args: Json | None = None,
-        schedule: CronExpression | None = None,
-    ) -> Check:
-        check = self._get_check(auth_obj, check_id)
-        if template_id is not None:
-            check.metadata["template_id"] = template_id
-        if template_args is not None:
-            check.metadata["template_args"] = template_args
-        # TODO: check check if template_args and check_template are compatible
-        if schedule is not None:
-            check.schedule = schedule
-        return check
+    # @override
+    # async def update_check(
+    #     self: Self,
+    #     auth_obj: AuthenticationObject,
+    #     check_id: CheckId,
+    #     template_id: CheckTemplateId | None = None,
+    #     template_args: Json | None = None,
+    #     schedule: CronExpression | None = None,
+    # ) -> Check:
+    #     check = self._get_check(auth_obj, check_id)
+    #     if template_id is not None:
+    #         check.metadata["template_id"] = template_id
+    #     if template_args is not None:
+    #         check.metadata["template_args"] = template_args
+    #     # TODO: check check if template_args and check_template are compatible
+    #     if schedule is not None:
+    #         check.schedule = schedule
+    #     return check
 
     @override
     async def remove_check(

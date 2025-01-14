@@ -102,16 +102,16 @@ async def new_check(
     return await check_backend.new_check(auth_obj, template_id, template_args, schedule)
 
 
-@app.patch(UPDATE_CHECK_PATH, status_code=status.HTTP_200_OK)
-async def update_check(
-    check_id: Annotated[CheckId, Path()],
-    template_id: Annotated[CheckTemplateId | None, Body()] = None,
-    template_args: Annotated[Json | None, Body()] = None,
-    schedule: Annotated[CronExpression | None, Body()] = None,
-) -> Check:
-    return await check_backend.update_check(
-        auth_obj, check_id, template_id, template_args, schedule
-    )
+# @app.patch(UPDATE_CHECK_PATH, status_code=status.HTTP_200_OK)
+# async def update_check(
+#     check_id: Annotated[CheckId, Path()],
+#     template_id: Annotated[CheckTemplateId | None, Body()] = None,
+#     template_args: Annotated[Json | None, Body()] = None,
+#     schedule: Annotated[CronExpression | None, Body()] = None,
+# ) -> Check:
+#     return await check_backend.update_check(
+#         auth_obj, check_id, template_id, template_args, schedule
+#     )
 
 
 @app.delete(REMOVE_CHECK_PATH, status_code=status.HTTP_204_NO_CONTENT)

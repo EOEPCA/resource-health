@@ -396,52 +396,52 @@ class K8sBackend(CheckBackend):
             check = self._make_check(cronjob)
         return check
 
-    @override
-    async def update_check(
-        self: Self,
-        auth_obj: AuthenticationObject,
-        check_id: CheckId,
-        template_id: CheckTemplateId | None = None,
-        template_args: Json | None = None,
-        schedule: CronExpression | None = None,
-    ) -> Check:
-        script = None
-        requirements = None
-        if template_args is not None:
-            if template_id is not None:
-                check_template = self._get_check_template(template_id)
-                validate(template_args, check_template.arguments)
-            script = TypeAdapter(str | None).validate_python(
-                template_args.get("script")
-            )
-            requirements = TypeAdapter(str | None).validate_python(
-                template_args.get("requirements")
-            )
-        await load_config()
-        async with ApiClient() as api_client:
-            api_instance = client.BatchV1Api(api_client)
-            try:
-                api_response = await api_instance.patch_namespaced_cron_job(
-                    name=check_id,
-                    namespace=NAMESPACE,
-                    body=make_cronjob(
-                        name=check_id,
-                        schedule=schedule,
-                        script=script,
-                        requirements=requirements,
-                    ),
-                )
-                logger.info(f"Succesfully patched cron job: {api_response}")
-            except ApiException as e:
-                logger.error(f"Failed to patch cron job: {e}")
-                if e.status == 422:
-                    raise CheckInternalError(f"Unprocessable content")
-                raise e
-            except aiohttp.ClientConnectionError as e:
-                logger.error(f"Failed to patch cron job: {e}")
-                raise CheckConnectionError("Cannot connect to cluster")
-            check = self._make_check(api_response)
-        return check
+    # @override
+    # async def update_check(
+    #     self: Self,
+    #     auth_obj: AuthenticationObject,
+    #     check_id: CheckId,
+    #     template_id: CheckTemplateId | None = None,
+    #     template_args: Json | None = None,
+    #     schedule: CronExpression | None = None,
+    # ) -> Check:
+    #     script = None
+    #     requirements = None
+    #     if template_args is not None:
+    #         if template_id is not None:
+    #             check_template = self._get_check_template(template_id)
+    #             validate(template_args, check_template.arguments)
+    #         script = TypeAdapter(str | None).validate_python(
+    #             template_args.get("script")
+    #         )
+    #         requirements = TypeAdapter(str | None).validate_python(
+    #             template_args.get("requirements")
+    #         )
+    #     await load_config()
+    #     async with ApiClient() as api_client:
+    #         api_instance = client.BatchV1Api(api_client)
+    #         try:
+    #             api_response = await api_instance.patch_namespaced_cron_job(
+    #                 name=check_id,
+    #                 namespace=NAMESPACE,
+    #                 body=make_cronjob(
+    #                     name=check_id,
+    #                     schedule=schedule,
+    #                     script=script,
+    #                     requirements=requirements,
+    #                 ),
+    #             )
+    #             logger.info(f"Succesfully patched cron job: {api_response}")
+    #         except ApiException as e:
+    #             logger.error(f"Failed to patch cron job: {e}")
+    #             if e.status == 422:
+    #                 raise CheckInternalError(f"Unprocessable content")
+    #             raise e
+    #         except aiohttp.ClientConnectionError as e:
+    #             logger.error(f"Failed to patch cron job: {e}")
+    #             raise CheckConnectionError("Cannot connect to cluster")
+    #         check = self._make_check(api_response)
+    #     return check
 
     @override
     async def remove_check(
