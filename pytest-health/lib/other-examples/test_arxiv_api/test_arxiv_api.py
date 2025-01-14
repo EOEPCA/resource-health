@@ -1,58 +1,32 @@
 import atoma
 import pytest
-from os import environ
+# from os import environ
 import requests
 
 
-search_query: str = environ["SEARCH_QUERY"]
-max_results: int = environ["MAX_RESULTS"]
+# search_query: str = environ["SEARCH_QUERY"]
+# max_results: int = environ["MAX_RESULTS"]
+search_query: str = "all:esa"
+max_results: int = 10
 
 query: str = f"search_query={search_query}&max_results={max_results}"
 url: str = f"http://export.arxiv.org/api/query?{query}"
 
 
-def arxiv_api_response():
+def test_arxiv_links() -> None:
     response = requests.get(url)
-    return response
-
-
-RESPONSE = arxiv_api_response()
-
-
-def arxiv_feed():
-    if RESPONSE.status_code == 200:
-        feed = atoma.parse_atom_bytes(RESPONSE.content)
-        return feed
-    else:
-        return []
-
-
-FEED = arxiv_feed()
-
-
-def doi_links():
+    assert response.status_code == 200, "arXiv API did not return a 200 response"
+    
+    feed = atoma.parse_atom_bytes(response.content)
+    assert len(feed.entries) > 0, "arXiv feed does not contain any entries"
+    
     doi_links = []
-    for entry in FEED.entries:
+    for entry in feed.entries:
         doi_href = [link.href for link in entry.links if link.title == "doi"]
         doi_links.extend(doi_href)
-    return doi_links
+    
+    doi_links_and_status_codes = [(doi, requests.get(doi).status_code) for doi in doi_links]
+    
+    bad_status_codes = [(doi, code) for (doi, code) in doi_links_and_status_codes if code != 200]
 
-
-DOI_LINKS = doi_links()
-
-
-def test_arxiv_api_status():
-    """Test to check if the arXiv API responded successfully."""
-    assert RESPONSE.status_code == 200, "arXiv API did not return a 200 response"
-
-
-def test_arxiv_feed_has_entries():
-    """Test to check if the arXiv feed has at least one entry."""
-    assert len(FEED.entries) > 0, "arXiv feed does not contain any entries"
-
-
-@pytest.mark.parametrize("doi", DOI_LINKS)
-def test_doi_link_status(doi):
-    """Test to check if the DOI link return a 200 response."""
-    response = requests.get(doi)
-    assert response.status_code == 200, f"DOI link {doi} did not return a 200 response"
+    assert len(bad_status_codes) == 0, f"Follows the list of DOI links and their status codes which are not 200: {bad_status_codes}"

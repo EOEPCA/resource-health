@@ -152,52 +152,6 @@
       }
     },
     "/checks/{check_id}": {
-      "patch": {
-        "summary": "Update Check",
-        "operationId": "update_check_checks__check_id__patch",
-        "parameters": [
-          {
-            "name": "check_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Check Id"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_update_check_checks__check_id__patch"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Check"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      },
       "delete": {
         "summary": "Remove Check",
         "operationId": "remove_check_checks__check_id__delete",
@@ -253,44 +207,6 @@
           "schedule"
         ],
         "title": "Body_new_check_checks__post"
-      },
-      "Body_update_check_checks__check_id__patch": {
-        "properties": {
-          "template_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Template Id"
-          },
-          "template_args": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Json"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "schedule": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Schedule"
-          }
-        },
-        "type": "object",
-        "title": "Body_update_check_checks__check_id__patch"
       },
       "Check": {
         "properties": {
