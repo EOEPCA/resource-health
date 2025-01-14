@@ -4,7 +4,7 @@ import { JSX, useState } from 'react'
 import Form from '@rjsf/chakra-ui';
 import { Check, CheckId, CheckTemplate, CheckTemplateId, GetSpansQueryParams, ListChecks, ListCheckTemplates, NewCheck, ReduceSpans, RemoveCheck, UpdateCheck } from "@/app/check_api_wrapper"
 import validator from '@rjsf/validator-ajv8';
-import { Button, CSSReset, FormControl, FormLabel, Grid, GridItem, Heading, Input, Select, Table, TableContainer, Tbody, Td, Text, Th, Thead, theme, ThemeProvider, Tr } from '@chakra-ui/react';
+import { Button, CSSReset, FormControl, FormLabel, Grid, GridItem, Heading, Input, Select, Table, TableContainer, Tbody, Td, Text, Textarea, Th, Thead, theme, ThemeProvider, Tr } from '@chakra-ui/react';
 
 const log = (type: string) => console.log.bind(console, type);
 const LOADING_STRING = "Loading ..."
@@ -66,7 +66,7 @@ export default function Home(): JSX.Element {
           fromTime={before}
           toTime={now}
           templates={checkTemplates}
-          onCreateCheck={(check) => setChecks([...checks, check])}
+          onCreateCheck={(check) => setChecks([check, ...checks])}
           onCheckUpdate={(updatedCheck) => setChecks(checks.map((check) => check.id === updatedCheck.id ? updatedCheck : check))}
           onCheckRemove={(checkId) => setChecks(checks.filter((check) => check.id !== checkId))}
           setError={setError}
@@ -232,11 +232,8 @@ function CreateCheckDiv({templates, onCreateCheck, setError}: {templates: CheckT
 }
 
 function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRemove, setError}: {check: Check} & CheckDivCommonProps): JSX.Element {
-  if (check.metadata.template_id === undefined)
-    throw Error("Can't deal with checks without template id, at least for now")
-  const [templateId, setTemplateId] = useState(check.metadata.template_id)
+  const [templateId, setTemplateId] = useState(check.metadata.template_id ? undefined : check.metadata.template_id)
   const [schedule, setSchedule] = useState(check.schedule)
-  const template = FindCheckTemplate(templates, templateId)
   const [isDisabled, setIsDisabled] = useState(true)
   const [spansSummary, setSpansSummary] = useState<SpansSummary | null>(null)
   if (spansSummary === null) {
@@ -249,6 +246,84 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
     }).then(setSpansSummary).catch(setError)
   }
   const check_label = check.metadata.template_args === undefined ? check.id : check.metadata.template_args['health_check.name'] ?? check.id
+  let checkDiv
+  if (templateId) {
+    const template = FindCheckTemplate(templates, templateId)
+    checkDiv = (
+    <>
+      <FormControl isDisabled={isDisabled}>
+        <Grid gap={6} marginBottom={6}>
+          <GridItem>
+            <FormLabel>Check Template Id</FormLabel>
+            <Select>
+              {templates.map((template) => (<option key={template.id} onClick={() => setTemplateId(template.id)}>{template.id}</option>))}
+            </Select>
+          </GridItem>
+          <GridItem>
+            <FormLabel>Schedule</FormLabel>
+            <Input
+              value={schedule}
+              onChange={e => setSchedule(e.target.value)}
+            />
+          </GridItem>
+        </Grid>
+        <Form
+          schema={template.arguments}
+          formData={check.metadata.template_args}
+          uiSchema={{
+            "ui:readonly": isDisabled,
+            "ui:options": {
+              submitButtonOptions: {
+                props: {
+                  disabled: isDisabled
+                },
+              }
+            }
+          }}
+          validator={validator}
+          onChange={log('changed')}
+          onSubmit={(data) => {setIsDisabled(!isDisabled); UpdateCheck(check, templateId, data.formData, schedule).then((updatedCheck) => { onCheckUpdate(updatedCheck)}).catch(setError)}}
+          onError={log('errors')}
+        />
+      </FormControl>
+      <Button
+        type="button"
+        onClick={() => {
+          if (!isDisabled) {
+            setTemplateId(check.metadata.template_id!)
+            setSchedule(check.schedule)
+          }
+          setIsDisabled(!isDisabled)
+        }}
+      >
+        {isDisabled ? "Enable Editing" : "Disable Editing (and delete unsaved changes)"}
+      </Button>
+      <Button type="button" onClick={() => {RemoveCheck(check.id); onCheckRemove(check.id)}}>Remove Check</Button>
+    </>)
+  }
+  else {
+    const template_args = check.metadata.template_args!
+    checkDiv = (
+    <>
+      <FormControl isDisabled={isDisabled}>
+        <Grid gap={6} marginBottom={6}>
+          <GridItem>
+            <FormLabel>Schedule</FormLabel>
+            <Input
+              value={schedule}
+              onChange={e => setSchedule(e.target.value)}
+            />
+          </GridItem>
+          {Object.entries(template_args).map(([key, value]) => (
+            <GridItem key={key}>
+              <FormLabel>{key}</FormLabel>
+              <Textarea value={value} />
+            </GridItem>
+          ))}
+        </Grid>
+      </FormControl>
+    </>)
+  }
   return (
     <Tr>
       <Td>
@@ -264,54 +339,7 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
               <Text className="whitespace-pre">{StringifyPretty(check.outcome_filter)}</Text>
             </div>
           </Grid>
-          <FormControl isDisabled={isDisabled}>
-            <Grid gap={6} marginBottom={6}>
-              <GridItem>
-                <FormLabel>Check Template Id</FormLabel>
-                <Select>
-                  {templates.map((template) => (<option key={template.id} onClick={() => setTemplateId(template.id)}>{template.id}</option>))}
-                </Select>
-              </GridItem>
-              <GridItem>
-                <FormLabel>Schedule</FormLabel>
-                <Input
-                  value={schedule}
-                  onChange={e => setSchedule(e.target.value)}
-                />
-              </GridItem>
-            </Grid>
-            <Form
-              schema={template.arguments}
-              formData={check.metadata.template_args}
-              uiSchema={{
-                "ui:readonly": isDisabled,
-                "ui:options": {
-                  submitButtonOptions: {
-                    props: {
-                      disabled: isDisabled
-                    },
-                  }
-                }
-              }}
-              validator={validator}
-              onChange={log('changed')}
-              onSubmit={(data) => {setIsDisabled(!isDisabled); UpdateCheck(check, templateId, data.formData, schedule).then((updatedCheck) => { onCheckUpdate(updatedCheck)}).catch(setError)}}
-              onError={log('errors')}
-            />
-          </FormControl>
-          <Button
-            type="button"
-            onClick={() => {
-              if (!isDisabled) {
-                setTemplateId(check.metadata.template_id!)
-                setSchedule(check.schedule)
-              }
-              setIsDisabled(!isDisabled)
-            }}
-          >
-            {isDisabled ? "Enable Editing" : "Disable Editing (and delete unsaved changes)"}
-          </Button>
-          <Button type="button" onClick={() => {RemoveCheck(check.id); onCheckRemove(check.id)}}>Remove Check</Button>
+          {checkDiv}
         </details>
       </Td>
       <Td>{spansSummary?.durationCount ?? LOADING_STRING}</Td>
