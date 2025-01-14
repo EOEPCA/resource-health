@@ -322,7 +322,7 @@ class K8sBackend(CheckBackend):
 
         if cronjob.metadata.annotations and "health_check_label" in cronjob.metadata.annotations:
             template_args.update({"health_check.name": cronjob.metadata.annotations["health_check_label"]})
-        template_id = "unknown"
+        template_id = None
         if cronjob.metadata.annotations and "template_id" in cronjob.metadata.annotations:
             template_id = cronjob.metadata.annotations["template_id"]
         return Check(
