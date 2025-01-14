@@ -68,21 +68,21 @@ export async function NewCheck(templateId: CheckTemplateId, templateArgs: object
   return response.data
 }
 
-export async function UpdateCheck(oldCheck: Check, templateId?: CheckTemplateId, templateArgs?: object, schedule?: CronExpression): Promise<Check> {
-  if (templateId === oldCheck.metadata.template_id) {
-    templateId = undefined
-  }
+// export async function UpdateCheck(oldCheck: Check, templateId?: CheckTemplateId, templateArgs?: object, schedule?: CronExpression): Promise<Check> {
+//   if (templateId === oldCheck.metadata.template_id) {
+//     templateId = undefined
+//   }
 
-  if (templateArgs === oldCheck.metadata.template_args) {
-    templateArgs = undefined
-  }
+//   if (templateArgs === oldCheck.metadata.template_args) {
+//     templateArgs = undefined
+//   }
   
-  if (schedule === oldCheck.schedule) {
-    schedule = undefined
-  }
-  const response = await axios.patch(GetCheckManagerURL() + `/checks/${oldCheck.id}`, {template_id: templateId, template_args: templateArgs, schedule: schedule, withCredentials: true})
-  return response.data
-}
+//   if (schedule === oldCheck.schedule) {
+//     schedule = undefined
+//   }
+//   const response = await axios.patch(GetCheckManagerURL() + `/checks/${oldCheck.id}`, {template_id: templateId, template_args: templateArgs, schedule: schedule, withCredentials: true})
+//   return response.data
+// }
 
 export async function RemoveCheck(checkId: CheckId): Promise<void> {
   await axios.delete(GetCheckManagerURL() + `/checks/${checkId}`, {withCredentials: true})

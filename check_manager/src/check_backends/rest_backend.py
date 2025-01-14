@@ -97,29 +97,29 @@ class RestBackend(CheckBackend):
             return Check.model_validate(response.json())
         raise get_exception(status_code=response.status_code, content=response.json())
 
-    @override
-    async def update_check(
-        self: Self,
-        auth_obj: AuthenticationObject,
-        check_id: CheckId,
-        template_id: CheckTemplateId | None = None,
-        template_args: Json | None = None,
-        schedule: CronExpression | None = None,
-    ) -> Check:
-        try:
-            response = await self._client.patch(
-                self._url + UPDATE_CHECK_PATH.format(check_id=check_id),
-                json={
-                    "template_id": template_id,
-                    "template_args": template_args,
-                    "schedule": schedule,
-                },
-            )
-        except httpx.HTTPError as e:
-            raise CheckConnectionError(e.args[0])
-        if response.is_success:
-            return Check.model_validate(response.json())
-        raise get_exception(status_code=response.status_code, content=response.json())
+    # @override
+    # async def update_check(
+    #     self: Self,
+    #     auth_obj: AuthenticationObject,
+    #     check_id: CheckId,
+    #     template_id: CheckTemplateId | None = None,
+    #     template_args: Json | None = None,
+    #     schedule: CronExpression | None = None,
+    # ) -> Check:
+    #     try:
+    #         response = await self._client.patch(
+    #             self._url + UPDATE_CHECK_PATH.format(check_id=check_id),
+    #             json={
+    #                 "template_id": template_id,
+    #                 "template_args": template_args,
+    #                 "schedule": schedule,
+    #             },
+    #         )
+    #     except httpx.HTTPError as e:
+    #         raise CheckConnectionError(e.args[0])
+    #     if response.is_success:
+    #         return Check.model_validate(response.json())
+    #     raise get_exception(status_code=response.status_code, content=response.json())
 
     @override
     async def remove_check(

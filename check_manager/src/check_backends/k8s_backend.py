@@ -21,6 +21,7 @@ from os import environ
 from pydantic import TypeAdapter
 from typing import AsyncIterable, Optional, Self, override
 import uuid
+import json
 # import yaml
 
 from api_interface import Json
@@ -161,7 +162,7 @@ def make_cronjob(
 def default_k8s_template(
     template_args: Json,
     schedule: CronExpression,
-) -> Check:
+) -> V1CronJob:
     check_id = CheckId(str(uuid.uuid4()))
     user_id = "Health BB user"
     health_check_name = TypeAdapter(str).validate_python(
@@ -178,6 +179,7 @@ def default_k8s_template(
         health_check_name=health_check_name,
     )
     cronjob.metadata.annotations["template_id"] = "default_k8s_template"
+    cronjob.metadata.annotations["template_args"] = json.dumps(template_args)
     env = cronjob.spec.job_template.spec.template.spec.containers[0].env or []
     if script:
         env.append(
@@ -200,13 +202,14 @@ def default_k8s_template(
 def simple_ping(
     template_args: Json,
     schedule: CronExpression,
-) -> Check:
+) -> V1CronJob:
     check_id = CheckId(str(uuid.uuid4()))
     user_id = "Health BB user"
     health_check_name = TypeAdapter(str).validate_python(
         template_args["health_check.name"]
     )
     endpoint = TypeAdapter(str).validate_python(template_args["endpoint"])
+    expected_status_code = TypeAdapter(str).validate_python(str(template_args.get("expected_status_code", 200)))
     cronjob = make_cronjob(
         name=check_id,
         schedule=schedule,
@@ -214,17 +217,24 @@ def simple_ping(
         health_check_name=health_check_name,
     )
     cronjob.metadata.annotations["template_id"] = "simple_ping"
+    cronjob.metadata.annotations["template_args"] = json.dumps(template_args)
     env = cronjob.spec.job_template.spec.template.spec.containers[0].env or []
     env.append(
         V1EnvVar(
             name="RESOURCE_HEALTH_RUNNER_SCRIPT",
-            value="data:text/plain;base64,ZnJvbSBvcyBpbXBvcnQgZW52aXJvbgppbXBvcnQgcmVxdWVzdHMKCkdFTkVSSUNfRU5EUE9JTlQ6IHN0ciA9IGVudmlyb25bIkdFTkVSSUNfRU5EUE9JTlQiXQoKCmRlZiB0ZXN0X3BpbmcoKSAtPiBOb25lOgogICAgcmVzcG9uc2UgPSByZXF1ZXN0cy5nZXQoCiAgICAgICAgR0VORVJJQ19FTkRQT0lOVCwKICAgICkKICAgIGFzc2VydCByZXNwb25zZS5zdGF0dXNfY29kZSA9PSAyMDAK",
+            value="data:text/plain;base64,ZnJvbSBvcyBpbXBvcnQgZW52aXJvbgppbXBvcnQgcmVxdWVzdHMKCkdFTkVSSUNfRU5EUE9JTlQ6IHN0ciA9IGVudmlyb25bIkdFTkVSSUNfRU5EUE9JTlQiXQpFWFBFQ1RFRF9TVEFUVVNfQ09ERTogaW50ID0gaW50KGVudmlyb25bIkVYUEVDVEVEX1NUQVRVU19DT0RFIl0pCgoKZGVmIHRlc3RfcGluZygpIC0+IE5vbmU6CiAgICByZXNwb25zZSA9IHJlcXVlc3RzLmdldCgKICAgICAgICBHRU5FUklDX0VORFBPSU5ULAogICAgKQogICAgYXNzZXJ0IHJlc3BvbnNlLnN0YXR1c19jb2RlID09IEVYUEVDVEVEX1NUQVRVU19DT0RFCg==",
         )
     )
     env.append(
         V1EnvVar(
             name="GENERIC_ENDPOINT",
             value=endpoint,
+        )
+    )
+    env.append(
+        V1EnvVar(
+            name="EXPECTED_STATUS_CODE",
+            value=expected_status_code,
         )
     )
     cronjob.spec.job_template.spec.template.spec.containers[0].env = env
@@ -282,7 +292,13 @@ class K8sBackend(CheckBackend):
                         },
                         "endpoint": {
                             "type": "string",
-                            "format": "textarea"
+                            "format": "textarea",
+                        },
+                        "expected_status_code": {
+                            "type": "integer",
+                            "minimum": 100,
+                            "exclusiveMaximum": 600,
+                            "default": 200,
                         },
                     },
                     "required": [
@@ -314,7 +330,7 @@ class K8sBackend(CheckBackend):
         script = [x.value for x in env if x.name == "RESOURCE_HEALTH_RUNNER_SCRIPT"]
         req = [x.value for x in env if x.name == "RESOURCE_HEALTH_RUNNER_REQUIREMENTS"]
 
-        template_args = {}
+        template_args = json.loads(cronjob.metadata.annotations.get("template_args") or "{}") 
         if len(script) > 0:
             template_args.update({"script": script[0]})
         if len(req) > 0:
@@ -380,52 +396,52 @@ class K8sBackend(CheckBackend):
             check = self._make_check(cronjob)
         return check
 
-    @override
-    async def update_check(
-        self: Self,
-        auth_obj: AuthenticationObject,
-        check_id: CheckId,
-        template_id: CheckTemplateId | None = None,
-        template_args: Json | None = None,
-        schedule: CronExpression | None = None,
-    ) -> Check:
-        script = None
-        requirements = None
-        if template_args is not None:
-            if template_id is not None:
-                check_template = self._get_check_template(template_id)
-                validate(template_args, check_template.arguments)
-            script = TypeAdapter(str | None).validate_python(
-                template_args.get("script")
-            )
-            requirements = TypeAdapter(str | None).validate_python(
-                template_args.get("requirements")
-            )
-        await load_config()
-        async with ApiClient() as api_client:
-            api_instance = client.BatchV1Api(api_client)
-            try:
-                api_response = await api_instance.patch_namespaced_cron_job(
-                    name=check_id,
-                    namespace=NAMESPACE,
-                    body=make_cronjob(
-                        name=check_id,
-                        schedule=schedule,
-                        script=script,
-                        requirements=requirements,
-                    ),
-                )
-                logger.info(f"Succesfully patched cron job: {api_response}")
-            except ApiException as e:
-                logger.error(f"Failed to patch cron job: {e}")
-                if e.status == 422:
-                    raise CheckInternalError(f"Unprocessable content")
-                raise e
-            except aiohttp.ClientConnectionError as e:
-                logger.error(f"Failed to patch cron job: {e}")
-                raise CheckConnectionError("Cannot connect to cluster")
-            check = self._make_check(api_response)
-        return check
+    # @override
+    # async def update_check(
+    #     self: Self,
+    #     auth_obj: AuthenticationObject,
+    #     check_id: CheckId,
+    #     template_id: CheckTemplateId | None = None,
+    #     template_args: Json | None = None,
+    #     schedule: CronExpression | None = None,
+    # ) -> Check:
+    #     script = None
+    #     requirements = None
+    #     if template_args is not None:
+    #         if template_id is not None:
+    #             check_template = self._get_check_template(template_id)
+    #             validate(template_args, check_template.arguments)
+    #         script = TypeAdapter(str | None).validate_python(
+    #             template_args.get("script")
+    #         )
+    #         requirements = TypeAdapter(str | None).validate_python(
+    #             template_args.get("requirements")
+    #         )
+    #     await load_config()
+    #     async with ApiClient() as api_client:
+    #         api_instance = client.BatchV1Api(api_client)
+    #         try:
+    #             api_response = await api_instance.patch_namespaced_cron_job(
+    #                 name=check_id,
+    #                 namespace=NAMESPACE,
+    #                 body=make_cronjob(
+    #                     name=check_id,
+    #                     schedule=schedule,
+    #                     script=script,
+    #                     requirements=requirements,
+    #                 ),
+    #             )
+    #             logger.info(f"Succesfully patched cron job: {api_response}")
+    #         except ApiException as e:
+    #             logger.error(f"Failed to patch cron job: {e}")
+    #             if e.status == 422:
+    #                 raise CheckInternalError(f"Unprocessable content")
+    #             raise e
+    #         except aiohttp.ClientConnectionError as e:
+    #             logger.error(f"Failed to patch cron job: {e}")
+    #             raise CheckConnectionError("Cannot connect to cluster")
+    #         check = self._make_check(api_response)
+    #     return check
 
     @override
     async def remove_check(
