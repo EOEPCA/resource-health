@@ -161,7 +161,7 @@ def make_cronjob(
 def default_k8s_template(
     template_args: Json,
     schedule: CronExpression,
-) -> Check:
+) -> V1CronJob:
     check_id = CheckId(str(uuid.uuid4()))
     user_id = "Health BB user"
     health_check_name = TypeAdapter(str).validate_python(
@@ -200,13 +200,14 @@ def default_k8s_template(
 def simple_ping(
     template_args: Json,
     schedule: CronExpression,
-) -> Check:
+) -> V1CronJob:
     check_id = CheckId(str(uuid.uuid4()))
     user_id = "Health BB user"
     health_check_name = TypeAdapter(str).validate_python(
         template_args["health_check.name"]
     )
     endpoint = TypeAdapter(str).validate_python(template_args["endpoint"])
+    expected_status_code = TypeAdapter(str).validate_python(str(template_args.get("expected_status_code", 200)))
     cronjob = make_cronjob(
         name=check_id,
         schedule=schedule,
@@ -218,13 +219,19 @@ def simple_ping(
     env.append(
         V1EnvVar(
             name="RESOURCE_HEALTH_RUNNER_SCRIPT",
-            value="data:text/plain;base64,ZnJvbSBvcyBpbXBvcnQgZW52aXJvbgppbXBvcnQgcmVxdWVzdHMKCkdFTkVSSUNfRU5EUE9JTlQ6IHN0ciA9IGVudmlyb25bIkdFTkVSSUNfRU5EUE9JTlQiXQoKCmRlZiB0ZXN0X3BpbmcoKSAtPiBOb25lOgogICAgcmVzcG9uc2UgPSByZXF1ZXN0cy5nZXQoCiAgICAgICAgR0VORVJJQ19FTkRQT0lOVCwKICAgICkKICAgIGFzc2VydCByZXNwb25zZS5zdGF0dXNfY29kZSA9PSAyMDAK",
+            value="data:text/plain;base64,ZnJvbSBvcyBpbXBvcnQgZW52aXJvbgppbXBvcnQgcmVxdWVzdHMKCkdFTkVSSUNfRU5EUE9JTlQ6IHN0ciA9IGVudmlyb25bIkdFTkVSSUNfRU5EUE9JTlQiXQpFWFBFQ1RFRF9TVEFUVVNfQ09ERTogaW50ID0gaW50KGVudmlyb25bIkVYUEVDVEVEX1NUQVRVU19DT0RFIl0pCgoKZGVmIHRlc3RfcGluZygpIC0+IE5vbmU6CiAgICByZXNwb25zZSA9IHJlcXVlc3RzLmdldCgKICAgICAgICBHRU5FUklDX0VORFBPSU5ULAogICAgKQogICAgYXNzZXJ0IHJlc3BvbnNlLnN0YXR1c19jb2RlID09IEVYUEVDVEVEX1NUQVRVU19DT0RFCg==",
         )
     )
     env.append(
         V1EnvVar(
             name="GENERIC_ENDPOINT",
             value=endpoint,
+        )
+    )
+    env.append(
+        V1EnvVar(
+            name="EXPECTED_STATUS_CODE",
+            value=expected_status_code,
         )
     )
     cronjob.spec.job_template.spec.template.spec.containers[0].env = env
@@ -282,7 +289,13 @@ class K8sBackend(CheckBackend):
                         },
                         "endpoint": {
                             "type": "string",
-                            "format": "textarea"
+                            "format": "textarea",
+                        },
+                        "expected_status_code": {
+                            "type": "integer",
+                            "minimum": 100,
+                            "exclusiveMaximum": 600,
+                            "default": 200,
                         },
                     },
                     "required": [
