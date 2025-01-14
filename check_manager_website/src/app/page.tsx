@@ -235,9 +235,11 @@ function CreateCheckDiv({templates, onCreateCheck, setError}: {templates: CheckT
   )
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRemove, setError}: {check: Check} & CheckDivCommonProps): JSX.Element {
   const [templateId, setTemplateId] = useState(check.metadata.template_id)
   const [schedule, setSchedule] = useState(check.schedule)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isDisabled, setIsDisabled] = useState(true)
   const [spansSummary, setSpansSummary] = useState<SpansSummary | null>(null)
   if (spansSummary === null) {
