@@ -15,11 +15,11 @@ ERROR_CODE_KEY: Final[str] = "error"
 ERROR_MESSAGE_KEY: Final[str] = "detail"
 
 
-LIST_CHECK_TEMPLATES_PATH: Final[str] = "/check_templates/"
-NEW_CHECK_PATH: Final[str] = "/checks/"
-UPDATE_CHECK_PATH: Final[str] = "/checks/{check_id}"
-REMOVE_CHECK_PATH: Final[str] = "/checks/{check_id}"
-LIST_CHECKS_PATH: Final[str] = "/checks/"
+LIST_CHECK_TEMPLATES_PATH: Final[str] = "/v1/check_templates/"
+NEW_CHECK_PATH: Final[str] = "/v1/checks/"
+UPDATE_CHECK_PATH: Final[str] = "/v1/checks/{check_id}"
+REMOVE_CHECK_PATH: Final[str] = "/v1/checks/{check_id}"
+LIST_CHECKS_PATH: Final[str] = "/v1/checks/"
 
 
 def get_exception(status_code: int, content: Json) -> CheckException:

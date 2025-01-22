@@ -5,10 +5,10 @@
     "version": "0.1.0"
   },
   "paths": {
-    "/check_templates/": {
+    "/v1/check_templates/": {
       "get": {
         "summary": "List Check Templates",
-        "operationId": "list_check_templates_check_templates__get",
+        "operationId": "list_check_templates_v1_check_templates__get",
         "parameters": [
           {
             "name": "ids",
@@ -42,7 +42,7 @@
                   "items": {
                     "$ref": "#/components/schemas/CheckTemplate"
                   },
-                  "title": "Response List Check Templates Check Templates  Get"
+                  "title": "Response List Check Templates V1 Check Templates  Get"
                 }
               }
             }
@@ -60,16 +60,16 @@
         }
       }
     },
-    "/checks/": {
+    "/v1/checks/": {
       "post": {
         "summary": "New Check",
-        "operationId": "new_check_checks__post",
+        "operationId": "new_check_v1_checks__post",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Body_new_check_checks__post"
+                "$ref": "#/components/schemas/Body_new_check_v1_checks__post"
               }
             }
           }
@@ -99,7 +99,7 @@
       },
       "get": {
         "summary": "List Checks",
-        "operationId": "list_checks_checks__get",
+        "operationId": "list_checks_v1_checks__get",
         "parameters": [
           {
             "name": "ids",
@@ -133,7 +133,7 @@
                   "items": {
                     "$ref": "#/components/schemas/Check"
                   },
-                  "title": "Response List Checks Checks  Get"
+                  "title": "Response List Checks V1 Checks  Get"
                 }
               }
             }
@@ -151,10 +151,10 @@
         }
       }
     },
-    "/checks/{check_id}": {
+    "/v1/checks/{check_id}": {
       "delete": {
         "summary": "Remove Check",
-        "operationId": "remove_check_checks__check_id__delete",
+        "operationId": "remove_check_v1_checks__check_id__delete",
         "parameters": [
           {
             "name": "check_id",
@@ -186,7 +186,7 @@
   },
   "components": {
     "schemas": {
-      "Body_new_check_checks__post": {
+      "Body_new_check_v1_checks__post": {
         "properties": {
           "template_id": {
             "type": "string",
@@ -206,7 +206,7 @@
           "template_args",
           "schedule"
         ],
-        "title": "Body_new_check_checks__post"
+        "title": "Body_new_check_v1_checks__post"
       },
       "Check": {
         "properties": {
