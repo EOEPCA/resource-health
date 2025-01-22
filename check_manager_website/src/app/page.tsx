@@ -179,6 +179,7 @@ function CreateCheckDiv({templates, onCreateCheck, setError}: {templates: CheckT
   const [key, setKey] = useState(0)
   const [schedule, setSchedule] = useState("")
   const template = FindCheckTemplate(templates, templateId)
+  const form_id = "create_check"
   return (
     <Tr>
       <Td>
@@ -188,6 +189,7 @@ function CreateCheckDiv({templates, onCreateCheck, setError}: {templates: CheckT
             <GridItem>
               <FormLabel>Check Template</FormLabel>
               <Select
+                form={form_id}
                 value={template.id}
                 onChange={e => setTemplateId(e.target.value)}
               >
@@ -205,15 +207,19 @@ function CreateCheckDiv({templates, onCreateCheck, setError}: {templates: CheckT
               <Text>{template.id}</Text>
             </GridItem>
             <GridItem>
-              <FormLabel>Schedule</FormLabel>
-              <Input
-                value={schedule}
-                onChange={e => setSchedule(e.target.value)}
-              />
+              <FormControl isRequired>
+                <FormLabel>Schedule</FormLabel>
+                <Input
+                  form={form_id}
+                  value={schedule}
+                  onChange={e => setSchedule(e.target.value)}
+                />
+              </FormControl>
             </GridItem>
           </Grid>
           <Form
-            idPrefix={"create_check_"}
+            id={form_id}
+            idPrefix={form_id + "_"}
             key={key}
             schema={template.arguments}
             validator={validator}
@@ -255,6 +261,7 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
   let checkDiv
   if (templateId) {
     const template = FindCheckTemplate(templates, templateId)
+    const form_id = "existing_check_" + check.id
     checkDiv = (
     <>
       <FormControl isDisabled={isDisabled}>
@@ -262,6 +269,7 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
           <GridItem>
             <FormLabel>Check Template Id</FormLabel>
             <Select
+              form={form_id}
               value={template.id}
               onChange={e => setTemplateId(e.target.value)}
             >
@@ -269,15 +277,18 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
             </Select>
           </GridItem>
           <GridItem>
-            <FormLabel>Schedule</FormLabel>
-            <Input
-              value={schedule}
-              onChange={e => setSchedule(e.target.value)}
-            />
+            <FormControl isRequired isDisabled={isDisabled}>
+              <FormLabel>Schedule</FormLabel>
+              <Input
+                form={form_id}
+                value={schedule}
+                onChange={e => setSchedule(e.target.value)}
+              />
+            </FormControl>
           </GridItem>
         </Grid>
         <Form
-          idPrefix={"existing_check_" + check.id + "_"}
+          idPrefix={form_id + "_"}
           schema={template.arguments}
           formData={check.metadata.template_args}
           uiSchema={{
