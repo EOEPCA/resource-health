@@ -12,7 +12,7 @@ Ideally integrating with the [OpenTelemetry Python agent](https://opentelemetry.
 
 # Use
 
-Currently requires Python 3.11 or newer.
+Currently requires Python 3.12 or newer.
 
 Install requirements, preferrably in a venv (`python3 -m venv .venv; source .venv/bin/activate; pip install -r requirements.txt`). You may want to make sure that you can run the test **uninstrumented** as `pytest examples/trivial_check.py` before continuing.
 
