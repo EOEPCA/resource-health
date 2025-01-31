@@ -312,6 +312,9 @@ opensearch:
     - name: certs
       secretName: opensearch-tls-certificate
       path: /usr/share/opensearch/config/esnode
+    - name: admin-certs
+      secretName: opensearch-admin-certificate
+      path: /usr/share/opensearch/config/admin-certs
 
   config:
     opensearch.yml: >
@@ -337,8 +340,9 @@ opensearch:
               clientauth_mode: OPTIONAL
           allow_unsafe_democertificates: false
           allow_default_init_securityindex: true
-          # authcz:
-          #   admin_dn:
+          authcz:
+            admin_dn:
+              - CN=opensearch-admin
           #     - CN=kirk,OU=client,O=client,L=test,C=de
           audit.type: internal_opensearch
           enable_snapshot_restore_privilege: true
