@@ -11,17 +11,18 @@ from kubernetes_asyncio.client.models.v1_object_meta import V1ObjectMeta
 from pydantic import TypeAdapter
 from typing import Optional, override
 
-from check_backends.k8s_backend.templates import CronjobTemplate
-from check_backends.check_backend import (
+from check_backends.k8s_backend.templates import (
+    CronjobTemplate,
     CheckTemplate,
     CheckTemplateId,
+    CronExpression,
 )
 
 CONTAINER_IMAGE: str = "docker.io/eoepca/healthcheck_runner:2.0.0-beta2"
 
 
 def make_base_cronjob(
-    schedule: Optional[str] = None,
+    schedule: Optional[CronExpression] = None,
     health_check_name: Optional[str] = None,
 ) -> V1CronJob:
     cronjob = V1CronJob(
@@ -60,14 +61,9 @@ def make_base_cronjob(
 class DefaultK8sTemplate(CronjobTemplate):
     @classmethod
     @override
-    def get_check_template_id(cls):
-        return "default_k8s_template"
-
-    @classmethod
-    @override
     def get_check_template(cls):
         return CheckTemplate(
-            id=cls.get_check_template_id(),
+            id=CheckTemplateId("default_k8s_template"),
             metadata={
                 "label": "Default Kubernetes template",
                 "description": "Default template for checks in the Kubernetes backend.",
@@ -133,11 +129,6 @@ class DefaultK8sTemplate(CronjobTemplate):
 
 
 class SimplePing(CronjobTemplate):
-    @classmethod
-    @override
-    def get_check_template_id(cls):
-        return "simple_ping"
-
     @classmethod
     @override
     def get_check_template(cls):

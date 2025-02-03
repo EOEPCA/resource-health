@@ -38,8 +38,13 @@ async def load_config() -> None:
 
 
 class K8sBackend(CheckBackend):
-    def __init__(self: Self, template_dirs: list[str]) -> None:
+    def __init__(
+        self: Self,
+        template_dirs: list[str],
+        api_client: ApiClient = None
+    ) -> None:
         self._template_dirs: list[str] = template_dirs
+        self.api_client = api_client or ApiClient()
 
     def _load_templates(self: Self) -> None:
         for dir in self._template_dirs:
@@ -63,13 +68,6 @@ class K8sBackend(CheckBackend):
             for id in ids:
                 if id in template_ids:
                     yield TemplateFactory.get_template(id).get_check_template()
-        # if ids is None:
-        #     for template in self._check_template_id_to_template.values():
-        #         yield template
-        # else:
-        #     for id in ids:
-        #         if id in self._check_template_id_to_template:
-        #             yield self._check_template_id_to_template[id]
 
     @override
     async def new_check(
@@ -85,12 +83,12 @@ class K8sBackend(CheckBackend):
             raise CheckTemplateIdError(f"No template found for ID: {template_id}")
         check_template = template.get_check_template()
         validate(template_args, check_template.arguments)
-        cronjob = template._make_cronjob(
+        cronjob = template.make_cronjob(
             template_args=template_args,
             schedule=schedule
         )
         await load_config()
-        async with ApiClient() as api_client:
+        async with self.api_client as api_client:
             api_instance = client.BatchV1Api(api_client)
             try:
                 api_response = await api_instance.create_namespaced_cron_job(
@@ -106,7 +104,7 @@ class K8sBackend(CheckBackend):
             except aiohttp.ClientConnectionError as e:
                 logger.error(f"Failed to create new cron job: {e}")
                 raise CheckConnectionError("Cannot connect to cluster")
-            check = template._make_check(cronjob)
+            check = template.make_check(api_response)
         return check
 
     # @override
@@ -131,7 +129,7 @@ class K8sBackend(CheckBackend):
     #             template_args.get("requirements")
     #         )
     #     await load_config()
-    #     async with ApiClient() as api_client:
+    #     async with self.api_client as api_client:
     #         api_instance = client.BatchV1Api(api_client)
     #         try:
     #             api_response = await api_instance.patch_namespaced_cron_job(
@@ -161,7 +159,7 @@ class K8sBackend(CheckBackend):
         self: Self, auth_obj: AuthenticationObject, check_id: CheckId
     ) -> None:
         await load_config()
-        async with ApiClient() as api_client:
+        async with self.api_client as api_client:
             api_instance = client.BatchV1Api(api_client)
             try:
                 api_response = await api_instance.delete_namespaced_cron_job(
@@ -187,7 +185,7 @@ class K8sBackend(CheckBackend):
         ids: list[CheckId] | None = None,
     ) -> AsyncIterable[Check]:
         await load_config()
-        async with ApiClient() as api_client:
+        async with self.api_client as api_client:
             self._load_templates()
             api_instance = client.BatchV1Api(api_client)
             try:
@@ -202,10 +200,10 @@ class K8sBackend(CheckBackend):
                 for cronjob in cronjobs.items:
                     template_id = cronjob.metadata.annotations["template_id"]
                     template = TemplateFactory.get_template(template_id)
-                    yield template._make_check(cronjob)
+                    yield template.make_check(cronjob)
             else:
                 for cronjob in cronjobs.items:
                     if cronjob.metadata.name in ids:
                         template_id = cronjob.metadata.annotations["template_id"]
                         template = TemplateFactory.get_template(template_id)
-                        yield template._make_check(cronjob)
+                        yield template.make_check(cronjob)
