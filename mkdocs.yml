@@ -7,10 +7,12 @@ nav:
   - EOEPCA Documentation: https://eoepca.readthedocs.io/
   - Resource Health:
     - index.md
+    - service-offer.md
     - Getting Started:
       - getting-started/quick-start.md
     - Design:
       - Architecture overview: design/overview.md
+      - Deployment overview: getting-started/deployment-overview.md
       - Use cases: design/use-cases.md
       - Core functions: design/0-core-functions.md
       - Data persistence: design/1-data-persistence.md
