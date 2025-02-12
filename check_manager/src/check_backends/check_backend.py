@@ -1,21 +1,14 @@
 from abc import ABC, abstractmethod
 import asyncio
-from collections import defaultdict
-from enum import Enum, auto
 from types import TracebackType
 from typing import (
-    Any,
     AsyncIterable,
-    Final,
     Literal,
     NewType,
     Self,
     Type,
-    assert_never,
     override,
 )
-import uuid
-from jsonschema import validate
 from pydantic import BaseModel, TypeAdapter
 from referencing.jsonschema import Schema
 
@@ -23,8 +16,6 @@ from api_interface import (
     Json,
 )
 from exceptions import (
-    CheckException,
-    CheckInternalError,
     CheckIdError,
     CheckIdNonUniqueError,
 )

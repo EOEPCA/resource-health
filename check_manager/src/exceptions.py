@@ -6,6 +6,10 @@ class CheckException(ABC, Exception):
     """Base exception class"""
 
 
+class NewCheckClientSpecifiedId(CheckException):
+    """Client must not specify new check id"""
+
+
 class CheckInternalError(CheckException):
     """Check Id not found"""
 

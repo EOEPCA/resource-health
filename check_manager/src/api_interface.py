@@ -1,4 +1,4 @@
-from typing import Final
+from typing import Any, Final
 from exceptions import (
     CheckException,
     CheckInternalError,
@@ -8,18 +8,22 @@ from exceptions import (
     CheckConnectionError,
 )
 
-type Json = dict[str, object]
+type Json = dict[str, Any]
 
 
 ERROR_CODE_KEY: Final[str] = "error"
 ERROR_MESSAGE_KEY: Final[str] = "detail"
 
-
-LIST_CHECK_TEMPLATES_PATH: Final[str] = "/v1/check_templates/"
-NEW_CHECK_PATH: Final[str] = "/v1/checks/"
-UPDATE_CHECK_PATH: Final[str] = "/v1/checks/{check_id}"
-REMOVE_CHECK_PATH: Final[str] = "/v1/checks/{check_id}"
-LIST_CHECKS_PATH: Final[str] = "/v1/checks/"
+ROUTE_PREFIX = "/v1"
+LIST_CHECK_TEMPLATES_PATH: Final[str] = ROUTE_PREFIX + "/check_templates/"
+GET_CHECK_TEMPLATE_PATH: Final[str] = (
+    ROUTE_PREFIX + "/check_templates/{check_template_id}"
+)
+NEW_CHECK_PATH: Final[str] = ROUTE_PREFIX + "/checks/"
+GET_CHECK_PATH: Final[str] = ROUTE_PREFIX + "/checks/{check_id}"
+UPDATE_CHECK_PATH: Final[str] = ROUTE_PREFIX + "/checks/{check_id}"
+REMOVE_CHECK_PATH: Final[str] = ROUTE_PREFIX + "/checks/{check_id}"
+LIST_CHECKS_PATH: Final[str] = ROUTE_PREFIX + "/checks/"
 
 
 def get_exception(status_code: int, content: Json) -> CheckException:

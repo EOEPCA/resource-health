@@ -1,10 +1,69 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "FastAPI",
-    "version": "0.1.0"
+    "title": "Custom title",
+    "summary": "This is a very custom OpenAPI schema",
+    "description": "Here's a longer description of the custom **OpenAPI** schema",
+    "version": "2.5.0"
   },
   "paths": {
+    "/": {
+      "get": {
+        "summary": "Root",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIOKResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/check_templates/{check_template_id}": {
+      "get": {
+        "summary": "Get Check Template",
+        "operationId": "get_check_template_v1_check_templates__check_template_id__get",
+        "parameters": [
+          {
+            "name": "check_template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Check Template Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIOKResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
+    },
     "/v1/check_templates/": {
       "get": {
         "summary": "List Check Templates",
@@ -36,26 +95,22 @@
           "200": {
             "description": "Successful Response",
             "content": {
-              "application/json": {
+              "application/vnd.api+json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CheckTemplate"
-                  },
-                  "title": "Response List Check Templates V1 Check Templates  Get"
+                  "$ref": "#/components/schemas/APIOKResponse"
                 }
               }
             }
           },
           "422": {
-            "description": "Validation Error",
             "content": {
-              "application/json": {
+              "application/vnd.api+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/APIErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Unprocessable Entity"
           }
         }
       }
@@ -67,9 +122,9 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
+            "application/vnd.api+json": {
               "schema": {
-                "$ref": "#/components/schemas/Body_new_check_v1_checks__post"
+                "$ref": "#/components/schemas/NewCheck"
               }
             }
           }
@@ -78,22 +133,22 @@
           "201": {
             "description": "Successful Response",
             "content": {
-              "application/json": {
+              "application/vnd.api+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Check"
+                  "$ref": "#/components/schemas/APIOKResponse"
                 }
               }
             }
           },
           "422": {
-            "description": "Validation Error",
             "content": {
-              "application/json": {
+              "application/vnd.api+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/APIErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Unprocessable Entity"
           }
         }
       },
@@ -127,31 +182,64 @@
           "200": {
             "description": "Successful Response",
             "content": {
-              "application/json": {
+              "application/vnd.api+json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Check"
-                  },
-                  "title": "Response List Checks V1 Checks  Get"
+                  "$ref": "#/components/schemas/APIOKResponse"
                 }
               }
             }
           },
           "422": {
-            "description": "Validation Error",
             "content": {
-              "application/json": {
+              "application/vnd.api+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/APIErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Unprocessable Entity"
           }
         }
       }
     },
     "/v1/checks/{check_id}": {
+      "get": {
+        "summary": "Get Check",
+        "operationId": "get_check_v1_checks__check_id__get",
+        "parameters": [
+          {
+            "name": "check_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Check Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIOKResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      },
       "delete": {
         "summary": "Remove Check",
         "operationId": "remove_check_v1_checks__check_id__delete",
@@ -171,14 +259,14 @@
             "description": "Successful Response"
           },
           "422": {
-            "description": "Validation Error",
             "content": {
-              "application/json": {
+              "application/vnd.api+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/APIErrorResponse"
                 }
               }
-            }
+            },
+            "description": "Unprocessable Entity"
           }
         }
       }
@@ -186,7 +274,186 @@
   },
   "components": {
     "schemas": {
-      "Body_new_check_v1_checks__post": {
+      "APIErrorResponse": {
+        "properties": {
+          "errors": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "title": "APIErrorResponse"
+      },
+      "APIOKResponse": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Resource"
+              },
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Resource"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "links": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Links"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIOKResponse"
+      },
+      "Error": {
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "meta": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meta"
+          }
+        },
+        "type": "object",
+        "title": "Error"
+      },
+      "Json": {
+        "type": "object"
+      },
+      "Link": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "$ref": "#/components/schemas/LinkObject"
+          }
+        ]
+      },
+      "LinkObject": {
+        "properties": {
+          "href": {
+            "type": "string",
+            "title": "Href"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "type": "object",
+        "required": [
+          "href"
+        ],
+        "title": "LinkObject"
+      },
+      "Links": {
+        "properties": {
+          "self": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Link"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "describedby": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Link"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "Links"
+      },
+      "NewCheck": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/NewCheckData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "NewCheck"
+      },
+      "NewCheckAttributes": {
         "properties": {
           "template_id": {
             "type": "string",
@@ -206,111 +473,65 @@
           "template_args",
           "schedule"
         ],
-        "title": "Body_new_check_v1_checks__post"
+        "title": "NewCheckAttributes"
       },
-      "Check": {
+      "NewCheckData": {
         "properties": {
-          "id": {
+          "type": {
             "type": "string",
-            "title": "Id"
+            "title": "Type",
+            "default": "check"
           },
-          "metadata": {
-            "$ref": "#/components/schemas/Json"
-          },
-          "schedule": {
-            "type": "string",
-            "title": "Schedule"
-          },
-          "outcome_filter": {
-            "$ref": "#/components/schemas/Json"
+          "attributes": {
+            "$ref": "#/components/schemas/NewCheckAttributes"
           }
         },
         "type": "object",
         "required": [
-          "id",
-          "metadata",
-          "schedule",
-          "outcome_filter"
+          "attributes"
         ],
-        "title": "Check"
+        "title": "NewCheckData"
       },
-      "CheckTemplate": {
+      "Resource": {
         "properties": {
           "id": {
             "type": "string",
             "title": "Id"
-          },
-          "metadata": {
-            "$ref": "#/components/schemas/Json"
-          },
-          "arguments": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "object"
-              }
-            ],
-            "title": "Arguments"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "metadata",
-          "arguments"
-        ],
-        "title": "CheckTemplate"
-      },
-      "HTTPValidationError": {
-        "properties": {
-          "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "type": "array",
-            "title": "Detail"
-          }
-        },
-        "type": "object",
-        "title": "HTTPValidationError"
-      },
-      "Json": {
-        "type": "object"
-      },
-      "ValidationError": {
-        "properties": {
-          "loc": {
-            "items": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "integer"
-                }
-              ]
-            },
-            "type": "array",
-            "title": "Location"
-          },
-          "msg": {
-            "type": "string",
-            "title": "Message"
           },
           "type": {
             "type": "string",
-            "title": "Error Type"
+            "title": "Type"
+          },
+          "attributes": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attributes"
+          },
+          "links": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/Link"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Links"
           }
         },
         "type": "object",
         "required": [
-          "loc",
-          "msg",
+          "id",
           "type"
         ],
-        "title": "ValidationError"
+        "title": "Resource"
       }
     }
   }

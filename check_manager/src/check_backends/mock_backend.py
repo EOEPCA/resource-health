@@ -1,13 +1,7 @@
 from collections import defaultdict
 from typing import (
-    Any,
     AsyncIterable,
-    Final,
-    Literal,
-    NewType,
     Self,
-    Type,
-    assert_never,
     override,
 )
 import uuid
@@ -24,11 +18,8 @@ from check_backends.check_backend import (
     CheckTemplateId,
 )
 from exceptions import (
-    CheckException,
-    CheckInternalError,
     CheckTemplateIdError,
     CheckIdError,
-    CheckIdNonUniqueError,
 )
 
 
@@ -47,10 +38,7 @@ class MockBackend(CheckBackend):
                     "properties": {
                         "health_check.name": {"type": "string"},
                         "script": {"type": "string", "format": "textarea"},
-                        "requirements": {
-                            "type": "string",
-                            "format": "textarea"
-                        },
+                        "requirements": {"type": "string", "format": "textarea"},
                     },
                     "required": ["health_check.name", "script"],
                 },
@@ -59,9 +47,26 @@ class MockBackend(CheckBackend):
         self._check_template_id_to_template: dict[CheckTemplateId, CheckTemplate] = {
             template.id: template for template in check_templates
         }
+        checks = [
+            Check(
+                id=CheckId("check_id_1_iuhwqed7"),
+                metadata={
+                    "template": "remote_check_template1",
+                    "template_args": {
+                        "health_check.name": "Simple Health Check",
+                        "script": "Dummy Script",
+                    },
+                },
+                schedule=CronExpression("* * * * *"),
+                outcome_filter={"resource.foo": "bar"},
+            )
+        ]
         self._auth_to_id_to_check: defaultdict[
             AuthenticationObject, dict[CheckId, Check]
         ] = defaultdict(dict)
+        self._auth_to_id_to_check[AuthenticationObject("user1")] = {
+            check.id: check for check in checks
+        }
 
     @override
     async def aclose(self: Self) -> None:
@@ -109,7 +114,11 @@ class MockBackend(CheckBackend):
             metadata={"template_id": template_id, "template_args": template_args},
             schedule=schedule,
             # Just return some filter which I know will have some results
-            outcome_filter={"resource_attributes": {"k8s.cronjob.name": "resource-health-healthchecks-cronjob-3"}},
+            outcome_filter={
+                "resource_attributes": {
+                    "k8s.cronjob.name": "resource-health-healthchecks-cronjob-3"
+                }
+            },
         )
         self._auth_to_id_to_check[auth_obj][check_id] = check
         return check
