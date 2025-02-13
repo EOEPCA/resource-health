@@ -44,7 +44,7 @@ class K8sBackend(CheckBackend):
         api_client: ApiClient = None
     ) -> None:
         self._template_dirs: list[str] = template_dirs
-        self.api_client = api_client or ApiClient()
+        self._api_client = api_client or ApiClient()
 
     def _load_templates(self: Self) -> None:
         for dir in self._template_dirs:
@@ -88,7 +88,7 @@ class K8sBackend(CheckBackend):
             schedule=schedule
         )
         await load_config()
-        async with self.api_client as api_client:
+        async with self._api_client as api_client:
             api_instance = client.BatchV1Api(api_client)
             try:
                 api_response = await api_instance.create_namespaced_cron_job(
@@ -129,7 +129,7 @@ class K8sBackend(CheckBackend):
     #             template_args.get("requirements")
     #         )
     #     await load_config()
-    #     async with self.api_client as api_client:
+    #     async with self._api_client as api_client:
     #         api_instance = client.BatchV1Api(api_client)
     #         try:
     #             api_response = await api_instance.patch_namespaced_cron_job(
@@ -159,7 +159,7 @@ class K8sBackend(CheckBackend):
         self: Self, auth_obj: AuthenticationObject, check_id: CheckId
     ) -> None:
         await load_config()
-        async with self.api_client as api_client:
+        async with self._api_client as api_client:
             api_instance = client.BatchV1Api(api_client)
             try:
                 api_response = await api_instance.delete_namespaced_cron_job(
@@ -185,7 +185,7 @@ class K8sBackend(CheckBackend):
         ids: list[CheckId] | None = None,
     ) -> AsyncIterable[Check]:
         await load_config()
-        async with self.api_client as api_client:
+        async with self._api_client as api_client:
             self._load_templates()
             api_instance = client.BatchV1Api(api_client)
             try:

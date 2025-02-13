@@ -21,7 +21,6 @@ from check_backends.check_backend import (
     CheckTemplateId,
     CronExpression,
 )
-from check_backends.k8s_backend.class_modifier import ClassModifier
 
 
 # Factory class for loading and storing template classes from Python modules
@@ -144,9 +143,8 @@ def _add_otel_exporter_variables(cronjob: V1CronJob):
     cronjob.spec.job_template.spec.template.spec.volumes = volumes
 
 
-def tag_cronjob(cls, cronjob: V1CronJob, *args, **kwargs):
+def _tag_cronjob(cls, cronjob: V1CronJob, template_args):
     tempalte_id = cls.get_check_template().id
-    template_args = kwargs.get("template_args") or args[0]
 
     _add_metadata(cronjob, tempalte_id, template_args)
 
@@ -157,7 +155,7 @@ def tag_cronjob(cls, cronjob: V1CronJob, *args, **kwargs):
     return cronjob
 
 
-def make_check(cronjob: V1CronJob):
+def _make_check(cronjob: V1CronJob):
     template_id = cronjob.metadata.annotations.get("template_id")
     template_args = json.loads(cronjob.metadata.annotations.get("template_args", "{}")) 
     return Check(
@@ -166,6 +164,23 @@ def make_check(cronjob: V1CronJob):
         schedule=CronExpression(cronjob.spec.schedule),
         outcome_filter={"resource_attributes": {"k8s.cronjob.name": cronjob.metadata.name}},
     )
+
+def make_factory_template(cronjob_template):
+    class FactoryTemplate:
+        @classmethod
+        def get_check_template(cls):
+            return cronjob_template.get_check_template()
+
+        @classmethod
+        def make_cronjob(cls, template_args, schedule):
+            res = cronjob_template.make_cronjob(template_args, schedule)
+            return _tag_cronjob(cronjob_template, res, template_args)
+
+        @classmethod
+        def make_check(cls, cronjob):
+            return _make_check(cronjob)
+
+    return FactoryTemplate
 
 
 # Metaclass that gives concrete template classes the ability to automatically
@@ -177,15 +192,10 @@ class TemplateMeta(ABCMeta):
         super().__init__(name, bases, dct)
         # Only register concrete classes
         if not cls.__abstractmethods__:
-            ModifiedTemplate = ClassModifier(
-                cls,
-                new_classmethods={"make_check": make_check},
-                return_modifications={"make_cronjob": tag_cronjob},
-            )
             # Register a modified version of the concrete template class
             TemplateFactory.register_template(
                 cls.get_check_template().id,
-                ModifiedTemplate,
+                make_factory_template(cls),
             )
 
 
@@ -195,7 +205,7 @@ class CronjobTemplate(ABC, metaclass=TemplateMeta):
     @abstractmethod
     def get_check_template(cls) -> CheckTemplate:
         """
-        Returns an instance of CheckTemplate containng a general information
+        Returns an instance of CheckTemplate containing a general information
         about the template and a JSON-schema describing the arguments it accepts.
         """
 
