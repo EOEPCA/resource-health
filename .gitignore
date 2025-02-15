@@ -7,4 +7,4 @@ build
 tmp/*
 *.tgz
 .check
-tmp/*
+.coverage
