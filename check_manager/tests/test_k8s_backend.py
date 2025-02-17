@@ -74,6 +74,17 @@ cronjob_2 = V1CronJob(
 )
 
 
+@patch("test_k8s_backend.ApiClient", new_callable=AsyncMock)
+async def test_aclose(mock_api_client):
+    try:
+        k8s_backend = K8sBackend(
+            template_dirs=[TEMPLATES],
+            api_client=mock_api_client,
+        )
+    finally:
+        await k8s_backend.aclose()
+
+
 @pytest.mark.parametrize("kubernetes_service_host", [
     "mock_service_host", None
 ])
@@ -84,7 +95,12 @@ async def test_load_config(
     mock_load_kube_config,
     kubernetes_service_host,
 ):
-    with patch.dict(os.environ, {"KUBERNETES_SERVICE_HOST": kubernetes_service_host} if kubernetes_service_host else {}, clear=True):
+    with patch.dict(
+        os.environ,
+        {"KUBERNETES_SERVICE_HOST": kubernetes_service_host}
+        if kubernetes_service_host else {},
+        clear=True,
+    ):
         await load_config()
         if kubernetes_service_host:
             mock_load_incluster_config.assert_called_once()
