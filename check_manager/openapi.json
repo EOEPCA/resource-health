@@ -17,10 +17,61 @@
             "content": {
               "application/vnd.api+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/APIOKResponse"
+                  "$ref": "#/components/schemas/APIOKResponseList_NoneType_"
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/v1/check_templates/": {
+      "get": {
+        "summary": "Get Check Templates",
+        "operationId": "get_check_templates_v1_check_templates__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "restrict IDs to include",
+              "title": "Id"
+            },
+            "description": "restrict IDs to include"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIOKResponseList_CheckTemplateAttributes_"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
           }
         }
       }
@@ -46,58 +97,7 @@
             "content": {
               "application/vnd.api+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/APIOKResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "content": {
-              "application/vnd.api+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/APIErrorResponse"
-                }
-              }
-            },
-            "description": "Unprocessable Entity"
-          }
-        }
-      }
-    },
-    "/v1/check_templates/": {
-      "get": {
-        "summary": "List Check Templates",
-        "operationId": "list_check_templates_v1_check_templates__get",
-        "parameters": [
-          {
-            "name": "ids",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "restrict IDs to include",
-              "title": "Ids"
-            },
-            "description": "restrict IDs to include"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/vnd.api+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/APIOKResponse"
+                  "$ref": "#/components/schemas/APIOKResponse_CheckTemplateAttributes_"
                 }
               }
             }
@@ -116,26 +116,39 @@
       }
     },
     "/v1/checks/": {
-      "post": {
-        "summary": "New Check",
-        "operationId": "new_check_v1_checks__post",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/vnd.api+json": {
-              "schema": {
-                "$ref": "#/components/schemas/NewCheck"
-              }
-            }
+      "get": {
+        "summary": "Get Checks",
+        "operationId": "get_checks_v1_checks__get",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "restrict IDs to include",
+              "title": "Id"
+            },
+            "description": "restrict IDs to include"
           }
-        },
+        ],
         "responses": {
-          "201": {
+          "200": {
             "description": "Successful Response",
             "content": {
               "application/vnd.api+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/APIOKResponse"
+                  "$ref": "#/components/schemas/APIOKResponseList_OutCheckAttributes_"
                 }
               }
             }
@@ -152,39 +165,26 @@
           }
         }
       },
-      "get": {
-        "summary": "List Checks",
-        "operationId": "list_checks_v1_checks__get",
-        "parameters": [
-          {
-            "name": "ids",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "restrict IDs to include",
-              "title": "Ids"
-            },
-            "description": "restrict IDs to include"
+      "post": {
+        "summary": "Create Check",
+        "operationId": "create_check_v1_checks__post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/vnd.api+json": {
+              "schema": {
+                "$ref": "#/components/schemas/InCheck"
+              }
+            }
           }
-        ],
+        },
         "responses": {
-          "200": {
+          "201": {
             "description": "Successful Response",
             "content": {
               "application/vnd.api+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/APIOKResponse"
+                  "$ref": "#/components/schemas/APIOKResponse_OutCheckAttributes_"
                 }
               }
             }
@@ -223,7 +223,7 @@
             "content": {
               "application/vnd.api+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/APIOKResponse"
+                  "$ref": "#/components/schemas/APIOKResponse_OutCheckAttributes_"
                 }
               }
             }
@@ -294,23 +294,13 @@
         "type": "object",
         "title": "APIErrorResponse"
       },
-      "APIOKResponse": {
+      "APIOKResponseList_CheckTemplateAttributes_": {
         "properties": {
           "data": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Resource"
-              },
-              {
-                "items": {
-                  "$ref": "#/components/schemas/Resource"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "items": {
+              "$ref": "#/components/schemas/Resource_CheckTemplateAttributes_"
+            },
+            "type": "array",
             "title": "Data"
           },
           "links": {
@@ -328,7 +318,127 @@
         "required": [
           "data"
         ],
-        "title": "APIOKResponse"
+        "title": "APIOKResponseList[CheckTemplateAttributes]"
+      },
+      "APIOKResponseList_NoneType_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Resource_NoneType_"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "links": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Links"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIOKResponseList[NoneType]"
+      },
+      "APIOKResponseList_OutCheckAttributes_": {
+        "properties": {
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/Resource_OutCheckAttributes_"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "links": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Links"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIOKResponseList[OutCheckAttributes]"
+      },
+      "APIOKResponse_CheckTemplateAttributes_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Resource_CheckTemplateAttributes_"
+          },
+          "links": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Links"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIOKResponse[CheckTemplateAttributes]"
+      },
+      "APIOKResponse_OutCheckAttributes_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Resource_OutCheckAttributes_"
+          },
+          "links": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Links"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "APIOKResponse[OutCheckAttributes]"
+      },
+      "CheckTemplateAttributes": {
+        "properties": {
+          "metadata": {
+            "$ref": "#/components/schemas/Json"
+          },
+          "arguments": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "object"
+              }
+            ],
+            "title": "Arguments"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metadata",
+          "arguments"
+        ],
+        "title": "CheckTemplateAttributes"
       },
       "Error": {
         "properties": {
@@ -377,6 +487,79 @@
         },
         "type": "object",
         "title": "Error"
+      },
+      "InCheck": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/InCheckData"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "InCheck"
+      },
+      "InCheckAttributes": {
+        "properties": {
+          "metadata": {
+            "$ref": "#/components/schemas/InCheckMetadata"
+          },
+          "schedule": {
+            "type": "string",
+            "title": "Schedule"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metadata",
+          "schedule"
+        ],
+        "title": "InCheckAttributes"
+      },
+      "InCheckData": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "default": "check"
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/InCheckAttributes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "attributes"
+        ],
+        "title": "InCheckData"
+      },
+      "InCheckMetadata": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "template_id": {
+            "type": "string",
+            "title": "Template Id"
+          },
+          "template_args": {
+            "$ref": "#/components/schemas/Json"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "template_id",
+          "template_args"
+        ],
+        "title": "InCheckMetadata"
       },
       "Json": {
         "type": "object"
@@ -436,63 +619,94 @@
                 "type": "null"
               }
             ]
+          },
+          "root": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Link"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
+        "additionalProperties": true,
         "type": "object",
         "title": "Links"
       },
-      "NewCheck": {
+      "OutCheckAttributes": {
         "properties": {
-          "data": {
-            "$ref": "#/components/schemas/NewCheckData"
-          }
-        },
-        "type": "object",
-        "required": [
-          "data"
-        ],
-        "title": "NewCheck"
-      },
-      "NewCheckAttributes": {
-        "properties": {
-          "template_id": {
-            "type": "string",
-            "title": "Template Id"
-          },
-          "template_args": {
-            "$ref": "#/components/schemas/Json"
+          "metadata": {
+            "$ref": "#/components/schemas/OutCheckMetadata"
           },
           "schedule": {
             "type": "string",
             "title": "Schedule"
-          }
-        },
-        "type": "object",
-        "required": [
-          "template_id",
-          "template_args",
-          "schedule"
-        ],
-        "title": "NewCheckAttributes"
-      },
-      "NewCheckData": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "title": "Type",
-            "default": "check"
           },
-          "attributes": {
-            "$ref": "#/components/schemas/NewCheckAttributes"
+          "outcome_filter": {
+            "$ref": "#/components/schemas/Json"
           }
         },
         "type": "object",
         "required": [
-          "attributes"
+          "metadata",
+          "schedule",
+          "outcome_filter"
         ],
-        "title": "NewCheckData"
+        "title": "OutCheckAttributes"
       },
-      "Resource": {
+      "OutCheckMetadata": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id"
+          },
+          "template_args": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Json"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "OutCheckMetadata"
+      },
+      "Resource_CheckTemplateAttributes_": {
         "properties": {
           "id": {
             "type": "string",
@@ -503,12 +717,43 @@
             "title": "Type"
           },
           "attributes": {
+            "$ref": "#/components/schemas/CheckTemplateAttributes"
+          },
+          "links": {
             "anyOf": [
-              {},
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/Link"
+                },
+                "type": "object"
+              },
               {
                 "type": "null"
               }
             ],
+            "title": "Links"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "attributes"
+        ],
+        "title": "Resource[CheckTemplateAttributes]"
+      },
+      "Resource_NoneType_": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "attributes": {
+            "type": "null",
             "title": "Attributes"
           },
           "links": {
@@ -529,9 +774,46 @@
         "type": "object",
         "required": [
           "id",
-          "type"
+          "type",
+          "attributes"
         ],
-        "title": "Resource"
+        "title": "Resource[NoneType]"
+      },
+      "Resource_OutCheckAttributes_": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/OutCheckAttributes"
+          },
+          "links": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/Link"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Links"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "attributes"
+        ],
+        "title": "Resource[OutCheckAttributes]"
       }
     }
   }

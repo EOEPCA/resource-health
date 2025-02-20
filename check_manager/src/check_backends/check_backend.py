@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import asyncio
 from types import TracebackType
 from typing import (
+    Any,
     AsyncIterable,
     Literal,
     NewType,
@@ -9,12 +10,9 @@ from typing import (
     Type,
     override,
 )
-from pydantic import BaseModel, TypeAdapter
+from pydantic import BaseModel
 from referencing.jsonschema import Schema
 
-from api_interface import (
-    Json,
-)
 from exceptions import (
     CheckIdError,
     CheckIdNonUniqueError,
@@ -25,23 +23,53 @@ CronExpression = NewType("CronExpression", str)
 CheckTemplateId = NewType("CheckTemplateId", str)
 CheckId = NewType("CheckId", str)
 
+type Json = dict[str, Any]
 
-class CheckTemplate(BaseModel):
-    id: CheckTemplateId
+
+class CheckTemplateAttributes(BaseModel):
     # SHOULD contain { 'label' : str, 'description' : str }
     metadata: Json
     arguments: Schema
 
 
-class Check(BaseModel):
-    id: CheckId
-    # SHOULD contain { 'label' : str, 'description' : str }, MAY contain { 'template': CheckTemplate, 'template_args': Json }
-    metadata: Json
+class InCheckMetadata(BaseModel):
+    # SHOULD have name and description
+    name: str
+    description: str
+    # MAY have template_id and template_args
+    template_id: CheckTemplateId
+    template_args: Json
+
+
+class OutCheckMetadata(BaseModel, extra="allow"):
+    # SHOULD have name and description
+    name: str | None = None
+    description: str | None = None
+    # MAY have template_id and template_args
+    template_id: CheckTemplateId | None = None
+    template_args: Json | None = None
+
+
+class InCheckAttributes(BaseModel):
+    metadata: InCheckMetadata
     schedule: CronExpression
 
+
+class OutCheckAttributes(BaseModel):
+    metadata: OutCheckMetadata
+    schedule: CronExpression
     # Conditions to determine which spans belong to this check outcome
     outcome_filter: Json
     ## NOTE: For now the above can just be a set of equality conditions on Span/Resource attributes
+
+
+class InCheckData(BaseModel):
+    type: str = "check"
+    attributes: InCheckAttributes
+
+
+class InCheck(BaseModel):
+    data: InCheckData
 
 
 # Inherit from this class and implement the abstract methods for each new backend
@@ -56,7 +84,7 @@ class CheckBackend(ABC):
     async def list_check_templates(
         self: Self,
         ids: list[CheckTemplateId] | None = None,
-    ) -> AsyncIterable[CheckTemplate]:
+    ) -> AsyncIterable[tuple[CheckTemplateId, CheckTemplateAttributes]]:
         # A trick to make the type of the function what I want
         # Why yield inside function body effects the type of the function is explained in
         # https://mypy.readthedocs.io/en/stable/more_types.html#asynchronous-iterators
@@ -67,12 +95,8 @@ class CheckBackend(ABC):
     # Otherwise don't use that error code
     @abstractmethod
     async def new_check(
-        self: Self,
-        auth_obj: AuthenticationObject,
-        template_id: CheckTemplateId,
-        template_args: Json,
-        schedule: CronExpression,
-    ) -> Check:
+        self: Self, auth_obj: AuthenticationObject, attributes: InCheckAttributes
+    ) -> tuple[CheckId, OutCheckAttributes]:
         pass
 
     # # Raise CheckIdError if check_id doesn't exist.
@@ -101,7 +125,7 @@ class CheckBackend(ABC):
         self: Self,
         auth_obj: AuthenticationObject,
         ids: list[CheckId] | None = None,
-    ) -> AsyncIterable[Check]:
+    ) -> AsyncIterable[tuple[CheckId, OutCheckAttributes]]:
         # A trick to make the type of the function what I want
         # Why yield inside function body effects the type of the function is explained in
         # https://mypy.readthedocs.io/en/stable/more_types.html#asynchronous-iterators
