@@ -80,7 +80,8 @@ class CheckDefinition(BaseModel):
 
 # Dummy for now
 auth_obj = AuthenticationObject("user1")
-check_backend: CheckBackend
+# Use CheckBackend type so mypy warns is any specifics of MockBackend are used
+check_backend: CheckBackend = MockBackend(template_id_prefix="remote_")
 
 app = FastAPI()
 
@@ -425,11 +426,8 @@ def uvicorn_dev() -> None:
         json.dump(app.openapi(), file, indent=2)
 
     global check_backend
-    check_backend = (
-        RestBackend("http://127.0.0.1:8000/")
-        if environ.get("BACKEND") == "REST"
-        else MockBackend(template_id_prefix="remote_")
-    )
+    if environ.get("BACKEND") == "REST":
+        check_backend = RestBackend("http://127.0.0.1:8000/")
 
     import uvicorn
 
