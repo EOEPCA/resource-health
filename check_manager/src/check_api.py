@@ -1,5 +1,4 @@
 import json
-from logging import warning
 from typing import Annotated, Any
 from fastapi import (
     APIRouter,
@@ -27,6 +26,7 @@ from api_interface import (
     LIST_CHECKS_PATH,
     NEW_CHECK_PATH,
     REMOVE_CHECK_PATH,
+    get_request_url_str,
     get_url_str,
 )
 from check_backends import (
@@ -62,14 +62,14 @@ from json_api_types import (
 )
 
 
-def get_my_url() -> str:
-    my_url = environ.get("MY_URL")
-    if my_url is None:
-        raise ValueError("Environment variable MY_URL must be set")
-    return my_url
+def get_base_url() -> str:
+    base_url = environ.get("RH_CHECK_API_BASE_URL")
+    if base_url is None:
+        raise ValueError("Environment variable RH_CHECK_API_BASE_URL must be set")
+    return base_url
 
 
-MY_URL = get_my_url()
+BASE_URL = get_base_url()
 
 
 class CheckDefinition(BaseModel):
@@ -147,7 +147,6 @@ async def validation_exception_handler(
             meta={**error, "loc": "/" + "/".join([str(name) for name in loc])},
         )
 
-    warning(f"{exc.errors()}")
     return JSONAPIResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content=jsonable_encoder(
@@ -171,25 +170,25 @@ async def root() -> APIOKResponseList[None]:
                 id="documentation_website",
                 type="api_path",
                 attributes=None,
-                links={"self": get_url_str(MY_URL, "/docs")},
+                links={"self": get_url_str(BASE_URL, "/docs")},
             ),
             Resource[None](
                 id="get_check_templates",
                 type="api_path",
                 attributes=None,
-                links={"self": get_url_str(MY_URL, LIST_CHECK_TEMPLATES_PATH)},
+                links={"self": get_url_str(BASE_URL, LIST_CHECK_TEMPLATES_PATH)},
             ),
             Resource[None](
                 id="get_checks",
                 type="api_path",
                 attributes=None,
-                links={"self": get_url_str(MY_URL, LIST_CHECKS_PATH)},
+                links={"self": get_url_str(BASE_URL, LIST_CHECKS_PATH)},
             ),
         ],
         links=Links(
-            self=MY_URL,
+            self=BASE_URL,
             describedby=LinkObject(
-                title="OpenAPI schema", href=get_url_str(MY_URL, "/openapi.json")
+                title="OpenAPI schema", href=get_url_str(BASE_URL, "/openapi.json")
             ),
         ),
     )
@@ -197,7 +196,7 @@ async def root() -> APIOKResponseList[None]:
 
 def check_template_url(check_template_id: CheckTemplateId) -> str:
     return get_url_str(
-        MY_URL,
+        BASE_URL,
         GET_CHECK_TEMPLATE_PATH,
         path_params={"check_template_id": check_template_id},
     )
@@ -226,7 +225,7 @@ async def get_check_templates(
     response: Response,
     ids: Annotated[
         list[CheckTemplateId] | None,
-        Query(description="restrict IDs to include", alias="id"),
+        Query(description="restrict IDs to include"),
     ] = None,
 ) -> APIOKResponseList[CheckTemplateAttributes]:
     response.headers["Allow"] = "GET"
@@ -235,7 +234,10 @@ async def get_check_templates(
             check_template_to_resource(template_id, attributes)
             async for template_id, attributes in check_backend.list_check_templates(ids)
         ],
-        links=Links(self=str(request.url), root=str(request.base_url)),
+        links=Links(
+            self=get_request_url_str(BASE_URL, request),
+            root=BASE_URL,
+        ),
     )
 
 
@@ -263,14 +265,17 @@ async def get_check_template(
             template_id, attributes = check_template
             return APIOKResponse[CheckTemplateAttributes](
                 data=check_template_to_resource(template_id, attributes),
-                links=Links(self=str(request.url), root=str(request.base_url)),
+                links=Links(
+                    self=get_request_url_str(BASE_URL, request),
+                    root=BASE_URL,
+                ),
             )
         case _:
             raise CheckException(f"Check template id {check_template_id} is not unique")
 
 
 def check_url(check_id: CheckId) -> str:
-    return get_url_str(MY_URL, GET_CHECK_PATH, path_params={"check_id": check_id})
+    return get_url_str(BASE_URL, GET_CHECK_PATH, path_params={"check_id": check_id})
 
 
 def check_to_resource(
@@ -308,7 +313,7 @@ async def get_checks(
     response: Response,
     ids: Annotated[
         list[CheckId] | None,
-        Query(description="restrict IDs to include", alias="id"),
+        Query(description="restrict IDs to include"),
     ] = None,
 ) -> APIOKResponseList[OutCheckAttributes]:
     response.headers["Allow"] = "GET,POST"
@@ -317,7 +322,7 @@ async def get_checks(
             check_to_resource(check_id, attributes)
             async for check_id, attributes in check_backend.list_checks(auth_obj, ids)
         ],
-        links=Links(self=str(request.url), root=str(request.base_url)),
+        links=Links(self=get_request_url_str(BASE_URL, request), root=BASE_URL),
     )
 
 
@@ -342,7 +347,7 @@ async def create_check(
     response.headers["Location"] = check_url(check_id)
     return APIOKResponse[OutCheckAttributes](
         data=check_to_resource(check_id, attributes),
-        links=Links(root=str(request.base_url)),
+        links=Links(root=BASE_URL),
     )
 
 
@@ -365,7 +370,10 @@ async def get_check(
             response.headers["Allow"] = "GET,DELETE"
             return APIOKResponse[OutCheckAttributes](
                 data=check_to_resource(check_id, attributes),
-                links=Links(self=str(request.url), root=str(request.base_url)),
+                links=Links(
+                    self=get_request_url_str(BASE_URL, request),
+                    root=BASE_URL,
+                ),
             )
         case _:
             raise CheckIdNonUniqueError(f"Check id {check_id} is not unique")
@@ -424,6 +432,9 @@ app.openapi = custom_openapi  # type: ignore
 def uvicorn_dev() -> None:
     with open("openapi.json", mode="w+") as file:
         json.dump(app.openapi(), file, indent=2)
+
+    # NOTE: this will not work in case reload=True in uvicorn.run function.
+    # The workaround for now is to comment out reload=True
 
     global check_backend
     if environ.get("BACKEND") == "REST":

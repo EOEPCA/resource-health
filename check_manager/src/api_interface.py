@@ -1,5 +1,7 @@
-from typing import Any, Final
+from typing import Any, Final, Iterable, Sequence
 from urllib import parse
+
+from fastapi import Request
 
 from exceptions import (
     CheckException,
@@ -44,24 +46,29 @@ def get_exception(status_code: int, content: dict[str, Any]) -> CheckException:
             return CheckInternalError(f"{error_code}: {message}")
 
 
+def get_request_url_str(base_url: str, request: Request) -> str:
+    return _concat_url_str(base_url, request.url.path, request.url.query)
+
+
 # Can't accept dict[str, str] for query params because the same key might have multiple values.
 def get_url_str(
     base_url: str,
     path: str,
     path_params: dict[str, str] | None = None,
-    query_params_list: list[tuple[str, str]] | None = None,
+    query_params_list: Iterable[tuple[str, str]] | None = None,
 ) -> str:
+    path_str = path.format_map(
+        {
+            parse.quote(key, safe=""): parse.quote(value, safe="")
+            for key, value in (path_params or {}).items()
+        }
+    )
+    return _concat_url_str(
+        base_url, path_str, query=parse.urlencode(list(query_params_list or []))
+    )
+
+
+def _concat_url_str(base_url: str, path: str, query: str) -> str:
     if base_url.endswith("/"):
         base_url = base_url[:-1]
-    path_str = (
-        path.format_map(
-            {
-                parse.quote(key, safe=""): parse.quote(value, safe="")
-                for key, value in path_params.items()
-            }
-        )
-        if path_params
-        else path
-    )
-    query_str = "?" + parse.urlencode(query_params_list) if query_params_list else ""
-    return base_url + path_str + query_str
+    return base_url + path + ("?" + query if query else "")
