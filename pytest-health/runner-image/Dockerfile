@@ -1,4 +1,4 @@
-FROM python:3.11-slim AS compiler
+FROM python:3.12-slim AS compiler
 ENV PYTHONUNBUFFERED=1
 
 RUN python -m venv /venv
@@ -7,7 +7,7 @@ COPY ./utilities /utilities
 COPY ./runner-image/base_requirements.txt /requirements.txt
 RUN pip install -Ur /requirements.txt
 
-FROM python:3.11-slim AS runner
+FROM python:3.12-slim AS runner
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
     wget && \

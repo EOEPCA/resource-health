@@ -10,7 +10,7 @@ Run the check api first. For how to do that, see `check_manager/README.md`
 Then, run the development server:
 
 ```bash
-NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT=http://localhost:8000 NEXT_PUBLIC_TELEMETRY_ENDPOINT=http://localhost:12345/v1 yarn dev
+NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT=http://localhost:8000/v1 NEXT_PUBLIC_TELEMETRY_ENDPOINT=http://localhost:12345/v1 yarn dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
@@ -37,7 +37,7 @@ docker build -t check_manager_website -f Dockerfile .
 Run the image with
 
 ```bash
-docker run -e NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT=http://localhost:8000 -e NEXT_PUBLIC_TELEMETRY_ENDPOINT=http://localhost:12345/v1 -p 3000:3000 -it check_manager_website
+docker run -e NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT=http://localhost:8000/v1 -e NEXT_PUBLIC_TELEMETRY_ENDPOINT=http://localhost:12345/v1 -p 3000:3000 -it check_manager_website
 ```
 
 Where `NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT` points to the REST API endpoint.
