@@ -48,14 +48,47 @@ class Resource[T](BaseModel):
 #     meta: object | None = None
 
 
+# A JSON Pointer [RFC6901] to the value in the request document that caused the error
+# [e.g. "/data" for a primary data object, or "/data/attributes/title" for a specific attribute].
+# This MUST point to a value in the request document that exists; if it doesn’t, the client SHOULD simply ignore the pointer.
+class ErrorSourcePointer(BaseModel):
+    pointer: str
+
+
+# A string indicating which URI query parameter caused the error.
+class ErrorSourceParameter(BaseModel):
+    parameter: str
+
+
+# a string indicating the name of a single request header which caused the error.
+class ErrorSourceHeader(BaseModel):
+    header: str | None
+
+
+# See https://jsonapi.org/examples/#error-objects
+type ErrorSource = ErrorSourcePointer | ErrorSourceParameter | ErrorSourceHeader
+
+
+# # See https://jsonapi.org/examples/#error-objects
+# class ErrorSource(BaseModel):
+#     # a JSON Pointer [RFC6901] to the value in the request document that caused the error
+#     # [e.g. "/data" for a primary data object, or "/data/attributes/title" for a specific attribute].
+#     # This MUST point to a value in the request document that exists; if it doesn’t, the client SHOULD simply ignore the pointer.
+#     pointer: str | None
+#     # a string indicating which URI query parameter caused the error.
+#     parameter: str | None
+#     # a string indicating the name of a single request header which caused the error.
+#     header: str | None
+
+
 class Error(BaseModel):
     # id: str | None = None
     # links: dict[str, Link] | None = None
-    # status: str | None = None
-    code: str | None = None
-    title: str | None = None
+    status: str
+    code: str
+    title: str
     detail: str | None = None
-    # source: str | None = None
+    source: ErrorSource | None = None
     meta: object | None = None
 
 
@@ -83,7 +116,7 @@ class APIOKResponseList[T](BaseModel):
 
 
 class APIErrorResponse(BaseModel):
-    errors: list[Error] | None = None
+    errors: list[Error]
     # meta: Json | None = None
     # jsonapi: Json | None = None
     # links: Links | None = None

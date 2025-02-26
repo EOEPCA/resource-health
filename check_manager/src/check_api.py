@@ -1,7 +1,6 @@
 import json
 from typing import Annotated, Any
 from fastapi import (
-    APIRouter,
     FastAPI,
     Path,
     Query,
@@ -11,46 +10,47 @@ from fastapi import (
 )
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.openapi.utils import get_openapi
-from pydantic import BaseModel
 from os import environ
 
 from api_interface import (
     GET_CHECK_PATH,
     GET_CHECK_TEMPLATE_PATH,
-    ERROR_CODE_KEY,
-    ERROR_MESSAGE_KEY,
-    LIST_CHECK_TEMPLATES_PATH,
-    LIST_CHECKS_PATH,
-    NEW_CHECK_PATH,
+    GET_CHECK_TEMPLATES_PATH,
+    GET_CHECKS_PATH,
+    CREATE_CHECK_PATH,
     REMOVE_CHECK_PATH,
     get_request_url_str,
+    get_status_code_and_errors,
     get_url_str,
 )
-from check_backends import (
+from api_utils.api_utils import (
+    JSONAPIResponse,
+    get_api_router_with_defaults,
+    get_env_var_or_throw,
+    set_custom_json_schema,
+)
+from check_backends.check_backend import (
     AuthenticationObject,
     CheckBackend,
-    CronExpression,
+    CheckIdError,
+    CheckIdNonUniqueError,
     CheckTemplateId,
     CheckTemplateAttributes,
     CheckId,
     OutCheckAttributes,
     InCheck,
-    MockBackend,
-    Json,
-    RestBackend,
+    CheckTemplateIdError,
 )
+from check_backends.mock_backend import MockBackend
+
+# from check_backends.rest_backend import RestBackend
+from check_backends.rest_backend import RestBackend
 from exceptions import (
     CheckException,
-    CheckIdNonUniqueError,
-    CheckInternalError,
-    CheckTemplateIdError,
-    CheckIdError,
     NewCheckClientSpecifiedId,
 )
-from json_api_types import (
+from api_utils.json_api_types import (
     APIErrorResponse,
     APIOKResponse,
     APIOKResponseList,
@@ -61,21 +61,7 @@ from json_api_types import (
     Resource,
 )
 
-
-def get_base_url() -> str:
-    base_url = environ.get("RH_CHECK_API_BASE_URL")
-    if base_url is None:
-        raise ValueError("Environment variable RH_CHECK_API_BASE_URL must be set")
-    return base_url
-
-
-BASE_URL = get_base_url()
-
-
-class CheckDefinition(BaseModel):
-    check_template_id: CheckTemplateId
-    check_template_args: Json
-    schedule: CronExpression
+BASE_URL = get_env_var_or_throw("RH_CHECK_API_BASE_URL")
 
 
 # Dummy for now
@@ -95,35 +81,15 @@ app.add_middleware(
 )
 
 
-class JSONAPIResponse(JSONResponse):
-    media_type = "application/vnd.api+json"
-
-
-router = APIRouter(
-    default_response_class=JSONAPIResponse,
-    responses={status.HTTP_422_UNPROCESSABLE_ENTITY: {"model": APIErrorResponse}},
-)
-
-
-def get_status_code_and_error(exception: BaseException) -> tuple[int, Error]:
-    if not isinstance(exception, CheckException):
-        exception = CheckInternalError("Internal server error")
-    error: Error = Error(code=type(exception).__name__, detail=str(exception))
-    match exception:
-        case NewCheckClientSpecifiedId():
-            return (403, error)
-        case CheckIdError() | CheckTemplateIdError():
-            return (404, error)
-        case _:
-            return (500, error)
+router = get_api_router_with_defaults()
 
 
 @app.exception_handler(Exception)
 async def exception_handler(request: Request, exc: Exception) -> JSONAPIResponse:
-    (status_code, error) = get_status_code_and_error(exc)
+    status_code, errors = get_status_code_and_errors(exc)
     return JSONAPIResponse(
         status_code=status_code,
-        content=jsonable_encoder(APIErrorResponse(errors=[error]), exclude_unset=True),
+        content=jsonable_encoder(APIErrorResponse(errors=errors), exclude_unset=True),
     )
 
 
@@ -131,6 +97,8 @@ async def exception_handler(request: Request, exc: Exception) -> JSONAPIResponse
 async def validation_exception_handler(
     request: Request, exc: RequestValidationError
 ) -> JSONAPIResponse:
+    status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
+
     def mangle_error(error: dict[str, Any]) -> Error:
         type: str = error.pop("type")
         msg: str = error.pop("msg")
@@ -142,6 +110,7 @@ async def validation_exception_handler(
         # The difficulty is that sometimes the last element is int, and when the field is missing it points to the missing field
         # though json pointers must be valid. There might be some other edge cases with which I don't want to deal with for now
         return Error(
+            status=str(status_code),
             code=type,
             title=msg,
             meta={**error, "loc": "/" + "/".join([str(name) for name in loc])},
@@ -176,13 +145,13 @@ async def root() -> APIOKResponseList[None]:
                 id="get_check_templates",
                 type="api_path",
                 attributes=None,
-                links={"self": get_url_str(BASE_URL, LIST_CHECK_TEMPLATES_PATH)},
+                links={"self": get_url_str(BASE_URL, GET_CHECK_TEMPLATES_PATH)},
             ),
             Resource[None](
                 id="get_checks",
                 type="api_path",
                 attributes=None,
-                links={"self": get_url_str(BASE_URL, LIST_CHECKS_PATH)},
+                links={"self": get_url_str(BASE_URL, GET_CHECKS_PATH)},
             ),
         ],
         links=Links(
@@ -215,11 +184,10 @@ def check_template_to_resource(
 
 
 @router.get(
-    LIST_CHECK_TEMPLATES_PATH,
+    GET_CHECK_TEMPLATES_PATH,
     status_code=status.HTTP_200_OK,
     response_model_exclude_unset=True,
 )
-## filter: conditions to filter on Metadata
 async def get_check_templates(
     request: Request,
     response: Response,
@@ -232,7 +200,7 @@ async def get_check_templates(
     return APIOKResponseList[CheckTemplateAttributes](
         data=[
             check_template_to_resource(template_id, attributes)
-            async for template_id, attributes in check_backend.list_check_templates(ids)
+            async for template_id, attributes in check_backend.get_check_templates(ids)
         ],
         links=Links(
             self=get_request_url_str(BASE_URL, request),
@@ -251,15 +219,13 @@ async def get_check_template(
 ) -> APIOKResponse[CheckTemplateAttributes]:
     check_templates = [
         check_template
-        async for check_template in check_backend.list_check_templates(
+        async for check_template in check_backend.get_check_templates(
             ids=[check_template_id]
         )
     ]
     match check_templates:
         case []:
-            raise CheckIdError(
-                f"Check template with id {check_template_id} doesn't exist"
-            )
+            raise CheckTemplateIdError.create(check_template_id)
         case [check_template]:
             response.headers["Allow"] = "GET"
             template_id, attributes = check_template
@@ -271,7 +237,14 @@ async def get_check_template(
                 ),
             )
         case _:
-            raise CheckException(f"Check template id {check_template_id} is not unique")
+            raise CheckException(
+                Error(
+                    status="400",
+                    code="CheckTemplateIdNotUnique",
+                    title="Check template id is not unique",
+                    detail=f"Check template id {check_template_id} is not unique",
+                )
+            )
 
 
 def check_url(check_id: CheckId) -> str:
@@ -304,7 +277,7 @@ def check_to_resource(
 
 
 @router.get(
-    LIST_CHECKS_PATH,
+    GET_CHECKS_PATH,
     status_code=status.HTTP_200_OK,
     response_model_exclude_unset=True,
 )
@@ -320,14 +293,14 @@ async def get_checks(
     return APIOKResponseList[OutCheckAttributes](
         data=[
             check_to_resource(check_id, attributes)
-            async for check_id, attributes in check_backend.list_checks(auth_obj, ids)
+            async for check_id, attributes in check_backend.get_checks(auth_obj, ids)
         ],
         links=Links(self=get_request_url_str(BASE_URL, request), root=BASE_URL),
     )
 
 
 @router.post(
-    NEW_CHECK_PATH,
+    CREATE_CHECK_PATH,
     status_code=status.HTTP_201_CREATED,
     response_model_exclude_unset=True,
     # dependencies=[Depends(application_vnd)],
@@ -338,9 +311,9 @@ async def create_check(
     in_check: InCheck,
 ) -> APIOKResponse[OutCheckAttributes]:
     if hasattr(in_check.data, "id"):
-        raise NewCheckClientSpecifiedId()
+        raise NewCheckClientSpecifiedId.create()
     assert in_check.data.type == "check"
-    check_id, attributes = await check_backend.new_check(
+    check_id, attributes = await check_backend.create_check(
         auth_obj, in_check.data.attributes
     )
     response.headers["Allow"] = "GET,POST"
@@ -360,11 +333,11 @@ async def get_check(
     request: Request, response: Response, check_id: CheckId
 ) -> APIOKResponse[OutCheckAttributes]:
     checks = [
-        check async for check in check_backend.list_checks(auth_obj, ids=[check_id])
+        check async for check in check_backend.get_checks(auth_obj, ids=[check_id])
     ]
     match checks:
         case []:
-            raise CheckIdError(f"Check with id {check_id} doesn't exist")
+            raise CheckIdError.create(check_id)
         case [check]:
             check_id, attributes = check
             response.headers["Allow"] = "GET,DELETE"
@@ -376,7 +349,7 @@ async def get_check(
                 ),
             )
         case _:
-            raise CheckIdNonUniqueError(f"Check id {check_id} is not unique")
+            raise CheckIdNonUniqueError.create(check_id)
 
 
 # @router.patch(UPDATE_CHECK_PATH, status_code=status.HTTP_200_OK,
@@ -404,29 +377,9 @@ async def remove_check(
     return await check_backend.remove_check(auth_obj, check_id)
 
 
-def custom_openapi() -> dict[str, Any]:
-    if app.openapi_schema:
-        return app.openapi_schema
-    openapi_schema = get_openapi(
-        title="Custom title",
-        version="2.5.0",
-        summary="This is a very custom OpenAPI schema",
-        description="Here's a longer description of the custom **OpenAPI** schema",
-        routes=app.routes,
-    )
-
-    for _, path_schema in openapi_schema["paths"].items():
-        for _, method_schema in path_schema.items():
-            if "requestBody" in method_schema:
-                content: dict[str, Any] = method_schema["requestBody"]["content"]
-                content["application/vnd.api+json"] = content.pop("application/json")
-    app.openapi_schema = openapi_schema
-    return app.openapi_schema
-
-
 app.include_router(router)
 
-app.openapi = custom_openapi  # type: ignore
+set_custom_json_schema(app, "Check Manager API", "v1")
 
 
 def uvicorn_dev() -> None:
@@ -446,7 +399,7 @@ def uvicorn_dev() -> None:
     uvicorn.run(
         "check_api:app",
         port=int(port) if port else 8000,
-        reload=True,
+        # reload=True,
         root_path=environ.get("FAST_API_ROOT_PATH") or "",
     )
 

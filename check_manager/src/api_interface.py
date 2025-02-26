@@ -1,49 +1,80 @@
-from typing import Any, Final, Iterable, Sequence
+from typing import Any, Final, Iterable
 from urllib import parse
-
 from fastapi import Request
 
-from exceptions import (
-    CheckException,
-    CheckInternalError,
-    CheckTemplateIdError,
+from check_backends.check_backend import (
     CheckIdError,
     CheckIdNonUniqueError,
-    CheckConnectionError,
+    CheckTemplateIdError,
 )
+from exceptions import (
+    CheckException,
+    CheckExceptions,
+    CheckInternalError,
+    CheckConnectionError,
+    JsonValidationError,
+)
+from api_utils.json_api_types import APIErrorResponse, Error
 
 
 ERROR_CODE_KEY: Final[str] = "error"
 ERROR_MESSAGE_KEY: Final[str] = "detail"
 
 ROUTE_PREFIX = "/v1"
-LIST_CHECK_TEMPLATES_PATH: Final[str] = ROUTE_PREFIX + "/check_templates/"
+GET_CHECK_TEMPLATES_PATH: Final[str] = ROUTE_PREFIX + "/check_templates/"
 GET_CHECK_TEMPLATE_PATH: Final[str] = (
     ROUTE_PREFIX + "/check_templates/{check_template_id}"
 )
-NEW_CHECK_PATH: Final[str] = ROUTE_PREFIX + "/checks/"
+CREATE_CHECK_PATH: Final[str] = ROUTE_PREFIX + "/checks/"
 GET_CHECK_PATH: Final[str] = ROUTE_PREFIX + "/checks/{check_id}"
 UPDATE_CHECK_PATH: Final[str] = ROUTE_PREFIX + "/checks/{check_id}"
 REMOVE_CHECK_PATH: Final[str] = ROUTE_PREFIX + "/checks/{check_id}"
-LIST_CHECKS_PATH: Final[str] = ROUTE_PREFIX + "/checks/"
+GET_CHECKS_PATH: Final[str] = ROUTE_PREFIX + "/checks/"
 
 
-def get_exception(status_code: int, content: dict[str, Any]) -> CheckException:
-    error_code = content[ERROR_CODE_KEY]
-    message = content[ERROR_MESSAGE_KEY]
-    match error_code:
-        case CheckInternalError.__name__:
-            return CheckInternalError(message)
-        case CheckTemplateIdError.__name__:
-            return CheckTemplateIdError(message)
-        case CheckIdError.__name__:
-            return CheckIdError(message)
-        case CheckIdNonUniqueError.__name__:
-            return CheckIdNonUniqueError(message)
-        case CheckConnectionError.__name__:
-            return CheckConnectionError(message)
+def get_status_code_and_errors(exception: Exception) -> tuple[int, list[Error]]:
+    match exception:
+        case CheckExceptions():
+            exceptions = exception
+        case CheckException():
+            exceptions = CheckExceptions(
+                status=int(exception.error.status), exceptions=[exception]
+            )
         case _:
-            return CheckInternalError(f"{error_code}: {message}")
+            exceptions = CheckExceptions(
+                status=500,
+                exceptions=[CheckInternalError.create("Internal server error")],
+            )
+    return exceptions.status, [exc.error for exc in exceptions.exceptions]
+
+
+def get_exceptions(
+    status_code: int, content: dict[str, Any]
+) -> CheckException | CheckExceptions:
+    error_response = APIErrorResponse.model_validate(content)
+    exceptions = [_get_exception(error) for error in error_response.errors]
+    if len(exceptions) == 1:
+        return exceptions[0]
+    else:
+        return CheckExceptions(status=status_code, exceptions=exceptions)
+
+
+def _get_exception(error: Error) -> CheckException:
+    match error.code:
+        case JsonValidationError.__name__:
+            return JsonValidationError(error)
+        case CheckInternalError.__name__:
+            return CheckInternalError(error)
+        case CheckTemplateIdError.__name__:
+            return CheckTemplateIdError(error)
+        case CheckIdError.__name__:
+            return CheckIdError(error)
+        case CheckIdNonUniqueError.__name__:
+            return CheckIdNonUniqueError(error)
+        case CheckConnectionError.__name__:
+            return CheckConnectionError(error)
+        case _:
+            return CheckException(error)
 
 
 def get_request_url_str(base_url: str, request: Request) -> str:

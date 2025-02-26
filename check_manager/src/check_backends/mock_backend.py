@@ -5,10 +5,12 @@ from typing import (
     override,
 )
 import uuid
-from jsonschema import validate
+from jsonschema import ValidationError, validate
 
 from check_backends.check_backend import (
     AuthenticationObject,
+    CheckIdError,
+    CheckTemplateIdError,
     CronExpression,
     CheckBackend,
     CheckId,
@@ -18,10 +20,8 @@ from check_backends.check_backend import (
     CheckTemplateId,
     CheckTemplateAttributes,
 )
-from exceptions import (
-    CheckTemplateIdError,
-    CheckIdError,
-)
+from exceptions import JsonValidationError
+from api_utils.json_api_types import ErrorSource, ErrorSourceParameter
 
 
 class MockBackend(CheckBackend):
@@ -82,24 +82,26 @@ class MockBackend(CheckBackend):
         pass
 
     def _get_check_template_attributes(
-        self: Self, template_id: CheckTemplateId
+        self: Self,
+        template_id: CheckTemplateId,
     ) -> CheckTemplateAttributes:
         if template_id not in self._check_template_id_to_attributes:
-            raise CheckTemplateIdError(template_id)
+            raise CheckTemplateIdError.create(template_id)
         return self._check_template_id_to_attributes[template_id]
 
     def _get_check_attributes(
-        self: Self, auth_obj: AuthenticationObject, check_id: CheckId
+        self: Self,
+        auth_obj: AuthenticationObject,
+        check_id: CheckId,
     ) -> tuple[CheckId, OutCheckAttributes]:
         check_id_to_attributes = self._auth_to_check_id_to_attributes[auth_obj]
         if check_id not in check_id_to_attributes:
-            raise CheckIdError(f"Check id {check_id} not found")
+            raise CheckIdError.create(check_id)
         return check_id, check_id_to_attributes[check_id]
 
     @override
-    async def list_check_templates(
-        self: Self,
-        ids: list[CheckTemplateId] | None = None,
+    async def get_check_templates(
+        self: Self, ids: list[CheckTemplateId] | None = None
     ) -> AsyncIterable[tuple[CheckTemplateId, CheckTemplateAttributes]]:
         if ids is None:
             for (
@@ -109,16 +111,25 @@ class MockBackend(CheckBackend):
                 yield template_id, attributes
         else:
             for template_id in ids:
-                yield template_id, self._get_check_template_attributes(template_id)
+                yield (
+                    template_id,
+                    self._get_check_template_attributes(template_id),
+                )
 
     @override
-    async def new_check(
+    async def create_check(
         self: Self, auth_obj: AuthenticationObject, attributes: InCheckAttributes
     ) -> tuple[CheckId, OutCheckAttributes]:
         check_template = self._get_check_template_attributes(
             attributes.metadata.template_id
         )
-        validate(attributes.metadata.template_args, check_template.arguments)
+        try:
+            validate(attributes.metadata.template_args, check_template.arguments)
+        except ValidationError as e:
+            raise JsonValidationError.create(
+                "/data/attributes/metadata/template_args/", e
+            )
+
         check_id = CheckId(str(uuid.uuid4()))
         out_attributes = OutCheckAttributes(
             metadata=OutCheckMetadata(
@@ -163,11 +174,11 @@ class MockBackend(CheckBackend):
     ) -> None:
         id_to_check = self._auth_to_check_id_to_attributes[auth_obj]
         if check_id not in id_to_check:
-            raise CheckIdError(f"Check id {check_id} not found")
+            raise CheckIdError.create(check_id)
         id_to_check.pop(check_id)
 
     @override
-    async def list_checks(
+    async def get_checks(
         self: Self,
         auth_obj: AuthenticationObject,
         ids: list[CheckId] | None = None,

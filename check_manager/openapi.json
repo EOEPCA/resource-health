@@ -1,10 +1,8 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Custom title",
-    "summary": "This is a very custom OpenAPI schema",
-    "description": "Here's a longer description of the custom **OpenAPI** schema",
-    "version": "2.5.0"
+    "title": "Check Manager API",
+    "version": "v1"
   },
   "paths": {
     "/": {
@@ -277,21 +275,17 @@
       "APIErrorResponse": {
         "properties": {
           "errors": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/Error"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "items": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "type": "array",
             "title": "Errors"
           }
         },
         "type": "object",
+        "required": [
+          "errors"
+        ],
         "title": "APIErrorResponse"
       },
       "APIOKResponseList_CheckTemplateAttributes_": {
@@ -442,26 +436,16 @@
       },
       "Error": {
         "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
           "code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Code"
           },
           "title": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Title"
           },
           "detail": {
@@ -475,6 +459,16 @@
             ],
             "title": "Detail"
           },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "meta": {
             "anyOf": [
               {},
@@ -486,7 +480,71 @@
           }
         },
         "type": "object",
+        "required": [
+          "status",
+          "code",
+          "title"
+        ],
         "title": "Error"
+      },
+      "ErrorSource": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/ErrorSourcePointer"
+          },
+          {
+            "$ref": "#/components/schemas/ErrorSourceParameter"
+          },
+          {
+            "$ref": "#/components/schemas/ErrorSourceHeader"
+          }
+        ]
+      },
+      "ErrorSourceHeader": {
+        "properties": {
+          "header": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Header"
+          }
+        },
+        "type": "object",
+        "required": [
+          "header"
+        ],
+        "title": "ErrorSourceHeader"
+      },
+      "ErrorSourceParameter": {
+        "properties": {
+          "parameter": {
+            "type": "string",
+            "title": "Parameter"
+          }
+        },
+        "type": "object",
+        "required": [
+          "parameter"
+        ],
+        "title": "ErrorSourceParameter"
+      },
+      "ErrorSourcePointer": {
+        "properties": {
+          "pointer": {
+            "type": "string",
+            "title": "Pointer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "pointer"
+        ],
+        "title": "ErrorSourcePointer"
       },
       "InCheck": {
         "properties": {

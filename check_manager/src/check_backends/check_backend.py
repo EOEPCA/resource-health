@@ -13,15 +13,59 @@ from typing import (
 from pydantic import BaseModel
 from referencing.jsonschema import Schema
 
-from exceptions import (
-    CheckIdError,
-    CheckIdNonUniqueError,
-)
+from exceptions import CheckException
+from api_utils.json_api_types import Error, ErrorSource
 
 AuthenticationObject = NewType("AuthenticationObject", str)
 CronExpression = NewType("CronExpression", str)
 CheckTemplateId = NewType("CheckTemplateId", str)
 CheckId = NewType("CheckId", str)
+
+
+class CheckTemplateIdError(CheckException, KeyError):
+    """Template Id not found"""
+
+    @classmethod
+    def create(cls, check_template_id: CheckTemplateId) -> Self:
+        return cls(
+            Error(
+                status="404",
+                code=cls._create_code(),
+                title=cls._create_title_from_doc(),
+                detail=f"Check template id {check_template_id} not found",
+            )
+        )
+
+
+class CheckIdError(CheckException, KeyError):
+    """Check Id not found"""
+
+    @classmethod
+    def create(cls, check_id: CheckId) -> Self:
+        return cls(
+            Error(
+                status="404",
+                code=cls._create_code(),
+                title=cls._create_title_from_doc(),
+                detail=f"Check id {check_id} not found",
+            )
+        )
+
+
+class CheckIdNonUniqueError(CheckException, KeyError):
+    """Check Id is not unique"""
+
+    @classmethod
+    def create(cls, check_id: CheckId) -> Self:
+        return cls(
+            Error(
+                status="400",
+                code=cls._create_code(),
+                title=cls._create_title_from_doc(),
+                detail=f"Check id {check_id} is not unique",
+            )
+        )
+
 
 type Json = dict[str, Any]
 
@@ -81,7 +125,7 @@ class CheckBackend(ABC):
         pass
 
     @abstractmethod
-    async def list_check_templates(
+    async def get_check_templates(
         self: Self,
         ids: list[CheckTemplateId] | None = None,
     ) -> AsyncIterable[tuple[CheckTemplateId, CheckTemplateAttributes]]:
@@ -94,7 +138,7 @@ class CheckBackend(ABC):
     # Raise CheckIdError if template_id doesn't exist.
     # Otherwise don't use that error code
     @abstractmethod
-    async def new_check(
+    async def create_check(
         self: Self, auth_obj: AuthenticationObject, attributes: InCheckAttributes
     ) -> tuple[CheckId, OutCheckAttributes]:
         pass
@@ -121,7 +165,7 @@ class CheckBackend(ABC):
         pass
 
     @abstractmethod
-    async def list_checks(
+    async def get_checks(
         self: Self,
         auth_obj: AuthenticationObject,
         ids: list[CheckId] | None = None,

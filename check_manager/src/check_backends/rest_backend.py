@@ -6,11 +6,11 @@ from typing import (
 import httpx
 
 from api_interface import (
-    LIST_CHECK_TEMPLATES_PATH,
-    LIST_CHECKS_PATH,
-    NEW_CHECK_PATH,
+    GET_CHECK_TEMPLATES_PATH,
+    GET_CHECKS_PATH,
+    CREATE_CHECK_PATH,
     REMOVE_CHECK_PATH,
-    get_exception,
+    get_exceptions,
     get_url_str,
 )
 from check_backends.check_backend import (
@@ -26,7 +26,7 @@ from check_backends.check_backend import (
 )
 
 from exceptions import CheckConnectionError
-from json_api_types import APIOKResponse, APIOKResponseList
+from api_utils.json_api_types import APIOKResponse, APIOKResponseList
 
 
 class RestBackend(CheckBackend):
@@ -39,14 +39,14 @@ class RestBackend(CheckBackend):
         await self._client.aclose()
 
     @override
-    async def list_check_templates(
+    async def get_check_templates(
         self: Self,
         ids: list[CheckTemplateId] | None = None,
     ) -> AsyncIterable[tuple[CheckTemplateId, CheckTemplateAttributes]]:
         try:
             response = await self._client.get(
-                get_url_str(self._url, LIST_CHECK_TEMPLATES_PATH),
-                params={"id": ids} if ids is not None else {},
+                get_url_str(self._url, GET_CHECK_TEMPLATES_PATH),
+                params={"ids": ids} if ids is not None else {},
             )
         except httpx.HTTPError as e:
             raise CheckConnectionError(e.args[0])
@@ -58,17 +58,17 @@ class RestBackend(CheckBackend):
             ):
                 yield (CheckTemplateId(check_template.id), check_template.attributes)
         else:
-            raise get_exception(
+            raise get_exceptions(
                 status_code=response.status_code, content=response.json()
             )
 
     @override
-    async def new_check(
+    async def create_check(
         self: Self, auth_obj: AuthenticationObject, attributes: InCheckAttributes
     ) -> tuple[CheckId, OutCheckAttributes]:
         try:
             response = await self._client.post(
-                get_url_str(self._url, NEW_CHECK_PATH),
+                get_url_str(self._url, CREATE_CHECK_PATH),
                 json=InCheck(data=InCheckData(attributes=attributes)).model_dump(
                     exclude_unset=True
                 ),
@@ -82,7 +82,10 @@ class RestBackend(CheckBackend):
             return CheckId(
                 structured_response.data.id
             ), structured_response.data.attributes
-        raise get_exception(status_code=response.status_code, content=response.json())
+        else:
+            raise get_exceptions(
+                status_code=response.status_code, content=response.json()
+            )
 
     # @override
     # async def update_check(
@@ -122,18 +125,18 @@ class RestBackend(CheckBackend):
             raise CheckConnectionError(e.args[0])
         if response.is_success:
             return None
-        raise get_exception(status_code=response.status_code, content=response.json())
+        raise get_exceptions(status_code=response.status_code, content=response.json())
 
     @override
-    async def list_checks(
+    async def get_checks(
         self: Self,
         auth_obj: AuthenticationObject,
         ids: list[CheckId] | None = None,
     ) -> AsyncIterable[tuple[CheckId, OutCheckAttributes]]:
         try:
             response = await self._client.get(
-                get_url_str(self._url, LIST_CHECKS_PATH),
-                params={"id": ids} if ids is not None else {},
+                get_url_str(self._url, GET_CHECKS_PATH),
+                params={"ids": ids} if ids is not None else {},
             )
         except httpx.HTTPError as e:
             raise CheckConnectionError(e.args[0])
@@ -146,6 +149,6 @@ class RestBackend(CheckBackend):
             ):
                 yield CheckId(check.id), check.attributes
         else:
-            raise get_exception(
+            raise get_exceptions(
                 status_code=response.status_code, content=response.json()
             )
