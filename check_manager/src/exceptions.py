@@ -1,30 +1,8 @@
-from dataclasses import dataclass
 from typing import Self
 
 from jsonschema import ValidationError
+from api_utils.exceptions import CheckException
 from api_utils.json_api_types import Error, ErrorSourcePointer
-
-
-@dataclass
-class CheckException(Exception):
-    """Base exception class"""
-
-    error: Error
-
-    @classmethod
-    def _create_code(cls) -> str:
-        return cls.__name__
-
-    @classmethod
-    def _create_title_from_doc(cls) -> str:
-        return cls.__doc__ or ""
-
-
-@dataclass
-class CheckExceptions(Exception):
-    # HTTP status code
-    status: int
-    exceptions: list[CheckException]
 
 
 class JsonValidationError(CheckException):
@@ -67,21 +45,6 @@ class NewCheckClientSpecifiedId(CheckException):
                 code=cls._create_code(),
                 title=cls._create_title_from_doc(),
                 detail="Client must not specify new check id",
-            )
-        )
-
-
-class CheckInternalError(CheckException):
-    """Check internal error"""
-
-    @classmethod
-    def create(cls, detail: str) -> Self:
-        return cls(
-            Error(
-                status="500",
-                code=cls._create_code(),
-                title=cls._create_title_from_doc(),
-                detail=detail,
             )
         )
 

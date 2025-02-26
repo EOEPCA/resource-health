@@ -10,9 +10,9 @@ from api_interface import (
     GET_CHECKS_PATH,
     CREATE_CHECK_PATH,
     REMOVE_CHECK_PATH,
-    get_exceptions,
     get_url_str,
 )
+from api_utils.exceptions import get_exceptions
 from check_backends.check_backend import (
     AuthenticationObject,
     CheckBackend,

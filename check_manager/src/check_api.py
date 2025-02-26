@@ -21,7 +21,6 @@ from api_interface import (
     CREATE_CHECK_PATH,
     REMOVE_CHECK_PATH,
     get_request_url_str,
-    get_status_code_and_errors,
     get_url_str,
 )
 from api_utils.api_utils import (
@@ -30,6 +29,7 @@ from api_utils.api_utils import (
     get_env_var_or_throw,
     set_custom_json_schema,
 )
+from api_utils.exceptions import get_status_code_and_errors
 from check_backends.check_backend import (
     AuthenticationObject,
     CheckBackend,
