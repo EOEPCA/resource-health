@@ -1,5 +1,6 @@
-from abc import ABC, ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 import importlib.util
+import inspect
 import json
 from kubernetes_asyncio.client.models.v1_cron_job import V1CronJob
 from kubernetes_asyncio.client.models.v1_env_var import V1EnvVar
@@ -7,8 +8,11 @@ from kubernetes_asyncio.client.models.v1_object_meta import V1ObjectMeta
 from kubernetes_asyncio.client.models.v1_volume_mount import V1VolumeMount
 from kubernetes_asyncio.client.models.v1_volume import V1Volume
 from kubernetes_asyncio.client.models.v1_secret_volume_source import V1SecretVolumeSource
+import logging
 import os
+import pathlib
 from pydantic import TypeAdapter
+from typing import Any, Protocol, runtime_checkable
 import uuid
 
 from api_interface import (
@@ -21,47 +25,45 @@ from check_backends.check_backend import (
     CheckTemplateId,
     CronExpression,
 )
+from plugin_utils.loader import load_plugins
+
+logger = logging.getLogger("HEALTH_CHECK")
 
 
-# Factory class for loading and storing template classes from Python modules
-class TemplateFactory:
-    _registry = {}
+# Protocol class for cronjob templates
+@runtime_checkable
+class CronjobTemplateProtocol(Protocol):
+    def get_check_template(cls) -> CheckTemplate:
+        pass
 
-    @classmethod
-    def register_template(cls, template_id: CheckTemplateId, template_class):
-        cls._registry[template_id] = template_class
+    def make_cronjob(
+        cls,
+        template_args: Json,
+        schedule: CronExpression,
+    ) -> V1CronJob:
+        pass
 
-    @classmethod
-    def list_templates(cls):
-        return list(cls._registry.keys())
 
-    @classmethod
-    def get_template(cls, template_id: CheckTemplateId):
-        template_class = cls._registry.get(template_id)
-        if template_class:
-            return template_class()
-        else:
-            return None
+# Optional abstract base class for cronjob templates
+class CronjobTemplate(ABC):
+    @abstractmethod
+    def get_check_template(cls) -> CheckTemplate:
+        """
+        Returns an instance of CheckTemplate containing a general information
+        about the template and a JSON-schema describing the arguments it accepts.
+        """
 
-    @classmethod
-    def load_templates_from_directory(cls, directory: str):
-        """Dynamically load all template modules in a given directory."""
-        for filename in os.listdir(directory):
-            if filename.endswith('.py') and filename != '__init__.py':
-                module_name = filename[:-3]  # Strip '.py' extension
-                cls.load_template_module(directory, module_name)
-
-    @classmethod
-    def load_template_module(cls, directory: str, module_name: str):
-        """Load a specific module and register its classes."""
-        module_path = os.path.join(directory, module_name + '.py')
-        spec = importlib.util.spec_from_file_location(module_name, module_path)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+    @abstractmethod
+    def make_cronjob(
+        cls,
+        template_args: Json,
+        schedule: CronExpression,
+    ) -> V1CronJob:
+        """ Returns a cronjob from the arguments and schedule. """
 
 
 # Helper functions for adding metadata and telemetry properties to cronjobs
-def _add_metadata(cronjob: V1CronJob, template_id: CheckTemplateId, template_args: Json):
+def _add_metadata(cronjob: V1CronJob, template_id: CheckTemplateId, template_args: Json) -> None:
     if cronjob.metadata is None:
         cronjob.metadata = V1ObjectMeta()
     cronjob.metadata.annotations["template_id"] = template_id
@@ -70,7 +72,7 @@ def _add_metadata(cronjob: V1CronJob, template_id: CheckTemplateId, template_arg
     cronjob.metadata.name = check_id
 
 
-def _add_otel_resource_attributes(cronjob: V1CronJob, template_args: Json):
+def _add_otel_resource_attributes(cronjob: V1CronJob, template_args: Json) -> None:
     check_id = cronjob.metadata.name
     user_id = "Health BB user"
     health_check_name = TypeAdapter(str).validate_python(
@@ -93,7 +95,8 @@ def _add_otel_resource_attributes(cronjob: V1CronJob, template_args: Json):
         )
     cronjob.spec.job_template.spec.template.spec.containers[0].env = env
 
-def _add_otel_exporter_variables(cronjob: V1CronJob):
+
+def _add_otel_exporter_variables(cronjob: V1CronJob) -> None:
     env = cronjob.spec.job_template.spec.template.spec.containers[0].env or []
     volumes = cronjob.spec.job_template.spec.template.spec.containers[0].volume_mounts or []
     volume_mounts = cronjob.spec.job_template.spec.template.spec.volumes or []
@@ -143,8 +146,12 @@ def _add_otel_exporter_variables(cronjob: V1CronJob):
     cronjob.spec.job_template.spec.template.spec.volumes = volumes
 
 
-def _tag_cronjob(cls, cronjob: V1CronJob, template_args):
-    tempalte_id = cls.get_check_template().id
+def _tag_cronjob(
+    cronjob_template: CronjobTemplateProtocol,
+    cronjob: V1CronJob,
+    template_args: Json,
+) -> V1CronJob:
+    tempalte_id = cronjob_template.get_check_template().id
 
     _add_metadata(cronjob, tempalte_id, template_args)
 
@@ -155,9 +162,11 @@ def _tag_cronjob(cls, cronjob: V1CronJob, template_args):
     return cronjob
 
 
-def _make_check(cronjob: V1CronJob):
+def _make_check(cronjob: V1CronJob) -> Check:
     template_id = cronjob.metadata.annotations.get("template_id")
-    template_args = json.loads(cronjob.metadata.annotations.get("template_args", "{}")) 
+    template_args = json.loads(
+        cronjob.metadata.annotations.get("template_args", "{}")
+    ) 
     return Check(
         id=CheckId(cronjob.metadata.name),
         metadata={"template_id": template_id, "template_args": template_args},
@@ -165,55 +174,61 @@ def _make_check(cronjob: V1CronJob):
         outcome_filter={"resource_attributes": {"k8s.cronjob.name": cronjob.metadata.name}},
     )
 
-def make_factory_template(cronjob_template):
-    class FactoryTemplate:
-        @classmethod
-        def get_check_template(cls):
-            return cronjob_template.get_check_template()
 
-        @classmethod
-        def make_cronjob(cls, template_args, schedule):
-            res = cronjob_template.make_cronjob(template_args, schedule)
-            return _tag_cronjob(cronjob_template, res, template_args)
+class CronjobMaker:
+    def __init__(self, cronjob_template: CronjobTemplateProtocol) -> None:
+        self.cronjob_template: CronjobTemplateProtocol = cronjob_template
 
-        @classmethod
-        def make_check(cls, cronjob):
-            return _make_check(cronjob)
+    def get_check_template(self) -> CheckTemplate:
+        return self.cronjob_template.get_check_template()
 
-    return FactoryTemplate
-
-
-# Metaclass that gives concrete template classes the ability to automatically
-# register a modified version of themselves into the TemplateFactory.
-# The modifications add the neccessary methods for the K8sBackend as well
-# as properties for generating accessible telemetry.
-class TemplateMeta(ABCMeta):
-    def __init__(cls, name, bases, dct):
-        super().__init__(name, bases, dct)
-        # Only register concrete classes
-        if not cls.__abstractmethods__:
-            # Register a modified version of the concrete template class
-            TemplateFactory.register_template(
-                cls.get_check_template().id,
-                make_factory_template(cls),
-            )
-
-
-# Abstract base class for cronjob templates
-class CronjobTemplate(ABC, metaclass=TemplateMeta):
-    @classmethod
-    @abstractmethod
-    def get_check_template(cls) -> CheckTemplate:
-        """
-        Returns an instance of CheckTemplate containing a general information
-        about the template and a JSON-schema describing the arguments it accepts.
-        """
-
-    @classmethod
-    @abstractmethod
     def make_cronjob(
-        cls,
+        self,
         template_args: Json,
         schedule: CronExpression,
     ) -> V1CronJob:
-        """ Returns a cronjob from the arguments and schedule. """
+        res = self.cronjob_template.make_cronjob(template_args, schedule)
+        return _tag_cronjob(self.cronjob_template, res, template_args)
+
+    def make_check(self, cronjob: V1CronJob) -> Check:
+        return _make_check(cronjob)
+
+
+def make_template_value(
+    obj: Any
+) -> CronjobMaker | None:
+    if not inspect.isclass(obj):
+        return None
+    if not (
+        issubclass(obj, CronjobTemplateProtocol)
+        and obj != CronjobTemplateProtocol
+        and not inspect.isabstract(obj)
+    ):
+        if (
+            issubclass(obj, CronjobTemplate)
+            and obj != CronjobTemplate
+        ):
+            logger.warning(
+                "Encountered unfinished implementation of CronjobTemplate: "
+                f"{str(obj)}"
+            )
+        return None
+
+    cronjob_template: CronjobTemplateProtocol = obj()
+
+    return CronjobMaker(cronjob_template)
+
+
+def load_templates(dirs: str | list[str]) -> dict[str, CronjobMaker]:
+    paths: list[str] = [dirs] if isinstance(dirs, str) else dirs
+    templates: dict[str, Any] = {}
+    for path in paths:
+        templates.update(
+            load_plugins(
+                pathlib.Path(path),
+                key=(lambda c: c().get_check_template().id),
+                value=make_template_value,
+                logger=logger,
+            )
+        )
+    return templates

@@ -11,6 +11,9 @@ from kubernetes_asyncio.client.models.v1_object_meta import V1ObjectMeta
 from pydantic import TypeAdapter
 from typing import Optional, override
 
+from api_interface import (
+    Json,
+)
 from check_backends.k8s_backend.templates import (
     CronjobTemplate,
     CheckTemplate,
@@ -59,9 +62,8 @@ def make_base_cronjob(
 
 
 class DefaultK8sTemplate(CronjobTemplate):
-    @classmethod
     @override
-    def get_check_template(cls):
+    def get_check_template(self) -> CheckTemplate:
         return CheckTemplate(
             id=CheckTemplateId("default_k8s_template"),
             metadata={
@@ -91,18 +93,17 @@ class DefaultK8sTemplate(CronjobTemplate):
             },
         )
 
-    @classmethod
     @override
     def make_cronjob(
-        cls,
-        template_args,
-        schedule,
-    ):
+        self,
+        template_args: Json,
+        schedule: CronExpression,
+    ) -> V1CronJob:
         health_check_name = TypeAdapter(str).validate_python(
             template_args["health_check.name"]
         )
         script = TypeAdapter(str).validate_python(template_args["script"])
-        requirements = TypeAdapter(str | None).validate_python(
+        requirements: str | None = TypeAdapter(str | None).validate_python(
             template_args.get("requirements")
         )
         cronjob = make_base_cronjob(
@@ -129,9 +130,8 @@ class DefaultK8sTemplate(CronjobTemplate):
 
 
 class SimplePing(CronjobTemplate):
-    @classmethod
     @override
-    def get_check_template(cls):
+    def get_check_template(self) -> CheckTemplate:
         return CheckTemplate(
             id=CheckTemplateId("simple_ping"),
             metadata={
@@ -163,13 +163,12 @@ class SimplePing(CronjobTemplate):
             },
         )
 
-    @classmethod
     @override
     def make_cronjob(
-        cls,
-        template_args,
-        schedule,
-    ):
+        self,
+        template_args: Json,
+        schedule: CronExpression,
+    ) -> V1CronJob:
         health_check_name = TypeAdapter(str).validate_python(
             template_args["health_check.name"]
         )

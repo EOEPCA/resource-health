@@ -15,7 +15,6 @@ from kubernetes_asyncio.client.rest import ApiException
 import pytest
 
 from check_backends.k8s_backend import K8sBackend, load_config
-from check_backends.k8s_backend.templates import TemplateFactory
 from check_backends.check_backend import (
     AuthenticationObject,
     Check,
@@ -363,5 +362,5 @@ async def test_list_checks(
         mock_load_config.assert_called_once()
         mock_batch_v1_api.assert_called_once()
         mock_batch_v1_api.return_value.list_namespaced_cron_job.assert_called_once()
-        call_args = mock_batch_v1_api.return_value.list_namespaced_cron_job.call_args.args
-        assert call_args[0] == NAMESPACE
+        call_kwargs = mock_batch_v1_api.return_value.list_namespaced_cron_job.call_args.kwargs
+        assert call_kwargs["namespace"] == NAMESPACE

@@ -17,7 +17,10 @@ from check_backends.check_backend import (
     CheckTemplateId,
     CronExpression,
 )
-from check_backends.k8s_backend.templates import TemplateFactory
+from check_backends.k8s_backend.templates import (
+    CronjobMaker,
+    load_templates,
+)
 from exceptions import (
     CheckInternalError,
     CheckTemplateIdError,
@@ -41,14 +44,10 @@ class K8sBackend(CheckBackend):
     def __init__(
         self: Self,
         template_dirs: list[str],
-        api_client: ApiClient = None
+        api_client: ApiClient | None = None
     ) -> None:
-        self._template_dirs: list[str] = template_dirs
-        self._api_client = api_client or ApiClient()
-
-    def _load_templates(self: Self) -> None:
-        for dir in self._template_dirs:
-            TemplateFactory.load_templates_from_directory(dir)
+        self._templates: dict[str, CronjobMaker] = load_templates(template_dirs)
+        self._api_client: ApiClient = api_client or ApiClient()
 
     @override
     async def aclose(self: Self) -> None:
@@ -59,15 +58,19 @@ class K8sBackend(CheckBackend):
         self: Self,
         ids: list[CheckTemplateId] | None = None,
     ) -> AsyncIterable[CheckTemplate]:
-        self._load_templates()
-        template_ids = TemplateFactory.list_templates()
+        # TODO: See if there is a way to loop directly over the check templates
+        template_ids = list(self._templates.keys())
         if ids is None:
             for id in template_ids:
-                yield TemplateFactory.get_template(id).get_check_template()
+                cronjob_template = self._templates.get(id)
+                if cronjob_template is not None:
+                    yield cronjob_template.get_check_template()
         else:
             for id in ids:
                 if id in template_ids:
-                    yield TemplateFactory.get_template(id).get_check_template()
+                    cronjob_template = self._templates.get(id)
+                    if cronjob_template is not None:
+                        yield cronjob_template.get_check_template()
 
     @override
     async def new_check(
@@ -77,8 +80,7 @@ class K8sBackend(CheckBackend):
         template_args: Json,
         schedule: CronExpression,
     ) -> Check:
-        self._load_templates()
-        template = TemplateFactory.get_template(template_id)
+        template = self._templates.get(template_id)
         if template is None:
             raise CheckTemplateIdError(f"No template found for ID: {template_id}")
         check_template = template.get_check_template()
@@ -99,7 +101,7 @@ class K8sBackend(CheckBackend):
             except ApiException as e:
                 logger.error(f"Failed to create new cron job: {e}")
                 if e.status == 422:
-                    raise CheckInternalError(f"Unprocessable content")
+                    raise CheckInternalError("Unprocessable content")
                 raise e
             except aiohttp.ClientConnectionError as e:
                 logger.error(f"Failed to create new cron job: {e}")
@@ -186,10 +188,11 @@ class K8sBackend(CheckBackend):
     ) -> AsyncIterable[Check]:
         await load_config()
         async with self._api_client as api_client:
-            self._load_templates()
             api_instance = client.BatchV1Api(api_client)
             try:
-                cronjobs = await api_instance.list_namespaced_cron_job(NAMESPACE)
+                cronjobs = await api_instance.list_namespaced_cron_job(
+                    namespace=NAMESPACE
+                )
             except ApiException as e:
                 logger.error(f"Failed to list cron jobs: {e}")
                 raise e
@@ -199,11 +202,13 @@ class K8sBackend(CheckBackend):
             if ids is None:
                 for cronjob in cronjobs.items:
                     template_id = cronjob.metadata.annotations["template_id"]
-                    template = TemplateFactory.get_template(template_id)
-                    yield template.make_check(cronjob)
+                    template = self._templates.get(template_id)
+                    if template is not None:
+                        yield template.make_check(cronjob)
             else:
                 for cronjob in cronjobs.items:
                     if cronjob.metadata.name in ids:
                         template_id = cronjob.metadata.annotations["template_id"]
-                        template = TemplateFactory.get_template(template_id)
-                        yield template.make_check(cronjob)
+                        template = self._templates.get(template_id)
+                        if template is not None:
+                            yield template.make_check(cronjob)
