@@ -10,9 +10,9 @@ from api_interface import (
     GET_CHECKS_PATH,
     CREATE_CHECK_PATH,
     REMOVE_CHECK_PATH,
-    get_url_str,
+    get_check_exceptions,
 )
-from api_utils.exceptions import get_exceptions
+from api_utils.api_utils import get_url_str
 from check_backends.check_backend import (
     AuthenticationObject,
     CheckBackend,
@@ -58,7 +58,7 @@ class RestBackend(CheckBackend):
             ):
                 yield (CheckTemplateId(check_template.id), check_template.attributes)
         else:
-            raise get_exceptions(
+            raise get_check_exceptions(
                 status_code=response.status_code, content=response.json()
             )
 
@@ -83,7 +83,7 @@ class RestBackend(CheckBackend):
                 structured_response.data.id
             ), structured_response.data.attributes
         else:
-            raise get_exceptions(
+            raise get_check_exceptions(
                 status_code=response.status_code, content=response.json()
             )
 
@@ -125,7 +125,9 @@ class RestBackend(CheckBackend):
             raise CheckConnectionError(e.args[0])
         if response.is_success:
             return None
-        raise get_exceptions(status_code=response.status_code, content=response.json())
+        raise get_check_exceptions(
+            status_code=response.status_code, content=response.json()
+        )
 
     @override
     async def get_checks(
@@ -149,6 +151,6 @@ class RestBackend(CheckBackend):
             ):
                 yield CheckId(check.id), check.attributes
         else:
-            raise get_exceptions(
+            raise get_check_exceptions(
                 status_code=response.status_code, content=response.json()
             )

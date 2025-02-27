@@ -1,20 +1,15 @@
 from abc import ABC, abstractmethod
-import asyncio
-from types import TracebackType
 from typing import (
     Any,
     AsyncIterable,
-    Literal,
     NewType,
     Self,
-    Type,
-    override,
 )
 from pydantic import BaseModel
 from referencing.jsonschema import Schema
 
-from exceptions import CheckException
-from api_utils.json_api_types import Error, ErrorSource
+from exceptions import APIException
+from api_utils.json_api_types import Error
 
 AuthenticationObject = NewType("AuthenticationObject", str)
 CronExpression = NewType("CronExpression", str)
@@ -22,7 +17,7 @@ CheckTemplateId = NewType("CheckTemplateId", str)
 CheckId = NewType("CheckId", str)
 
 
-class CheckTemplateIdError(CheckException, KeyError):
+class CheckTemplateIdError(APIException, KeyError):
     """Template Id not found"""
 
     @classmethod
@@ -37,7 +32,7 @@ class CheckTemplateIdError(CheckException, KeyError):
         )
 
 
-class CheckIdError(CheckException, KeyError):
+class CheckIdError(APIException, KeyError):
     """Check Id not found"""
 
     @classmethod
@@ -52,7 +47,7 @@ class CheckIdError(CheckException, KeyError):
         )
 
 
-class CheckIdNonUniqueError(CheckException, KeyError):
+class CheckIdNonUniqueError(APIException, KeyError):
     """Check Id is not unique"""
 
     @classmethod

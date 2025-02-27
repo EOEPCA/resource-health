@@ -5,7 +5,7 @@ from api_utils.json_api_types import APIErrorResponse, Error
 
 
 @dataclass
-class CheckException(Exception):
+class APIException(Exception):
     """Base exception class"""
 
     error: Error
@@ -20,14 +20,14 @@ class CheckException(Exception):
 
 
 @dataclass
-class CheckExceptions(Exception):
+class APIExceptions(Exception):
     # HTTP status code
     status: int
-    exceptions: list[CheckException]
+    exceptions: list[APIException]
 
 
-class CheckInternalError(CheckException):
-    """Check internal error"""
+class APIInternalError(APIException):
+    """API internal error"""
 
     @classmethod
     def create(cls, detail: str) -> Self:
@@ -43,28 +43,28 @@ class CheckInternalError(CheckException):
 
 def get_status_code_and_errors(exception: Exception) -> tuple[int, list[Error]]:
     match exception:
-        case CheckExceptions():
+        case APIExceptions():
             exceptions = exception
-        case CheckException():
-            exceptions = CheckExceptions(
+        case APIException():
+            exceptions = APIExceptions(
                 status=int(exception.error.status), exceptions=[exception]
             )
         case _:
-            exceptions = CheckExceptions(
+            exceptions = APIExceptions(
                 status=500,
-                exceptions=[CheckInternalError.create("Internal server error")],
+                exceptions=[APIInternalError.create("Internal server error")],
             )
     return exceptions.status, [exc.error for exc in exceptions.exceptions]
 
 
 def get_exceptions(
-    get_exception: Callable[[Error], CheckException],
+    get_exception: Callable[[Error], APIException],
     status_code: int,
     content: dict[str, Any],
-) -> CheckException | CheckExceptions:
+) -> APIException | APIExceptions:
     error_response = APIErrorResponse.model_validate(content)
     exceptions = [get_exception(error) for error in error_response.errors]
     if len(exceptions) == 1:
         return exceptions[0]
     else:
-        return CheckExceptions(status=status_code, exceptions=exceptions)
+        return APIExceptions(status=status_code, exceptions=exceptions)

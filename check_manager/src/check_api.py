@@ -1,5 +1,5 @@
 import json
-from typing import Annotated, Any
+from typing import Annotated
 from fastapi import (
     FastAPI,
     Path,
@@ -8,8 +8,6 @@ from fastapi import (
     Response,
     status,
 )
-from fastapi.encoders import jsonable_encoder
-from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from os import environ
 
@@ -20,16 +18,16 @@ from api_interface import (
     GET_CHECKS_PATH,
     CREATE_CHECK_PATH,
     REMOVE_CHECK_PATH,
-    get_request_url_str,
-    get_url_str,
 )
 from api_utils.api_utils import (
     JSONAPIResponse,
+    add_exception_handlers,
     get_api_router_with_defaults,
     get_env_var_or_throw,
+    get_request_url_str,
+    get_url_str,
     set_custom_json_schema,
 )
-from api_utils.exceptions import get_status_code_and_errors
 from check_backends.check_backend import (
     AuthenticationObject,
     CheckBackend,
@@ -47,11 +45,10 @@ from check_backends.mock_backend import MockBackend
 # from check_backends.rest_backend import RestBackend
 from check_backends.rest_backend import RestBackend
 from exceptions import (
-    CheckException,
+    APIException,
     NewCheckClientSpecifiedId,
 )
 from api_utils.json_api_types import (
-    APIErrorResponse,
     APIOKResponse,
     APIOKResponseList,
     Error,
@@ -70,8 +67,6 @@ auth_obj = AuthenticationObject("user1")
 check_backend: CheckBackend = MockBackend(template_id_prefix="remote_")
 
 app = FastAPI()
-
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -79,50 +74,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+add_exception_handlers(app)
 
 router = get_api_router_with_defaults()
-
-
-@app.exception_handler(Exception)
-async def exception_handler(request: Request, exc: Exception) -> JSONAPIResponse:
-    status_code, errors = get_status_code_and_errors(exc)
-    return JSONAPIResponse(
-        status_code=status_code,
-        content=jsonable_encoder(APIErrorResponse(errors=errors), exclude_unset=True),
-    )
-
-
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(
-    request: Request, exc: RequestValidationError
-) -> JSONAPIResponse:
-    status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
-
-    def mangle_error(error: dict[str, Any]) -> Error:
-        type: str = error.pop("type")
-        msg: str = error.pop("msg")
-        loc: tuple = error.pop("loc")
-        if loc[0] == "body":
-            loc = loc[1:]
-        _input = error.pop("input")
-        # TODO: turn loc into a valid JSON Pointer
-        # The difficulty is that sometimes the last element is int, and when the field is missing it points to the missing field
-        # though json pointers must be valid. There might be some other edge cases with which I don't want to deal with for now
-        return Error(
-            status=str(status_code),
-            code=type,
-            title=msg,
-            meta={**error, "loc": "/" + "/".join([str(name) for name in loc])},
-        )
-
-    return JSONAPIResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content=jsonable_encoder(
-            APIErrorResponse(errors=[mangle_error(error) for error in exc.errors()]),
-            exclude_unset=True,
-        ),
-    )
 
 
 # app. instead of router. because don't want to indicate that could return HTTP error 422
@@ -237,7 +191,7 @@ async def get_check_template(
                 ),
             )
         case _:
-            raise CheckException(
+            raise APIException(
                 Error(
                     status="400",
                     code="CheckTemplateIdNotUnique",
@@ -263,17 +217,6 @@ def check_to_resource(
         attributes=attributes,
         links=links,
     )
-
-
-# def application_vnd(content_type: str = Header(...)):
-#     """Require request MIME-type to be application/vnd.api+json"""
-
-#     if content_type != "application/vnd.api+json":
-#         raise HTTPException(
-#             status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-#             f"Unsupported media type: {content_type}."
-#             " It must be application/vnd.api+json",
-#         )
 
 
 @router.get(
@@ -303,7 +246,6 @@ async def get_checks(
     CREATE_CHECK_PATH,
     status_code=status.HTTP_201_CREATED,
     response_model_exclude_unset=True,
-    # dependencies=[Depends(application_vnd)],
 )
 async def create_check(
     request: Request,

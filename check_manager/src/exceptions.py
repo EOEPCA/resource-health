@@ -1,11 +1,11 @@
 from typing import Self
 
 from jsonschema import ValidationError
-from api_utils.exceptions import CheckException
+from api_utils.exceptions import APIException
 from api_utils.json_api_types import Error, ErrorSourcePointer
 
 
-class JsonValidationError(CheckException):
+class JsonValidationError(APIException):
     """Json is not valid for this schema"""
 
     @classmethod
@@ -34,7 +34,7 @@ class JsonValidationError(CheckException):
         )
 
 
-class NewCheckClientSpecifiedId(CheckException):
+class NewCheckClientSpecifiedId(APIException):
     """Client must not specify new check id"""
 
     @classmethod
@@ -49,7 +49,7 @@ class NewCheckClientSpecifiedId(CheckException):
         )
 
 
-class CheckConnectionError(CheckException, ConnectionError):
+class CheckConnectionError(APIException, ConnectionError):
     """HTTP request failed"""
 
     @classmethod

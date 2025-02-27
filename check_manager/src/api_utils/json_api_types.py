@@ -1,4 +1,7 @@
+from typing import Any
 from pydantic import BaseModel
+
+type Json = dict[str, Any]
 
 
 class LinkObject(BaseModel):
@@ -25,10 +28,10 @@ class Links(BaseModel, extra="allow"):
     self: Link | None = None
     # related: object | None = None
     describedby: Link | None = None
-    # first: Link | None = None
+    first: Link | None = None
     # last: Link | None = None
     # prev: Link | None = None
-    # next: Link | None = None
+    next: Link | None = None
     root: Link | None = None
 
 
@@ -102,7 +105,7 @@ class APIOKResponse[T](BaseModel):
 
 class APIOKResponseList[T](BaseModel):
     data: list[Resource[T]]
-    # meta: Json | None = None
+    meta: Json | None = None
     # jsonapi: Json | None = None
     links: Links | None = None
     # included: list[Resource] | None = None

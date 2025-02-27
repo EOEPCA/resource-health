@@ -21,7 +21,6 @@ from check_backends.check_backend import (
     CheckTemplateAttributes,
 )
 from exceptions import JsonValidationError
-from api_utils.json_api_types import ErrorSource, ErrorSourceParameter
 
 
 class MockBackend(CheckBackend):

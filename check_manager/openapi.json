@@ -297,6 +297,16 @@
             "type": "array",
             "title": "Data"
           },
+          "meta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Json"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "links": {
             "anyOf": [
               {
@@ -323,6 +333,16 @@
             "type": "array",
             "title": "Data"
           },
+          "meta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Json"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "links": {
             "anyOf": [
               {
@@ -348,6 +368,16 @@
             },
             "type": "array",
             "title": "Data"
+          },
+          "meta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Json"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "links": {
             "anyOf": [
@@ -669,6 +699,26 @@
             ]
           },
           "describedby": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Link"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "first": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Link"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "next": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/Link"
