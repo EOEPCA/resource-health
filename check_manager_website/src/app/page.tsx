@@ -2,7 +2,7 @@
 
 import { JSX, useState } from 'react'
 import Form from '@rjsf/chakra-ui';
-import { Check, CheckId, CheckTemplate, CheckTemplateId, GetSpansQueryParams, ListChecks, ListCheckTemplates, NewCheck, ReduceSpans, RemoveCheck } from "@/app/check_api_wrapper"
+import { CheckId, CheckTemplateId, GetSpansQueryParams, GetChecks, GetCheckTemplates, CreateCheck, ReduceSpans, RemoveCheck, CheckTemplate, Check } from "@/app/check_api_wrapper"
 import validator from '@rjsf/validator-ajv8';
 import { Button, CSSReset, FormControl, FormLabel, Grid, GridItem, Heading, Input, Select, Table, TableContainer, Tbody, Td, Text, Textarea, Th, Thead, theme, ThemeProvider, Tr } from '@chakra-ui/react';
 
@@ -38,10 +38,10 @@ export default function Home(): JSX.Element {
     )
   }
   if (checkTemplates === null) {
-    ListCheckTemplates().then(setCheckTemplates).catch(setError)
+    GetCheckTemplates().then(setCheckTemplates).catch(setError)
   }
   if (checks === null) {
-    ListChecks().then(setChecks).catch(setError)
+    GetChecks().then(setChecks).catch(setError)
   }
   if (checkTemplates === null || checks === null) {
     return (
@@ -177,6 +177,8 @@ function CreateCheckDiv({templates, onCreateCheck, setError}: {templates: CheckT
   const [templateId, setTemplateId] = useState(templates[0].id)
   // Only used as a hacky way to force clearing of form data
   const [key, setKey] = useState(0)
+  const [name, setName] = useState("")
+  const [description, setDescription] = useState("")
   const [schedule, setSchedule] = useState("")
   const template = FindCheckTemplate(templates, templateId)
   const form_id = "create_check"
@@ -198,15 +200,31 @@ function CreateCheckDiv({templates, onCreateCheck, setError}: {templates: CheckT
                     key={template.id}
                     value={template.id}
                   >
-                    {template.metadata.label || template.id}
+                    {template.attributes.metadata.label || template.id}
                   </option>
                 ))}
               </Select>
-              <Text>{template.metadata.description}</Text>
+              <Text>{template.attributes.metadata.description}</Text>
               <FormLabel>Template ID</FormLabel>
               <Text>{template.id}</Text>
             </GridItem>
             <GridItem>
+            <FormControl isRequired>
+                <FormLabel>Name</FormLabel>
+                <Input
+                  form={form_id}
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                />
+              </FormControl>
+              <FormControl isRequired>
+                <FormLabel>Description</FormLabel>
+                <Input
+                  form={form_id}
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                />
+              </FormControl>
               <FormControl isRequired>
                 <FormLabel>Schedule</FormLabel>
                 <Input
@@ -221,15 +239,30 @@ function CreateCheckDiv({templates, onCreateCheck, setError}: {templates: CheckT
             id={form_id}
             idPrefix={form_id + "_"}
             key={key}
-            schema={template.arguments}
+            schema={template.attributes.arguments}
             validator={validator}
             onChange={log('changed')}
             onSubmit={(data) => {
+              setName("")
               setSchedule("")
+              setDescription("")
               // A hacky way to force clearing of form data
               setKey(1 - key)
               setTemplateId(templates[0].id)
-              NewCheck(templateId, data.formData, schedule)
+              CreateCheck({
+                data: {
+                  type: "check",
+                  attributes: {
+                    metadata: {
+                      name: name,
+                      description: description,
+                      template_id: templateId,
+                      template_args: data.formData,
+                    },
+                    schedule: schedule
+                  }
+                }
+              })
                 .then(onCreateCheck)
                 .catch(setError)
             }}
@@ -243,8 +276,10 @@ function CreateCheckDiv({templates, onCreateCheck, setError}: {templates: CheckT
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRemove, setError}: {check: Check} & CheckDivCommonProps): JSX.Element {
-  const [templateId, setTemplateId] = useState(check.metadata.template_id)
-  const [schedule, setSchedule] = useState(check.schedule)
+  const [templateId, setTemplateId] = useState(check.attributes.metadata.template_id)
+  const [name, setName] = useState(check.attributes.metadata.name)
+  const [description, setDescription] = useState(check.attributes.metadata.description)
+  const [schedule, setSchedule] = useState(check.attributes.schedule)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isDisabled, setIsDisabled] = useState(true)
   const [spansSummary, setSpansSummary] = useState<SpansSummary | null>(null)
@@ -252,12 +287,12 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
     ComputeSpansSummary({
       fromTime: fromTime,
       toTime: toTime,
-      resourceAttributes: check.outcome_filter.resource_attributes,
-      scopeAttributes: check.outcome_filter.scope_attributes,
-      spanAttributes: check.outcome_filter.span_attributes
+      resourceAttributes: check.attributes.outcome_filter.resource_attributes,
+      scopeAttributes: check.attributes.outcome_filter.scope_attributes,
+      spanAttributes: check.attributes.outcome_filter.span_attributes
     }).then(setSpansSummary).catch(setError)
   }
-  const check_label = check.metadata.template_args === undefined ? check.id : check.metadata.template_args['health_check.name'] ?? check.id
+  const check_label = check.attributes.metadata.template_args === undefined ? check.id : check.attributes.metadata.name ?? check.id
   let checkDiv
   if (templateId) {
     const template = FindCheckTemplate(templates, templateId)
@@ -278,6 +313,26 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
           </GridItem>
           <GridItem>
             <FormControl isRequired isDisabled={isDisabled}>
+              <FormLabel>Name</FormLabel>
+              <Input
+                form={form_id}
+                value={name}
+                onChange={e => setName(e.target.value)}
+              />
+            </FormControl>
+          </GridItem>
+          <GridItem>
+            <FormControl isRequired isDisabled={isDisabled}>
+              <FormLabel>Description</FormLabel>
+              <Input
+                form={form_id}
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+              />
+            </FormControl>
+          </GridItem>
+          <GridItem>
+            <FormControl isRequired isDisabled={isDisabled}>
               <FormLabel>Schedule</FormLabel>
               <Input
                 form={form_id}
@@ -289,8 +344,8 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
         </Grid>
         <Form
           idPrefix={form_id + "_"}
-          schema={template.arguments}
-          formData={check.metadata.template_args}
+          schema={template.attributes.arguments}
+          formData={check.attributes.metadata.template_args}
           uiSchema={{
             "ui:readonly": isDisabled,
             "ui:options": {
@@ -324,11 +379,25 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
     </>)
   }
   else {
-    const template_args = check.metadata.template_args!
+    const template_args = check.attributes.metadata.template_args!
     checkDiv = (
     <>
       <FormControl isDisabled={isDisabled}>
         <Grid gap={6} marginBottom={6}>
+        <GridItem>
+            <FormLabel>Name</FormLabel>
+            <Input
+              value={name}
+              onChange={e => setName(e.target.value)}
+            />
+          </GridItem>
+          <GridItem>
+            <FormLabel>Description</FormLabel>
+            <Input
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+            />
+          </GridItem>
           <GridItem>
             <FormLabel>Schedule</FormLabel>
             <Input
@@ -339,7 +408,8 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
           {Object.entries(template_args).map(([key, value]) => (
             <GridItem key={key}>
               <FormLabel>{key}</FormLabel>
-              <Textarea value={value} />
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              <Textarea value={value as any} />
             </GridItem>
           ))}
         </Grid>
@@ -358,7 +428,7 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
             </div>
             <div>
               <FormLabel>Outcome Filter</FormLabel>
-              <Text className="whitespace-pre">{StringifyPretty(check.outcome_filter)}</Text>
+              <Text className="whitespace-pre">{StringifyPretty(check.attributes.outcome_filter)}</Text>
             </div>
           </Grid>
           {checkDiv}
