@@ -33,11 +33,11 @@ logger = logging.getLogger("HEALTH_CHECK")
 # Protocol class for cronjob templates
 @runtime_checkable
 class CronjobTemplateProtocol(Protocol):
-    def get_check_template(cls) -> CheckTemplate:
+    def get_check_template(self) -> CheckTemplate:
         pass
 
     def make_cronjob(
-        cls,
+        self,
         template_args: Json,
         schedule: CronExpression,
     ) -> V1CronJob:
@@ -47,7 +47,7 @@ class CronjobTemplateProtocol(Protocol):
 # Optional abstract base class for cronjob templates
 class CronjobTemplate(ABC):
     @abstractmethod
-    def get_check_template(cls) -> CheckTemplate:
+    def get_check_template(self) -> CheckTemplate:
         """
         Returns an instance of CheckTemplate containing a general information
         about the template and a JSON-schema describing the arguments it accepts.
@@ -55,7 +55,7 @@ class CronjobTemplate(ABC):
 
     @abstractmethod
     def make_cronjob(
-        cls,
+        self,
         template_args: Json,
         schedule: CronExpression,
     ) -> V1CronJob:

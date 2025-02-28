@@ -74,7 +74,7 @@ To create your own cronjob template simply make a class with two methods named `
 ```python
 class MyTemplate(CronjobTemplate):
     @override
-    def get_check_template(cls) -> CheckTemplate:
+    def get_check_template(self) -> CheckTemplate:
         """
         Returns an instance of CheckTemplate containng a general information
         about the template and a JSON-schema describing the arguments it accepts.
@@ -82,7 +82,7 @@ class MyTemplate(CronjobTemplate):
 
     @override
     def make_cronjob(
-        cls,
+        self,
         template_args,
         schedule,
     ) -> V1CronJob:
@@ -90,7 +90,7 @@ class MyTemplate(CronjobTemplate):
 ```
 The first function should return a `CheckTemplate` containing name, label, description, and a JSON-schema describing what arguments `make_cronjob` accepts. A simple example could look like this
 ```python
-    def get_check_template(cls):
+    def get_check_template(self):
         return CheckTemplate(
             id=CheckTemplateId("my_template"),
             metadata={
