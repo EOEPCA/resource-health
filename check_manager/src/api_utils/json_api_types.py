@@ -65,7 +65,7 @@ class ErrorSourceParameter(BaseModel):
 
 # a string indicating the name of a single request header which caused the error.
 class ErrorSourceHeader(BaseModel):
-    header: str | None
+    header: str
 
 
 # See https://jsonapi.org/examples/#error-objects
@@ -92,7 +92,7 @@ class Error(BaseModel):
     title: str
     detail: str | None = None
     source: ErrorSource | None = None
-    meta: object | None = None
+    meta: Json | None = None
 
 
 class APIOKResponse[T](BaseModel):
@@ -103,9 +103,9 @@ class APIOKResponse[T](BaseModel):
     # included: list[Resource] | None = None
 
 
-class APIOKResponseList[T](BaseModel):
+class APIOKResponseList[T, U](BaseModel):
     data: list[Resource[T]]
-    meta: Json | None = None
+    meta: U
     # jsonapi: Json | None = None
     links: Links | None = None
     # included: list[Resource] | None = None

@@ -52,7 +52,7 @@ class RestBackend(CheckBackend):
             raise CheckConnectionError(e.args[0])
         if response.is_success:
             for check_template in (
-                APIOKResponseList[CheckTemplateAttributes]
+                APIOKResponseList[CheckTemplateAttributes, None]
                 .model_validate(response.json())
                 .data
             ):
@@ -145,7 +145,7 @@ class RestBackend(CheckBackend):
         # TODO: stream this instead of accumulating everything first
         if response.is_success:
             for check in (
-                APIOKResponseList[OutCheckAttributes]
+                APIOKResponseList[OutCheckAttributes, None]
                 .model_validate(response.json())
                 .data
             ):

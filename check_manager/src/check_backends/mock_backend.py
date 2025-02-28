@@ -19,6 +19,7 @@ from check_backends.check_backend import (
     OutCheckAttributes,
     CheckTemplateId,
     CheckTemplateAttributes,
+    OutcomeFilter,
 )
 from exceptions import JsonValidationError
 
@@ -65,7 +66,9 @@ class MockBackend(CheckBackend):
                         template_args={"script": "Dummy Script"},
                     ),
                     schedule=CronExpression("* * * * *"),
-                    outcome_filter={"resource.foo": "bar"},
+                    outcome_filter=OutcomeFilter(
+                        resource_attributes={"resource.foo": "bar"}
+                    ),
                 ),
             )
         ]
@@ -139,11 +142,11 @@ class MockBackend(CheckBackend):
             ),
             schedule=attributes.schedule,
             # Just return some filter which I know will have some results
-            outcome_filter={
-                "resource_attributes": {
+            outcome_filter=OutcomeFilter(
+                resource_attributes={
                     "k8s.cronjob.name": "resource-health-healthchecks-cronjob-3"
                 }
-            },
+            ),
         )
         self._auth_to_check_id_to_attributes[auth_obj][check_id] = out_attributes
         return check_id, out_attributes

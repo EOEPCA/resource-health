@@ -69,7 +69,10 @@ check_backend: CheckBackend = MockBackend(template_id_prefix="remote_")
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origin_regex=".*",
+    # Even though the below allows all things too, it disables returns Access-Control-Allow-Origin=* in the header
+    # and borwsers don't allow to use that with withCredentials=True
+    # allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -86,8 +89,8 @@ router = get_api_router_with_defaults()
     response_model_exclude_unset=True,
     response_class=JSONAPIResponse,
 )
-async def root() -> APIOKResponseList[None]:
-    return APIOKResponseList[None](
+async def root() -> APIOKResponseList[None, None]:
+    return APIOKResponseList[None, None](
         data=[
             Resource[None](
                 id="documentation_website",
@@ -114,6 +117,7 @@ async def root() -> APIOKResponseList[None]:
                 title="OpenAPI schema", href=get_url_str(BASE_URL, "/openapi.json")
             ),
         ),
+        meta=None,
     )
 
 
@@ -149,9 +153,9 @@ async def get_check_templates(
         list[CheckTemplateId] | None,
         Query(description="restrict IDs to include"),
     ] = None,
-) -> APIOKResponseList[CheckTemplateAttributes]:
+) -> APIOKResponseList[CheckTemplateAttributes, None]:
     response.headers["Allow"] = "GET"
-    return APIOKResponseList[CheckTemplateAttributes](
+    return APIOKResponseList[CheckTemplateAttributes, None](
         data=[
             check_template_to_resource(template_id, attributes)
             async for template_id, attributes in check_backend.get_check_templates(ids)
@@ -160,6 +164,7 @@ async def get_check_templates(
             self=get_request_url_str(BASE_URL, request),
             root=BASE_URL,
         ),
+        meta=None,
     )
 
 
@@ -231,14 +236,15 @@ async def get_checks(
         list[CheckId] | None,
         Query(description="restrict IDs to include"),
     ] = None,
-) -> APIOKResponseList[OutCheckAttributes]:
+) -> APIOKResponseList[OutCheckAttributes, None]:
     response.headers["Allow"] = "GET,POST"
-    return APIOKResponseList[OutCheckAttributes](
+    return APIOKResponseList[OutCheckAttributes, None](
         data=[
             check_to_resource(check_id, attributes)
             async for check_id, attributes in check_backend.get_checks(auth_obj, ids)
         ],
         links=Links(self=get_request_url_str(BASE_URL, request), root=BASE_URL),
+        meta=None,
     )
 
 

@@ -15,7 +15,7 @@
             "content": {
               "application/vnd.api+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/APIOKResponseList_NoneType_"
+                  "$ref": "#/components/schemas/APIOKResponseList_NoneType_NoneType_"
                 }
               }
             }
@@ -56,7 +56,7 @@
             "content": {
               "application/vnd.api+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/APIOKResponseList_CheckTemplateAttributes_"
+                  "$ref": "#/components/schemas/APIOKResponseList_CheckTemplateAttributes_NoneType_"
                 }
               }
             }
@@ -146,7 +146,7 @@
             "content": {
               "application/vnd.api+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/APIOKResponseList_OutCheckAttributes_"
+                  "$ref": "#/components/schemas/APIOKResponseList_OutCheckAttributes_NoneType_"
                 }
               }
             }
@@ -288,7 +288,7 @@
         ],
         "title": "APIErrorResponse"
       },
-      "APIOKResponseList_CheckTemplateAttributes_": {
+      "APIOKResponseList_CheckTemplateAttributes_NoneType_": {
         "properties": {
           "data": {
             "items": {
@@ -298,14 +298,8 @@
             "title": "Data"
           },
           "meta": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Json"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "null",
+            "title": "Meta"
           },
           "links": {
             "anyOf": [
@@ -320,11 +314,12 @@
         },
         "type": "object",
         "required": [
-          "data"
+          "data",
+          "meta"
         ],
-        "title": "APIOKResponseList[CheckTemplateAttributes]"
+        "title": "APIOKResponseList[CheckTemplateAttributes, NoneType]"
       },
-      "APIOKResponseList_NoneType_": {
+      "APIOKResponseList_NoneType_NoneType_": {
         "properties": {
           "data": {
             "items": {
@@ -334,14 +329,8 @@
             "title": "Data"
           },
           "meta": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Json"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "null",
+            "title": "Meta"
           },
           "links": {
             "anyOf": [
@@ -356,11 +345,12 @@
         },
         "type": "object",
         "required": [
-          "data"
+          "data",
+          "meta"
         ],
-        "title": "APIOKResponseList[NoneType]"
+        "title": "APIOKResponseList[NoneType, NoneType]"
       },
-      "APIOKResponseList_OutCheckAttributes_": {
+      "APIOKResponseList_OutCheckAttributes_NoneType_": {
         "properties": {
           "data": {
             "items": {
@@ -370,14 +360,8 @@
             "title": "Data"
           },
           "meta": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Json"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "type": "null",
+            "title": "Meta"
           },
           "links": {
             "anyOf": [
@@ -392,9 +376,10 @@
         },
         "type": "object",
         "required": [
-          "data"
+          "data",
+          "meta"
         ],
-        "title": "APIOKResponseList[OutCheckAttributes]"
+        "title": "APIOKResponseList[OutCheckAttributes, NoneType]"
       },
       "APIOKResponse_CheckTemplateAttributes_": {
         "properties": {
@@ -501,12 +486,13 @@
           },
           "meta": {
             "anyOf": [
-              {},
+              {
+                "$ref": "#/components/schemas/Json"
+              },
               {
                 "type": "null"
               }
-            ],
-            "title": "Meta"
+            ]
           }
         },
         "type": "object",
@@ -533,14 +519,7 @@
       "ErrorSourceHeader": {
         "properties": {
           "header": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Header"
           }
         },
@@ -753,7 +732,7 @@
             "title": "Schedule"
           },
           "outcome_filter": {
-            "$ref": "#/components/schemas/Json"
+            "$ref": "#/components/schemas/OutcomeFilter"
           }
         },
         "type": "object",
@@ -813,6 +792,42 @@
         "additionalProperties": true,
         "type": "object",
         "title": "OutCheckMetadata"
+      },
+      "OutcomeFilter": {
+        "properties": {
+          "resource_attributes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TelemetryAttributes"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "scope_attributes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TelemetryAttributes"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "span_attributes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TelemetryAttributes"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "OutcomeFilter"
       },
       "Resource_CheckTemplateAttributes_": {
         "properties": {
@@ -922,6 +937,22 @@
           "attributes"
         ],
         "title": "Resource[OutCheckAttributes]"
+      },
+      "TelemetryAttributes": {
+        "additionalProperties": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "type": "object"
       }
     }
   }

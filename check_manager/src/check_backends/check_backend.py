@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from typing import (
-    Any,
     AsyncIterable,
     NewType,
     Self,
@@ -9,7 +8,7 @@ from pydantic import BaseModel
 from referencing.jsonschema import Schema
 
 from exceptions import APIException
-from api_utils.json_api_types import Error
+from api_utils.json_api_types import Error, Json
 
 AuthenticationObject = NewType("AuthenticationObject", str)
 CronExpression = NewType("CronExpression", str)
@@ -62,9 +61,6 @@ class CheckIdNonUniqueError(APIException, KeyError):
         )
 
 
-type Json = dict[str, Any]
-
-
 class CheckTemplateAttributes(BaseModel):
     # SHOULD contain { 'label' : str, 'description' : str }
     metadata: Json
@@ -94,11 +90,20 @@ class InCheckAttributes(BaseModel):
     schedule: CronExpression
 
 
+type TelemetryAttributes = dict[str, str | int | bool]
+
+
+class OutcomeFilter(BaseModel):
+    resource_attributes: TelemetryAttributes | None = None
+    scope_attributes: TelemetryAttributes | None = None
+    span_attributes: TelemetryAttributes | None = None
+
+
 class OutCheckAttributes(BaseModel):
     metadata: OutCheckMetadata
     schedule: CronExpression
     # Conditions to determine which spans belong to this check outcome
-    outcome_filter: Json
+    outcome_filter: OutcomeFilter
     ## NOTE: For now the above can just be a set of equality conditions on Span/Resource attributes
 
 
