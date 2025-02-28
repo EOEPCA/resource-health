@@ -1,10 +1,26 @@
-venv/
-.venv/
-__pycache__
-build
-*.egg-info
 .gitignore
-tmp/*
 *.tgz
+
+# Python-generated files
+__pycache__
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.mypy_cache
+.pytest_cache
+.ruff_cache
+
+# Virtual environments
+.venv
+tmp/
+
+# Pytest-Cov files
+.coverage
+
+# MacOS files
+.DS_Store
+
+# Project specific
 .check
-tmp/*

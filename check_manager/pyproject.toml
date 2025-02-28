@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "check-manager"
 version = "0.1.0"
@@ -8,15 +12,43 @@ dependencies = [
     "fastapi[standard]",
     "httpx>=0.27.2",
     "jsonschema>=4.23.0",
-    "pydantic>=2.9.2",
     "kubernetes_asyncio>=31.1.0",
+    "plugin_utils>=0.1.0",
+    "pydantic>=2.9.2",
+    "pyyaml>=6.0.0",
     "typer>=0.13.0",
 ]
 
 [tool.uv]
 dev-dependencies = [
+    "mypy>=1.15.0",
+    "pytest>=6.0",
+    "pytest-asyncio>=0.17",
+    "pytest-cov>=6.0.0",
     "types-jsonschema>=4.23.0.20240813",
 ]
+
+[tool.uv.sources]
+plugin_utils = { path = "./../plugin-utils" }
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q --cov=src --cov-report=term-missing"
+testpaths = ["tests"]
+asyncio_default_fixture_loop_scope = "function"
+asyncio_mode = "auto"
+
+[tool.mypy]
+python_version = "3.12"
+packages = "check_backends"
+disallow_untyped_defs = true
+show_error_context = true
+pretty = true
+no_implicit_optional = true
+warn_unused_ignores = true
+warn_return_any = true
+ignore_missing_imports = true
+follow_untyped_imports = true
 
 [project.scripts]
 check = "check_cli.check:app"
