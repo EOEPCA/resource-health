@@ -12,7 +12,7 @@ A hopefully growing collection of utilities to make it easier to load and use pl
 Not available on PyPI yet but using `uv` you can add
 ```toml
 [tool.uv.sources]
-plugin_utils = { git = "https://github.com/EOEPCA/resource-helath/plugin-utils.git", branch = "deploy-develop" }
+plugin_utils = { git = "https://github.com/EOEPCA/resource-health.git", branch = "deploy-develop", subdirectory = "plugin-utils" }
 ```
 to your `pyproject.toml` to make it available as a dependency.
 

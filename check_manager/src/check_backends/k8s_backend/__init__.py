@@ -44,10 +44,10 @@ class K8sBackend(CheckBackend):
     def __init__(
         self: Self,
         template_dirs: list[str],
-        api_client: ApiClient | None = None
+        api_client: type[ApiClient] | None = None
     ) -> None:
         self._templates: dict[str, CronjobMaker] = load_templates(template_dirs)
-        self._api_client: ApiClient = api_client or ApiClient()
+        self._api_client: type[ApiClient] = api_client or ApiClient
 
     @override
     async def aclose(self: Self) -> None:
@@ -90,7 +90,7 @@ class K8sBackend(CheckBackend):
             schedule=schedule
         )
         await load_config()
-        async with self._api_client as api_client:
+        async with self._api_client() as api_client:
             api_instance = client.BatchV1Api(api_client)
             try:
                 api_response = await api_instance.create_namespaced_cron_job(
@@ -131,7 +131,7 @@ class K8sBackend(CheckBackend):
     #             template_args.get("requirements")
     #         )
     #     await load_config()
-    #     async with self._api_client as api_client:
+    #     async with self._api_client() as api_client:
     #         api_instance = client.BatchV1Api(api_client)
     #         try:
     #             api_response = await api_instance.patch_namespaced_cron_job(
@@ -161,7 +161,7 @@ class K8sBackend(CheckBackend):
         self: Self, auth_obj: AuthenticationObject, check_id: CheckId
     ) -> None:
         await load_config()
-        async with self._api_client as api_client:
+        async with self._api_client() as api_client:
             api_instance = client.BatchV1Api(api_client)
             try:
                 api_response = await api_instance.delete_namespaced_cron_job(
@@ -187,7 +187,7 @@ class K8sBackend(CheckBackend):
         ids: list[CheckId] | None = None,
     ) -> AsyncIterable[Check]:
         await load_config()
-        async with self._api_client as api_client:
+        async with self._api_client() as api_client:
             api_instance = client.BatchV1Api(api_client)
             try:
                 cronjobs = await api_instance.list_namespaced_cron_job(

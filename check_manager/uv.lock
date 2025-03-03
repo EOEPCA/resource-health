@@ -142,7 +142,7 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.27.2" },
     { name = "jsonschema", specifier = ">=4.23.0" },
     { name = "kubernetes-asyncio", specifier = ">=31.1.0" },
-    { name = "plugin-utils", directory = "../plugin-utils" },
+    { name = "plugin-utils", git = "https://github.com/EOEPCA/resource-health.git?subdirectory=plugin-utils&branch=deploy-develop" },
     { name = "pydantic", specifier = ">=2.9.2" },
     { name = "pyyaml", specifier = ">=6.0.0" },
     { name = "typer", specifier = ">=0.13.0" },
@@ -607,16 +607,7 @@ wheels = [
 [[package]]
 name = "plugin-utils"
 version = "0.1.0"
-source = { directory = "../plugin-utils" }
-
-[package.metadata]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "mypy", specifier = ">=1.15.0" },
-    { name = "pytest", specifier = ">=8.3.3" },
-    { name = "pytest-cov", specifier = ">=6.0.0" },
-]
+source = { git = "https://github.com/EOEPCA/resource-health.git?subdirectory=plugin-utils&branch=deploy-develop#6c8005531531910dfc639ee8be7d1a99bd1d4ed4" }
 
 [[package]]
 name = "propcache"

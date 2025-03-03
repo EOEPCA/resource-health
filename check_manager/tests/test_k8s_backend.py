@@ -180,7 +180,7 @@ async def test_list_check_templates(
     ]
 )
 @patch("check_backends.k8s_backend.load_config", new_callable=AsyncMock)
-@patch("test_k8s_backend.ApiClient", new_callable=AsyncMock)
+@patch("test_k8s_backend.ApiClient")
 @patch("test_k8s_backend.client.BatchV1Api")
 async def test_new_check(
     mock_batch_v1_api,
@@ -194,6 +194,7 @@ async def test_new_check(
         side_effect=side_effect,
         return_value=cronjob_1,
     )
+    mock_api_client.return_value.__aenter__ = AsyncMock()
 
     k8s_backend = K8sBackend(
         template_dirs=[TEMPLATES],
@@ -232,7 +233,7 @@ async def test_new_check(
     ]
 )
 @patch("check_backends.k8s_backend.load_config", new_callable=AsyncMock)
-@patch("test_k8s_backend.ApiClient", new_callable=AsyncMock)
+@patch("test_k8s_backend.ApiClient")
 @patch("test_k8s_backend.client.BatchV1Api")
 async def test_remove_check(
     mock_batch_v1_api,
@@ -244,6 +245,7 @@ async def test_remove_check(
     mock_batch_v1_api.return_value.delete_namespaced_cron_job = AsyncMock(
         side_effect=side_effect,
     )
+    mock_api_client.return_value.__aenter__ = AsyncMock()
 
     k8s_backend = K8sBackend(
         template_dirs=[TEMPLATES],
@@ -325,7 +327,7 @@ async def test_remove_check(
     ],
 )
 @patch("check_backends.k8s_backend.load_config", new_callable=AsyncMock)
-@patch("test_k8s_backend.ApiClient", new_callable=AsyncMock)
+@patch("test_k8s_backend.ApiClient")
 @patch("test_k8s_backend.client.BatchV1Api")
 async def test_list_checks(
     mock_batch_v1_api,
@@ -342,6 +344,7 @@ async def test_list_checks(
             items=[cronjob_1, cronjob_2]
         ),
     )
+    mock_api_client.return_value.__aenter__ = AsyncMock()
 
     k8s_backend = K8sBackend(
         template_dirs=[TEMPLATES],

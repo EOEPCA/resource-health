@@ -29,7 +29,7 @@ dev-dependencies = [
 ]
 
 [tool.uv.sources]
-plugin_utils = { path = "./../plugin-utils" }
+plugin_utils = { git = "https://github.com/EOEPCA/resource-health.git", branch = "deploy-develop", subdirectory = "plugin-utils" }
 
 [tool.pytest.ini_options]
 minversion = "6.0"
