@@ -20,6 +20,7 @@ from check_backends.check_backend import (
 from check_backends.k8s_backend.templates import (
     CronjobMaker,
     load_templates,
+    default_make_check,
 )
 from exceptions import (
     CheckInternalError,
@@ -199,16 +200,29 @@ class K8sBackend(CheckBackend):
             except aiohttp.ClientConnectionError as e:
                 logger.error(f"Failed to list cron jobs: {e}")
                 raise CheckConnectionError("Cannot connect to cluster")
+            template_id: str | None
             if ids is None:
                 for cronjob in cronjobs.items:
-                    template_id = cronjob.metadata.annotations["template_id"]
-                    template = self._templates.get(template_id)
+                    template_id = None
+                    if (cronjob.metadata and cronjob.metadata.annotations):
+                        template_id = (
+                            cronjob.metadata.annotations.get("template_id")
+                        )
+                    template = self._templates.get(template_id or "")
                     if template is not None:
                         yield template.make_check(cronjob)
+                    else:
+                        yield default_make_check(cronjob)
             else:
                 for cronjob in cronjobs.items:
                     if cronjob.metadata.name in ids:
-                        template_id = cronjob.metadata.annotations["template_id"]
-                        template = self._templates.get(template_id)
+                        template_id = None
+                        if (cronjob.metadata and cronjob.metadata.annotations):
+                            template_id = (
+                                cronjob.metadata.annotations.get("template_id")
+                            )
+                        template = self._templates.get(template_id or "")
                         if template is not None:
                             yield template.make_check(cronjob)
+                        else:
+                            yield default_make_check(cronjob)

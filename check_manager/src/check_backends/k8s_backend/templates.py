@@ -175,6 +175,33 @@ def _make_check(cronjob: V1CronJob) -> Check:
     )
 
 
+def default_make_check(cronjob: V1CronJob) -> Check:
+    template_id: CheckTemplateId | None = None
+    template_args: dict = {}
+    if (cronjob.metadata and cronjob.metadata.annotations):
+        template_id = (
+            cronjob.metadata.annotations.get("template_id")
+        )
+        template_args = json.loads(
+            cronjob.metadata.annotations.get("template_args", "{}")
+        )
+    cronjob_name: str = (
+        cronjob.metadata.name
+        if cronjob.metadata and cronjob.metadata.name
+        else ""
+    )
+    return Check(
+        id=CheckId(cronjob_name),
+        metadata={"template_id": template_id, "template_args": template_args},
+        schedule=CronExpression(cronjob.spec.schedule),
+        outcome_filter={
+            "resource_attributes": {
+                "k8s.cronjob.name": cronjob_name
+            }
+        },
+    )
+
+
 class CronjobMaker:
     def __init__(self, cronjob_template: CronjobTemplateProtocol) -> None:
         self.cronjob_template: CronjobTemplateProtocol = cronjob_template
