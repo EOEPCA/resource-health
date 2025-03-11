@@ -88,7 +88,7 @@ class MyTemplate(CronjobTemplate):
     ) -> V1CronJob:
         """ Returns a cronjob from the arguments and schedule. """
 ```
-The first function should return a `CheckTemplate` containing name, label, description, and a JSON-schema describing what arguments `make_cronjob` accepts. A simple example could look like this
+The first function should return a `CheckTemplate` containing name, label, description, and a JSON-schema describing what arguments `make_cronjob` accepts. A simple example could look like this:
 ```python
     def get_check_template(self):
         return CheckTemplate(
@@ -115,6 +115,6 @@ The first function should return a `CheckTemplate` containing name, label, descr
             },
         )
 ```
-The function `make_cronjob` should then take a dictionary `template_args` according to your schema, together with a cron expression schedule, and return a `V1CronJob` as defined in `kubernetes_asyncio`. See [documention](https://github.com/tomplus/kubernetes_asyncio/blob/master/kubernetes_asyncio/docs/V1CronJob.md) for more information on how to define cronjobs or take a look at the examples in the `templates` directory.
+The function `make_cronjob` should then take a dictionary `template_args` according to your schema, together with a cron expression schedule, and return a `V1CronJob` as defined in `kubernetes_asyncio`. See [documention](https://github.com/tomplus/kubernetes_asyncio/blob/master/kubernetes_asyncio/docs/V1CronJob.md) for more information on how to define cronjobs or take a look at the examples in [src/check_backends/k8s_backend/template_examples](./src/check_backends/k8s_backend/template_examples).
 
 Templates will automatically be loaded from the directories specified when creating the Kubernetes backend: `K8sBackend(template_dirs=["my_templates"])`.

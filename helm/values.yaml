@@ -63,7 +63,7 @@ check_api:
   image:
     repository: docker.io/eoepca/resourcehealth_check_api
     pullPolicy: IfNotPresent
-    tag: "2.0.0-beta2.13"
+    tag: "v0.3.0-internal1"
   serviceType: ClusterIP
   containerPort: 8000
   servicePort: 8000
@@ -75,6 +75,10 @@ check_api:
   environmentSecrets: []
   # - name: ...
   #   value: ...
+  configmapMounts: []
+  # - name: ...
+  #   configmapName: ...
+  #   mountPath: ...
 
 telemetry_api:
   image:

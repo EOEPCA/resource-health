@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: health-check-templates-configmap
+  labels:
+    {{- include "resource-health-reference-deployment.labels" . | nindent 4 }}
+data:
+  ping_template.py: |
+    from check_backends.k8s_backend.template_examples import SimplePing as SimplePing
+
+  script_template.py: |
+    from check_backends.k8s_backend.template_examples import SimpleScript as SimpleScript
