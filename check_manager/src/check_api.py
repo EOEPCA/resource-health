@@ -159,7 +159,7 @@ def uvicorn_k8s() -> None:
     from check_backends import K8sBackend
 
     global check_backend
-    check_backend = K8sBackend("Cluster")
+    check_backend = K8sBackend(["templates"])
 
     import uvicorn
 
