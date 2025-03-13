@@ -4,7 +4,7 @@ kind: Certificate
 metadata:
   name: opensearch-admin-certificate
   labels:
-    {{- include "resource-health-reference-deployment.labels" . | nindent 4 }}
+    {{- include "resource-health.labels" . | nindent 4 }}
 spec:
   secretName: opensearch-admin-certificate
   isCA: false
