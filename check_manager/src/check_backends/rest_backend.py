@@ -51,7 +51,7 @@ class RestBackend(CheckBackend):
                 params={"ids": ids} if ids is not None else {},
             )
         except httpx.HTTPError as e:
-            raise CheckConnectionError(e.args[0])
+            raise CheckConnectionError.create(str(e))
         if response.is_success:
             for check_template in (
                 APIOKResponseList[CheckTemplateAttributes, None]
@@ -79,7 +79,7 @@ class RestBackend(CheckBackend):
                 ),
             )
         except httpx.HTTPError as e:
-            raise CheckConnectionError(e.args[0])
+            raise CheckConnectionError.create(str(e))
         if response.is_success:
             structured_response = APIOKResponse[OutCheckAttributes].model_validate(
                 response.json()
@@ -112,7 +112,7 @@ class RestBackend(CheckBackend):
     #             },
     #         )
     #     except httpx.HTTPError as e:
-    #         raise CheckConnectionError(e.args[0])
+    #         raise CheckConnectionError.create(str(e))
     #     if response.is_success:
     #         return Check.model_validate(response.json())
     #     raise get_exception(status_code=response.status_code, content=response.json())
@@ -128,7 +128,7 @@ class RestBackend(CheckBackend):
                 )
             )
         except httpx.HTTPError as e:
-            raise CheckConnectionError(e.args[0])
+            raise CheckConnectionError.create(str(e))
         if response.is_success:
             return None
         raise get_check_exceptions(
@@ -147,7 +147,7 @@ class RestBackend(CheckBackend):
                 params={"ids": ids} if ids is not None else {},
             )
         except httpx.HTTPError as e:
-            raise CheckConnectionError(e.args[0])
+            raise CheckConnectionError.create(str(e))
         # TODO: stream this instead of accumulating everything first
         if response.is_success:
             for check in (
