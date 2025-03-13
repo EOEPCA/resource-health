@@ -33,9 +33,11 @@ from check_backends.check_backend import (
     CheckBackend,
     CheckIdError,
     CheckIdNonUniqueError,
+    CheckTemplate,
     CheckTemplateId,
     CheckTemplateAttributes,
     CheckId,
+    OutCheck,
     OutCheckAttributes,
     InCheck,
     CheckTemplateIdError,
@@ -130,14 +132,13 @@ def check_template_url(check_template_id: CheckTemplateId) -> str:
 
 
 def check_template_to_resource(
-    template_id,
-    attributes: CheckTemplateAttributes,
+    template: CheckTemplate,
 ) -> Resource[CheckTemplateAttributes]:
     return Resource[CheckTemplateAttributes](
-        id=template_id,
+        id=template.id,
         type="check_template",
-        attributes=attributes,
-        links={"self": check_template_url(template_id)},
+        attributes=template.attributes,
+        links={"self": check_template_url(template.id)},
     )
 
 
@@ -157,8 +158,8 @@ async def get_check_templates(
     response.headers["Allow"] = "GET"
     return APIOKResponseList[CheckTemplateAttributes, None](
         data=[
-            check_template_to_resource(template_id, attributes)
-            async for template_id, attributes in check_backend.get_check_templates(ids)
+            check_template_to_resource(template)
+            async for template in check_backend.get_check_templates(ids)
         ],
         links=Links(
             self=get_request_url_str(BASE_URL, request),
@@ -187,9 +188,8 @@ async def get_check_template(
             raise CheckTemplateIdError.create(check_template_id)
         case [check_template]:
             response.headers["Allow"] = "GET"
-            template_id, attributes = check_template
             return APIOKResponse[CheckTemplateAttributes](
-                data=check_template_to_resource(template_id, attributes),
+                data=check_template_to_resource(check_template),
                 links=Links(
                     self=get_request_url_str(BASE_URL, request),
                     root=BASE_URL,
@@ -210,16 +210,16 @@ def check_url(check_id: CheckId) -> str:
     return get_url_str(BASE_URL, GET_CHECK_PATH, path_params={"check_id": check_id})
 
 
-def check_to_resource(
-    check_id: CheckId, attributes: OutCheckAttributes
-) -> Resource[OutCheckAttributes]:
-    links: dict[str, Link] = {"self": check_url(check_id)}
-    if attributes.metadata.template_id is not None:
-        links["check_template"] = check_template_url(attributes.metadata.template_id)
+def check_to_resource(check: OutCheck) -> Resource[OutCheckAttributes]:
+    links: dict[str, Link] = {"self": check_url(check.id)}
+    if check.attributes.metadata.template_id is not None:
+        links["check_template"] = check_template_url(
+            check.attributes.metadata.template_id
+        )
     return Resource[OutCheckAttributes](
-        id=check_id,
+        id=check.id,
         type="check",
-        attributes=attributes,
+        attributes=check.attributes,
         links=links,
     )
 
@@ -240,8 +240,8 @@ async def get_checks(
     response.headers["Allow"] = "GET,POST"
     return APIOKResponseList[OutCheckAttributes, None](
         data=[
-            check_to_resource(check_id, attributes)
-            async for check_id, attributes in check_backend.get_checks(auth_obj, ids)
+            check_to_resource(check)
+            async for check in check_backend.get_checks(auth_obj, ids)
         ],
         links=Links(self=get_request_url_str(BASE_URL, request), root=BASE_URL),
         meta=None,
@@ -261,13 +261,11 @@ async def create_check(
     if hasattr(in_check.data, "id"):
         raise NewCheckClientSpecifiedId.create()
     assert in_check.data.type == "check"
-    check_id, attributes = await check_backend.create_check(
-        auth_obj, in_check.data.attributes
-    )
+    check = await check_backend.create_check(auth_obj, in_check.data.attributes)
     response.headers["Allow"] = "GET,POST"
-    response.headers["Location"] = check_url(check_id)
+    response.headers["Location"] = check_url(check.id)
     return APIOKResponse[OutCheckAttributes](
-        data=check_to_resource(check_id, attributes),
+        data=check_to_resource(check),
         links=Links(root=BASE_URL),
     )
 
@@ -287,10 +285,9 @@ async def get_check(
         case []:
             raise CheckIdError.create(check_id)
         case [check]:
-            check_id, attributes = check
             response.headers["Allow"] = "GET,DELETE"
             return APIOKResponse[OutCheckAttributes](
-                data=check_to_resource(check_id, attributes),
+                data=check_to_resource(check),
                 links=Links(
                     self=get_request_url_str(BASE_URL, request),
                     root=BASE_URL,
@@ -364,7 +361,7 @@ def unicorn_dummy_prod() -> None:
 
 
 def uvicorn_k8s() -> None:
-    from check_backends import K8sBackend
+    from check_backends.k8s_backend import K8sBackend
 
     global check_backend
     check_backend = K8sBackend(["templates"])

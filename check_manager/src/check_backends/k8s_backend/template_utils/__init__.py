@@ -3,26 +3,16 @@ import typing
 from kubernetes_asyncio.client.models.v1_container import V1Container
 from kubernetes_asyncio.client.models.v1_cron_job import V1CronJob
 from kubernetes_asyncio.client.models.v1_cron_job_spec import V1CronJobSpec
-from kubernetes_asyncio.client.models.v1_env_var import V1EnvVar
 from kubernetes_asyncio.client.models.v1_job_spec import V1JobSpec
 from kubernetes_asyncio.client.models.v1_pod_spec import V1PodSpec
 from kubernetes_asyncio.client.models.v1_job_template_spec import V1JobTemplateSpec
 from kubernetes_asyncio.client.models.v1_pod_template_spec import V1PodTemplateSpec
 from kubernetes_asyncio.client.models.v1_object_meta import V1ObjectMeta
-from pydantic import TypeAdapter
 
-from ..templates import (
-    CronjobTemplate,
-    CheckTemplate,
-    CheckTemplateId,
-    CronExpression,
-)
-
-from api_interface import (
-    Json,
-)
+from ..templates import CronExpression
 
 DEFAULT_CONTAINER_IMAGE: str = "docker.io/eoepca/healthcheck_runner:2.0.0-beta2"
+
 
 def make_base_cronjob(
     schedule: typing.Optional[CronExpression] = None,

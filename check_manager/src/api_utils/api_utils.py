@@ -104,7 +104,7 @@ def add_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(RequestValidationError, _validation_exception_handler)
 
 
-def set_custom_json_schema(app: FastAPI, title: str, version: str, **args) -> None:
+def set_custom_json_schema(app: FastAPI, title: str, version: str, **args: Any) -> None:
     def custom_openapi() -> dict[str, Any]:
         if app.openapi_schema:
             return app.openapi_schema

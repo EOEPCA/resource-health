@@ -1,10 +1,15 @@
 from abc import ABC, abstractmethod
+import asyncio
+from types import TracebackType
 from typing import (
     AsyncIterable,
+    Literal,
     NewType,
     Self,
+    Type,
+    override,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, TypeAdapter
 from referencing.jsonschema import Schema
 
 from exceptions import APIException
@@ -51,20 +56,33 @@ class CheckIdNonUniqueError(APIException, KeyError):
 
     @classmethod
     def create(cls, check_id: CheckId) -> Self:
+        return cls.create_with_detail(f"Check id {check_id} is not unique")
+
+    @classmethod
+    def create_with_detail(cls, detail: str) -> Self:
         return cls(
             Error(
                 status="400",
                 code=cls._create_code(),
                 title=cls._create_title_from_doc(),
-                detail=f"Check id {check_id} is not unique",
+                detail=detail,
             )
         )
 
 
+class CheckTemplateMetadata(BaseModel, extra="allow"):
+    label: str | None
+    description: str | None
+
+
 class CheckTemplateAttributes(BaseModel):
-    # SHOULD contain { 'label' : str, 'description' : str }
-    metadata: Json
+    metadata: CheckTemplateMetadata
     arguments: Schema
+
+
+class CheckTemplate(BaseModel):
+    id: CheckTemplateId
+    attributes: CheckTemplateAttributes
 
 
 class InCheckMetadata(BaseModel):
@@ -112,6 +130,11 @@ class InCheckData(BaseModel):
     attributes: InCheckAttributes
 
 
+class OutCheck(BaseModel):
+    id: CheckId
+    attributes: OutCheckAttributes
+
+
 class InCheck(BaseModel):
     data: InCheckData
 
@@ -128,7 +151,7 @@ class CheckBackend(ABC):
     async def get_check_templates(
         self: Self,
         ids: list[CheckTemplateId] | None = None,
-    ) -> AsyncIterable[tuple[CheckTemplateId, CheckTemplateAttributes]]:
+    ) -> AsyncIterable[CheckTemplate]:
         # A trick to make the type of the function what I want
         # Why yield inside function body effects the type of the function is explained in
         # https://mypy.readthedocs.io/en/stable/more_types.html#asynchronous-iterators
@@ -140,7 +163,7 @@ class CheckBackend(ABC):
     @abstractmethod
     async def create_check(
         self: Self, auth_obj: AuthenticationObject, attributes: InCheckAttributes
-    ) -> tuple[CheckId, OutCheckAttributes]:
+    ) -> OutCheck:
         pass
 
     # # Raise CheckIdError if check_id doesn't exist.
@@ -169,7 +192,7 @@ class CheckBackend(ABC):
         self: Self,
         auth_obj: AuthenticationObject,
         ids: list[CheckId] | None = None,
-    ) -> AsyncIterable[tuple[CheckId, OutCheckAttributes]]:
+    ) -> AsyncIterable[OutCheck]:
         # A trick to make the type of the function what I want
         # Why yield inside function body effects the type of the function is explained in
         # https://mypy.readthedocs.io/en/stable/more_types.html#asynchronous-iterators
@@ -199,7 +222,7 @@ class AggregationBackend(CheckBackend):
             case ([success], _):
                 return success
             case ([_, _, *_], _):
-                raise CheckIdNonUniqueError(non_unique_id_message)
+                raise CheckIdNonUniqueError.create_with_detail(non_unique_id_message)
             case ([], [failure, *_]):
                 raise failure
             case ([], []):
@@ -216,28 +239,22 @@ class AggregationBackend(CheckBackend):
         await asyncio.gather(*(backend.aclose() for backend in self._backends))
 
     @override
-    async def list_check_templates(
+    async def get_check_templates(
         self: Self,
         ids: list[CheckTemplateId] | None = None,
     ) -> AsyncIterable[CheckTemplate]:
         for backend in self._backends:
-            async for template in backend.list_check_templates(ids):
+            async for template in backend.get_check_templates(ids):
                 yield template
 
     @override
-    async def new_check(
-        self: Self,
-        auth_obj: AuthenticationObject,
-        template_id: CheckTemplateId,
-        template_args: Json,
-        schedule: CronExpression,
-    ) -> Check:
+    async def create_check(
+        self: Self, auth_obj: AuthenticationObject, attributes: InCheckAttributes
+    ) -> OutCheck:
         index: int = TypeAdapter(int).validate_python(
-            template_args.pop("service_index", 0)
+            attributes.metadata.template_args.pop("service_index", 0)
         )
-        return await self._backends[index].new_check(
-            auth_obj, template_id, template_args, schedule
-        )
+        return await self._backends[index].create_check(auth_obj, attributes)
         # results = await asyncio.gather(
         #     *(
         #         backend.new_check(auth_obj, template_id, template_args, schedule)
@@ -284,16 +301,13 @@ class AggregationBackend(CheckBackend):
         )
 
     @override
-    async def list_checks(
+    async def get_checks(
         self: Self,
         auth_obj: AuthenticationObject,
         ids: list[CheckId] | None = None,
-    ) -> AsyncIterable[Check]:
-        # A trick to make the type of the function what I want
-        # Why yield inside function body effects the type of the function is explained in
-        # https://mypy.readthedocs.io/en/stable/more_types.html#asynchronous-iterators
+    ) -> AsyncIterable[OutCheck]:
         for backend in self._backends:
-            async for check in backend.list_checks(auth_obj, ids):
+            async for check in backend.get_checks(auth_obj, ids):
                 yield check
 
 

@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-import importlib.util
 import inspect
 import json
 from kubernetes_asyncio.client.models.v1_cron_job import V1CronJob
@@ -7,7 +6,9 @@ from kubernetes_asyncio.client.models.v1_env_var import V1EnvVar
 from kubernetes_asyncio.client.models.v1_object_meta import V1ObjectMeta
 from kubernetes_asyncio.client.models.v1_volume_mount import V1VolumeMount
 from kubernetes_asyncio.client.models.v1_volume import V1Volume
-from kubernetes_asyncio.client.models.v1_secret_volume_source import V1SecretVolumeSource
+from kubernetes_asyncio.client.models.v1_secret_volume_source import (
+    V1SecretVolumeSource,
+)
 import logging
 import os
 import pathlib
@@ -15,15 +16,16 @@ from pydantic import TypeAdapter
 from typing import Any, Protocol, runtime_checkable
 import uuid
 
-from api_interface import (
-    Json,
-)
+from api_utils.json_api_types import Json
 from check_backends.check_backend import (
-    Check,
     CheckId,
     CheckTemplate,
     CheckTemplateId,
     CronExpression,
+    OutCheck,
+    OutCheckAttributes,
+    OutCheckMetadata,
+    OutcomeFilter,
 )
 from plugin_utils.loader import load_plugins
 
@@ -59,11 +61,13 @@ class CronjobTemplate(ABC):
         template_args: Json,
         schedule: CronExpression,
     ) -> V1CronJob:
-        """ Returns a cronjob from the arguments and schedule. """
+        """Returns a cronjob from the arguments and schedule."""
 
 
 # Helper functions for adding metadata and telemetry properties to cronjobs
-def _add_metadata(cronjob: V1CronJob, template_id: CheckTemplateId, template_args: Json) -> None:
+def _add_metadata(
+    cronjob: V1CronJob, template_id: CheckTemplateId, template_args: Json
+) -> None:
     if cronjob.metadata is None:
         cronjob.metadata = V1ObjectMeta()
     cronjob.metadata.annotations["template_id"] = template_id
@@ -98,51 +102,38 @@ def _add_otel_resource_attributes(cronjob: V1CronJob, template_args: Json) -> No
 
 def _add_otel_exporter_variables(cronjob: V1CronJob) -> None:
     env = cronjob.spec.job_template.spec.template.spec.containers[0].env or []
-    volumes = cronjob.spec.job_template.spec.template.spec.containers[0].volume_mounts or []
+    volumes = (
+        cronjob.spec.job_template.spec.template.spec.containers[0].volume_mounts or []
+    )
     volume_mounts = cronjob.spec.job_template.spec.template.spec.volumes or []
     if os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"):
         env.append(
             V1EnvVar(
                 name="OTEL_EXPORTER_OTLP_ENDPOINT",
-                value=os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"]
+                value=os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"],
             )
         )
     if os.environ.get("CHECK_MANAGER_COLLECTOR_TLS_SECRET"):
+        env.append(V1EnvVar(name="OTEL_EXPORTER_OTLP_CERTIFICATE", value="/tls/ca.crt"))
+        env.append(V1EnvVar(name="OTEL_EXPORTER_OTLP_CLIENT_KEY", value="/tls/tls.key"))
         env.append(
-            V1EnvVar(
-                name="OTEL_EXPORTER_OTLP_CERTIFICATE",
-                value="/tls/ca.crt"
-            )
-        )
-        env.append(
-            V1EnvVar(
-                name="OTEL_EXPORTER_OTLP_CLIENT_KEY",
-                value="/tls/tls.key"
-            )
-        )
-        env.append(
-            V1EnvVar(
-                name="OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE",
-                value="/tls/tls.crt"
-            )
+            V1EnvVar(name="OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE", value="/tls/tls.crt")
         )
         volume_mounts.append(
-            V1VolumeMount(
-                name="tls",
-                mount_path="/tls",
-                read_only=True
-            )
+            V1VolumeMount(name="tls", mount_path="/tls", read_only=True)
         )
         volumes.append(
             V1Volume(
                 name="tls",
                 secret=V1SecretVolumeSource(
                     secret_name=os.environ["CHECK_MANAGER_COLLECTOR_TLS_SECRET"]
-                )
+                ),
             )
         )
     cronjob.spec.job_template.spec.template.spec.containers[0].env = env
-    cronjob.spec.job_template.spec.template.spec.containers[0].volume_mounts = volume_mounts
+    cronjob.spec.job_template.spec.template.spec.containers[
+        0
+    ].volume_mounts = volume_mounts
     cronjob.spec.job_template.spec.template.spec.volumes = volumes
 
 
@@ -151,9 +142,9 @@ def _tag_cronjob(
     cronjob: V1CronJob,
     template_args: Json,
 ) -> V1CronJob:
-    tempalte_id = cronjob_template.get_check_template().id
+    template = cronjob_template.get_check_template()
 
-    _add_metadata(cronjob, tempalte_id, template_args)
+    _add_metadata(cronjob, template.id, template_args)
 
     _add_otel_resource_attributes(cronjob, template_args)
 
@@ -162,43 +153,53 @@ def _tag_cronjob(
     return cronjob
 
 
-def _make_check(cronjob: V1CronJob) -> Check:
+def _make_check(cronjob: V1CronJob) -> OutCheck:
     template_id = cronjob.metadata.annotations.get("template_id")
-    template_args = json.loads(
-        cronjob.metadata.annotations.get("template_args", "{}")
-    ) 
-    return Check(
+    template_args = json.loads(cronjob.metadata.annotations.get("template_args", "{}"))
+    raise NotImplementedError("Add name and description")
+    return OutCheck(
         id=CheckId(cronjob.metadata.name),
-        metadata={"template_id": template_id, "template_args": template_args},
-        schedule=CronExpression(cronjob.spec.schedule),
-        outcome_filter={"resource_attributes": {"k8s.cronjob.name": cronjob.metadata.name}},
+        attributes=OutCheckAttributes(
+            metadata=OutCheckMetadata(
+                # name=,
+                # description=,
+                template_id=template_id,
+                template_args=template_args,
+            ),
+            schedule=CronExpression(cronjob.spec.schedule),
+            outcome_filter=OutcomeFilter(
+                resource_attributes={"k8s.cronjob.name": cronjob.metadata.name}
+            ),
+        ),
     )
 
 
-def default_make_check(cronjob: V1CronJob) -> Check:
+def default_make_check(cronjob: V1CronJob) -> OutCheck:
     template_id: CheckTemplateId | None = None
     template_args: dict = {}
-    if (cronjob.metadata and cronjob.metadata.annotations):
-        template_id = (
-            cronjob.metadata.annotations.get("template_id")
-        )
+    if cronjob.metadata and cronjob.metadata.annotations:
+        template_id = cronjob.metadata.annotations.get("template_id")
         template_args = json.loads(
             cronjob.metadata.annotations.get("template_args", "{}")
         )
     cronjob_name: str = (
-        cronjob.metadata.name
-        if cronjob.metadata and cronjob.metadata.name
-        else ""
+        cronjob.metadata.name if cronjob.metadata and cronjob.metadata.name else ""
     )
-    return Check(
+    raise NotImplementedError("Add name and description")
+    return OutCheck(
         id=CheckId(cronjob_name),
-        metadata={"template_id": template_id, "template_args": template_args},
-        schedule=CronExpression(cronjob.spec.schedule),
-        outcome_filter={
-            "resource_attributes": {
-                "k8s.cronjob.name": cronjob_name
-            }
-        },
+        attributes=OutCheckAttributes(
+            metadata=OutCheckMetadata(
+                # name=,
+                # description=,
+                template_id=template_id,
+                template_args=template_args,
+            ),
+            schedule=CronExpression(cronjob.spec.schedule),
+            outcome_filter=OutcomeFilter(
+                resource_attributes={"k8s.cronjob.name": cronjob_name}
+            ),
+        ),
     )
 
 
@@ -217,13 +218,11 @@ class CronjobMaker:
         res = self.cronjob_template.make_cronjob(template_args, schedule)
         return _tag_cronjob(self.cronjob_template, res, template_args)
 
-    def make_check(self, cronjob: V1CronJob) -> Check:
+    def make_check(self, cronjob: V1CronJob) -> OutCheck:
         return _make_check(cronjob)
 
 
-def make_template_value(
-    obj: Any
-) -> CronjobMaker | None:
+def make_template_value(obj: Any) -> CronjobMaker | None:
     if not inspect.isclass(obj):
         return None
     if not (
@@ -231,13 +230,9 @@ def make_template_value(
         and obj != CronjobTemplateProtocol
         and not inspect.isabstract(obj)
     ):
-        if (
-            issubclass(obj, CronjobTemplate)
-            and obj != CronjobTemplate
-        ):
+        if issubclass(obj, CronjobTemplate) and obj != CronjobTemplate:
             logger.warning(
-                "Encountered unfinished implementation of CronjobTemplate: "
-                f"{str(obj)}"
+                f"Encountered unfinished implementation of CronjobTemplate: {str(obj)}"
             )
         return None
 

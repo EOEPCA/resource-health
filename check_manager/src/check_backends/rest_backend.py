@@ -17,11 +17,13 @@ from check_backends.check_backend import (
     AuthenticationObject,
     CheckBackend,
     CheckId,
+    CheckTemplate,
     CheckTemplateId,
     CheckTemplateAttributes,
     InCheck,
     InCheckAttributes,
     InCheckData,
+    OutCheck,
     OutCheckAttributes,
 )
 
@@ -42,7 +44,7 @@ class RestBackend(CheckBackend):
     async def get_check_templates(
         self: Self,
         ids: list[CheckTemplateId] | None = None,
-    ) -> AsyncIterable[tuple[CheckTemplateId, CheckTemplateAttributes]]:
+    ) -> AsyncIterable[CheckTemplate]:
         try:
             response = await self._client.get(
                 get_url_str(self._url, GET_CHECK_TEMPLATES_PATH),
@@ -56,7 +58,10 @@ class RestBackend(CheckBackend):
                 .model_validate(response.json())
                 .data
             ):
-                yield (CheckTemplateId(check_template.id), check_template.attributes)
+                yield CheckTemplate(
+                    id=CheckTemplateId(check_template.id),
+                    attributes=check_template.attributes,
+                )
         else:
             raise get_check_exceptions(
                 status_code=response.status_code, content=response.json()
@@ -65,7 +70,7 @@ class RestBackend(CheckBackend):
     @override
     async def create_check(
         self: Self, auth_obj: AuthenticationObject, attributes: InCheckAttributes
-    ) -> tuple[CheckId, OutCheckAttributes]:
+    ) -> OutCheck:
         try:
             response = await self._client.post(
                 get_url_str(self._url, CREATE_CHECK_PATH),
@@ -79,9 +84,10 @@ class RestBackend(CheckBackend):
             structured_response = APIOKResponse[OutCheckAttributes].model_validate(
                 response.json()
             )
-            return CheckId(
-                structured_response.data.id
-            ), structured_response.data.attributes
+            return OutCheck(
+                id=CheckId(structured_response.data.id),
+                attributes=structured_response.data.attributes,
+            )
         else:
             raise get_check_exceptions(
                 status_code=response.status_code, content=response.json()
@@ -134,7 +140,7 @@ class RestBackend(CheckBackend):
         self: Self,
         auth_obj: AuthenticationObject,
         ids: list[CheckId] | None = None,
-    ) -> AsyncIterable[tuple[CheckId, OutCheckAttributes]]:
+    ) -> AsyncIterable[OutCheck]:
         try:
             response = await self._client.get(
                 get_url_str(self._url, GET_CHECKS_PATH),
@@ -149,7 +155,7 @@ class RestBackend(CheckBackend):
                 .model_validate(response.json())
                 .data
             ):
-                yield CheckId(check.id), check.attributes
+                yield OutCheck(id=CheckId(check.id), attributes=check.attributes)
         else:
             raise get_check_exceptions(
                 status_code=response.status_code, content=response.json()

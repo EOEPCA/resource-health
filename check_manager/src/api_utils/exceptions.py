@@ -4,11 +4,15 @@ from typing import Any, Callable, Self
 from api_utils.json_api_types import APIErrorResponse, Error
 
 
-@dataclass
 class APIException(Exception):
-    """Base exception class"""
+    """
+    Base exception class.
+    These errors (and their provided details) are reported to the user, so be careful.
+    """
 
-    error: Error
+    def __init__(self, error: Error) -> None:
+        super().__init__(error.detail)
+        self.error = error
 
     @classmethod
     def _create_code(cls) -> str:

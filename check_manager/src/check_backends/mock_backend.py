@@ -10,11 +10,14 @@ from jsonschema import ValidationError, validate
 from check_backends.check_backend import (
     AuthenticationObject,
     CheckIdError,
+    CheckTemplate,
     CheckTemplateIdError,
+    CheckTemplateMetadata,
     CronExpression,
     CheckBackend,
     CheckId,
     InCheckAttributes,
+    OutCheck,
     OutCheckMetadata,
     OutCheckAttributes,
     CheckTemplateId,
@@ -30,10 +33,10 @@ class MockBackend(CheckBackend):
             (
                 CheckTemplateId(template_id_prefix + "check_template1"),
                 CheckTemplateAttributes(
-                    metadata={
-                        "label": "Dummy check template",
-                        "description": "Dummy check template description",
-                    },
+                    metadata=CheckTemplateMetadata(
+                        label="Dummy check template",
+                        description="Dummy check template description",
+                    ),
                     arguments={
                         "$schema": "http://json-schema.org/draft-07/schema",
                         "type": "object",
@@ -95,33 +98,33 @@ class MockBackend(CheckBackend):
         self: Self,
         auth_obj: AuthenticationObject,
         check_id: CheckId,
-    ) -> tuple[CheckId, OutCheckAttributes]:
+    ) -> OutCheck:
         check_id_to_attributes = self._auth_to_check_id_to_attributes[auth_obj]
         if check_id not in check_id_to_attributes:
             raise CheckIdError.create(check_id)
-        return check_id, check_id_to_attributes[check_id]
+        return OutCheck(id=check_id, attributes=check_id_to_attributes[check_id])
 
     @override
     async def get_check_templates(
         self: Self, ids: list[CheckTemplateId] | None = None
-    ) -> AsyncIterable[tuple[CheckTemplateId, CheckTemplateAttributes]]:
+    ) -> AsyncIterable[CheckTemplate]:
         if ids is None:
             for (
                 template_id,
                 attributes,
             ) in self._check_template_id_to_attributes.items():
-                yield template_id, attributes
+                yield CheckTemplate(id=template_id, attributes=attributes)
         else:
             for template_id in ids:
-                yield (
-                    template_id,
-                    self._get_check_template_attributes(template_id),
+                yield CheckTemplate(
+                    id=template_id,
+                    attributes=self._get_check_template_attributes(template_id),
                 )
 
     @override
     async def create_check(
         self: Self, auth_obj: AuthenticationObject, attributes: InCheckAttributes
-    ) -> tuple[CheckId, OutCheckAttributes]:
+    ) -> OutCheck:
         check_template = self._get_check_template_attributes(
             attributes.metadata.template_id
         )
@@ -149,7 +152,7 @@ class MockBackend(CheckBackend):
             ),
         )
         self._auth_to_check_id_to_attributes[auth_obj][check_id] = out_attributes
-        return check_id, out_attributes
+        return OutCheck(id=check_id, attributes=out_attributes)
 
     # @override
     # async def update_check(
@@ -184,12 +187,12 @@ class MockBackend(CheckBackend):
         self: Self,
         auth_obj: AuthenticationObject,
         ids: list[CheckId] | None = None,
-    ) -> AsyncIterable[tuple[CheckId, OutCheckAttributes]]:
+    ) -> AsyncIterable[OutCheck]:
         if ids is None:
             for check_id, attributes in self._auth_to_check_id_to_attributes[
                 auth_obj
             ].items():
-                yield check_id, attributes
+                yield OutCheck(id=check_id, attributes=attributes)
         else:
             for id in ids:
                 yield self._get_check_attributes(auth_obj, id)
