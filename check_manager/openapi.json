@@ -428,7 +428,7 @@
       "CheckTemplateAttributes": {
         "properties": {
           "metadata": {
-            "$ref": "#/components/schemas/Json"
+            "$ref": "#/components/schemas/CheckTemplateMetadata"
           },
           "arguments": {
             "anyOf": [
@@ -448,6 +448,39 @@
           "arguments"
         ],
         "title": "CheckTemplateAttributes"
+      },
+      "CheckTemplateMetadata": {
+        "properties": {
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "label",
+          "description"
+        ],
+        "title": "CheckTemplateMetadata"
       },
       "Error": {
         "properties": {

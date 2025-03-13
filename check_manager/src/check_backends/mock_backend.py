@@ -89,20 +89,20 @@ class MockBackend(CheckBackend):
     def _get_check_template_attributes(
         self: Self,
         template_id: CheckTemplateId,
-    ) -> CheckTemplateAttributes:
+    ) -> CheckTemplateAttributes | None:
         if template_id not in self._check_template_id_to_attributes:
-            raise CheckTemplateIdError.create(template_id)
+            return None
         return self._check_template_id_to_attributes[template_id]
 
     def _get_check_attributes(
         self: Self,
         auth_obj: AuthenticationObject,
         check_id: CheckId,
-    ) -> OutCheck:
+    ) -> OutCheckAttributes | None:
         check_id_to_attributes = self._auth_to_check_id_to_attributes[auth_obj]
         if check_id not in check_id_to_attributes:
-            raise CheckIdError.create(check_id)
-        return OutCheck(id=check_id, attributes=check_id_to_attributes[check_id])
+            return None
+        return check_id_to_attributes[check_id]
 
     @override
     async def get_check_templates(
@@ -116,20 +116,23 @@ class MockBackend(CheckBackend):
                 yield CheckTemplate(id=template_id, attributes=attributes)
         else:
             for template_id in ids:
-                yield CheckTemplate(
-                    id=template_id,
-                    attributes=self._get_check_template_attributes(template_id),
-                )
+                template_attributes = self._get_check_template_attributes(template_id)
+                if template_attributes is not None:
+                    yield CheckTemplate(id=template_id, attributes=template_attributes)
 
     @override
     async def create_check(
         self: Self, auth_obj: AuthenticationObject, attributes: InCheckAttributes
     ) -> OutCheck:
-        check_template = self._get_check_template_attributes(
+        check_template_attributes = self._get_check_template_attributes(
             attributes.metadata.template_id
         )
+        if check_template_attributes is None:
+            raise CheckTemplateIdError.create(attributes.metadata.template_id)
         try:
-            validate(attributes.metadata.template_args, check_template.arguments)
+            validate(
+                attributes.metadata.template_args, check_template_attributes.arguments
+            )
         except ValidationError as e:
             raise JsonValidationError.create(
                 "/data/attributes/metadata/template_args/", e
@@ -195,4 +198,6 @@ class MockBackend(CheckBackend):
                 yield OutCheck(id=check_id, attributes=attributes)
         else:
             for id in ids:
-                yield self._get_check_attributes(auth_obj, id)
+                check_attributes = self._get_check_attributes(auth_obj, id)
+                if check_attributes is not None:
+                    yield OutCheck(id=id, attributes=check_attributes)
