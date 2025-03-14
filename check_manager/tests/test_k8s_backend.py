@@ -31,6 +31,8 @@ from exceptions import CheckConnectionError
 NAMESPACE: str = "resource-health"
 TEMPLATES: str = "templates"
 test_auth = "test-auth"
+check_name = "Dummy name"
+check_description = "Dummy description"
 template_id = "simple_ping"
 bad_template_id = "simply_ping"
 template_args: dict[str, object] = {
@@ -47,6 +49,8 @@ cronjob_1 = V1CronJob(
     metadata=V1ObjectMeta(
         name=check_id_1,
         annotations={
+            "name": check_name,
+            "description": check_description,
             "template_id": template_id,
             "template_args": json.dumps(template_args),
         },
@@ -60,6 +64,8 @@ cronjob_2 = V1CronJob(
     metadata=V1ObjectMeta(
         name=check_id_2,
         annotations={
+            "name": check_name,
+            "description": check_description,
             "template_id": template_id,
             "template_args": json.dumps(template_args),
         },
@@ -151,46 +157,34 @@ async def test_get_check_templates(
 
 
 @pytest.mark.parametrize(
-    ("check_name,check_description,template_id,side_effect,expectation"),
+    ("template_id,side_effect,expectation"),
     [
         (
-            "Dummy name",
-            "Dummy description",
             "simple_ping",
             None,
             contextlib.nullcontext(),
         ),
         (
-            "Dummy name",
-            "Dummy description",
             "simple_ping",
             ApiException(status=422),
             pytest.raises(APIInternalError),
         ),
         (
-            "Dummy name",
-            "Dummy description",
             "simple_ping",
             ApiException(),
             pytest.raises(ApiException),
         ),
         (
-            "Dummy name",
-            "Dummy description",
             "simple_ping",
             aiohttp.ClientConnectionError(),
             pytest.raises(CheckConnectionError),
         ),
         (
-            "Dummy name",
-            "Dummy description",
             "simple_ping",
             Exception(),
             pytest.raises(Exception),
         ),
         (
-            "Dummy name",
-            "Dummy description",
             "simply_ping",
             None,
             pytest.raises(CheckTemplateIdError),
@@ -200,12 +194,10 @@ async def test_get_check_templates(
 @patch("check_backends.k8s_backend.load_config", new_callable=AsyncMock)
 @patch("test_k8s_backend.ApiClient")
 @patch("test_k8s_backend.client.BatchV1Api")
-async def test_new_check(
+async def test_create_check(
     mock_batch_v1_api: Mock,
     mock_api_client: Mock,
     mock_load_config: AsyncMock,
-    check_name: str,
-    check_description: str,
     template_id: CheckTemplateId,
     side_effect: Exception | None,
     expectation: contextlib.AbstractContextManager,
@@ -247,9 +239,26 @@ async def test_new_check(
         mock_batch_v1_api.assert_called_once()
         mock_batch_v1_api.return_value.create_namespaced_cron_job.assert_called_once()
         call_kwargs = (
-            mock_batch_v1_api.return_value.create_namespaced_cron_job.call_args.kwargs
+            mock_batch_v1_api
+            .return_value.create_namespaced_cron_job
+            .call_args
+            .kwargs
         )
         assert call_kwargs["namespace"] == NAMESPACE
+        assert call_kwargs["body"].metadata.annotations["name"] == check_name
+        assert (
+            call_kwargs["body"].metadata.annotations["description"]
+            == check_description
+        )
+        assert (
+            call_kwargs["body"].metadata.annotations["template_id"]
+            == template_id
+        )
+        assert (
+            json.loads(
+                call_kwargs["body"].metadata.annotations["template_args"]
+            ) == template_args
+        )
 
 
 @pytest.mark.parametrize(

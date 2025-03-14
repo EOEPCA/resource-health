@@ -22,6 +22,7 @@ from check_backends.check_backend import (
     CheckTemplate,
     CheckTemplateId,
     CronExpression,
+    InCheckMetadata,
     OutCheck,
     OutCheckAttributes,
     OutCheckMetadata,
@@ -65,38 +66,36 @@ class CronjobTemplate(ABC):
 
 
 # Helper functions for adding metadata and telemetry properties to cronjobs
-def _add_metadata(
-    cronjob: V1CronJob, template_id: CheckTemplateId, template_args: Json
-) -> None:
+def _add_metadata(cronjob: V1CronJob, metadata: InCheckMetadata) -> None:
     if cronjob.metadata is None:
         cronjob.metadata = V1ObjectMeta()
-    cronjob.metadata.annotations["template_id"] = template_id
-    cronjob.metadata.annotations["template_args"] = json.dumps(template_args)
-    check_id = CheckId(str(uuid.uuid4()))
-    cronjob.metadata.name = check_id
+    cronjob.metadata.annotations["name"] = metadata.name
+    cronjob.metadata.annotations["description"] = metadata.description
+    cronjob.metadata.annotations["template_id"] = metadata.template_id
+    cronjob.metadata.annotations["template_args"] = json.dumps(
+        metadata.template_args
+    )
+    cronjob.metadata.name = CheckId(str(uuid.uuid4()))
 
 
-def _add_otel_resource_attributes(cronjob: V1CronJob, template_args: Json) -> None:
+def _add_otel_resource_attributes(cronjob: V1CronJob) -> None:
     check_id = cronjob.metadata.name
     user_id = "Health BB user"
-    health_check_name = TypeAdapter(str).validate_python(
-        template_args["health_check.name"]
-    )
+    name = cronjob.metadata.annotations["name"]
 
     env = cronjob.spec.job_template.spec.template.spec.containers[0].env or []
-    if user_id and health_check_name:
-        OTEL_RESOURCE_ATTRIBUTES = (
-            f"k8s.cronjob.name={check_id},"
-            f"user.id={user_id},"
-            f"health_check.name={health_check_name}"
-        )
+    OTEL_RESOURCE_ATTRIBUTES = (
+        f"k8s.cronjob.name={check_id},"
+        f"user.id={user_id},"
+        f"health_check.name={name}"
+    )
 
-        env.append(
-            V1EnvVar(
-                name="OTEL_RESOURCE_ATTRIBUTES",
-                value=OTEL_RESOURCE_ATTRIBUTES,
-            )
+    env.append(
+        V1EnvVar(
+            name="OTEL_RESOURCE_ATTRIBUTES",
+            value=OTEL_RESOURCE_ATTRIBUTES,
         )
+    )
     cronjob.spec.job_template.spec.template.spec.containers[0].env = env
 
 
@@ -137,16 +136,10 @@ def _add_otel_exporter_variables(cronjob: V1CronJob) -> None:
     cronjob.spec.job_template.spec.template.spec.volumes = volumes
 
 
-def _tag_cronjob(
-    cronjob_template: CronjobTemplateProtocol,
-    cronjob: V1CronJob,
-    template_args: Json,
-) -> V1CronJob:
-    template = cronjob_template.get_check_template()
+def _tag_cronjob(cronjob: V1CronJob, metadata: InCheckMetadata) -> V1CronJob:
+    _add_metadata(cronjob, metadata)
 
-    _add_metadata(cronjob, template.id, template_args)
-
-    _add_otel_resource_attributes(cronjob, template_args)
+    _add_otel_resource_attributes(cronjob)
 
     _add_otel_exporter_variables(cronjob)
 
@@ -154,15 +147,17 @@ def _tag_cronjob(
 
 
 def _make_check(cronjob: V1CronJob) -> OutCheck:
+    name = cronjob.metadata.annotations.get("name")
+    description = cronjob.metadata.annotations.get("description")
     template_id = cronjob.metadata.annotations.get("template_id")
     template_args = json.loads(cronjob.metadata.annotations.get("template_args", "{}"))
-    raise NotImplementedError("Add name and description")
+    # raise NotImplementedError("Add name and description")
     return OutCheck(
         id=CheckId(cronjob.metadata.name),
         attributes=OutCheckAttributes(
             metadata=OutCheckMetadata(
-                # name=,
-                # description=,
+                name=name,
+                description=description,
                 template_id=template_id,
                 template_args=template_args,
             ),
@@ -175,9 +170,13 @@ def _make_check(cronjob: V1CronJob) -> OutCheck:
 
 
 def default_make_check(cronjob: V1CronJob) -> OutCheck:
+    name: str | None = None
+    description: str | None = None
     template_id: CheckTemplateId | None = None
     template_args: dict = {}
     if cronjob.metadata and cronjob.metadata.annotations:
+        name = cronjob.metadata.annotations.get("name")
+        description = cronjob.metadata.annotations.get("description")
         template_id = cronjob.metadata.annotations.get("template_id")
         template_args = json.loads(
             cronjob.metadata.annotations.get("template_args", "{}")
@@ -185,13 +184,13 @@ def default_make_check(cronjob: V1CronJob) -> OutCheck:
     cronjob_name: str = (
         cronjob.metadata.name if cronjob.metadata and cronjob.metadata.name else ""
     )
-    raise NotImplementedError("Add name and description")
+    # raise NotImplementedError("Add name and description")
     return OutCheck(
         id=CheckId(cronjob_name),
         attributes=OutCheckAttributes(
             metadata=OutCheckMetadata(
-                # name=,
-                # description=,
+                name=name,
+                description=description,
                 template_id=template_id,
                 template_args=template_args,
             ),
@@ -212,11 +211,14 @@ class CronjobMaker:
 
     def make_cronjob(
         self,
-        template_args: Json,
+        metadata: InCheckMetadata,
         schedule: CronExpression,
     ) -> V1CronJob:
-        res = self.cronjob_template.make_cronjob(template_args, schedule)
-        return _tag_cronjob(self.cronjob_template, res, template_args)
+        cronjob = self.cronjob_template.make_cronjob(
+            metadata.template_args,
+            schedule
+        )
+        return _tag_cronjob(cronjob, metadata)
 
     def make_check(self, cronjob: V1CronJob) -> OutCheck:
         return _make_check(cronjob)

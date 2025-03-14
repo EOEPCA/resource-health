@@ -79,7 +79,7 @@ class K8sBackend(CheckBackend):
         check_template = template.get_check_template()
         validate(attributes.metadata.template_args, check_template.attributes.arguments)
         cronjob = template.make_cronjob(
-            template_args=attributes.metadata.template_args,
+            metadata=attributes.metadata,
             schedule=attributes.schedule,
         )
         await load_config()
