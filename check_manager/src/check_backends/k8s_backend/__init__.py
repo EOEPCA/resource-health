@@ -7,27 +7,24 @@ import logging
 from os import environ
 from typing import AsyncIterable, Self, override
 
-from api_interface import Json
+from api_utils.exceptions import APIInternalError
 from check_backends.check_backend import (
     AuthenticationObject,
-    Check,
     CheckBackend,
     CheckId,
+    CheckIdError,
     CheckTemplate,
     CheckTemplateId,
-    CronExpression,
+    CheckTemplateIdError,
+    InCheckAttributes,
+    OutCheck,
 )
 from check_backends.k8s_backend.templates import (
     CronjobMaker,
     load_templates,
     default_make_check,
 )
-from exceptions import (
-    CheckInternalError,
-    CheckTemplateIdError,
-    CheckIdError,
-    CheckConnectionError,
-)
+from exceptions import CheckConnectionError
 
 NAMESPACE: str = "resource-health"
 
@@ -43,9 +40,7 @@ async def load_config() -> None:
 
 class K8sBackend(CheckBackend):
     def __init__(
-        self: Self,
-        template_dirs: list[str],
-        api_client: type[ApiClient] | None = None
+        self: Self, template_dirs: list[str], api_client: type[ApiClient] | None = None
     ) -> None:
         self._templates: dict[str, CronjobMaker] = load_templates(template_dirs)
         self._api_client: type[ApiClient] = api_client or ApiClient
@@ -55,12 +50,13 @@ class K8sBackend(CheckBackend):
         pass
 
     @override
-    async def list_check_templates(
+    async def get_check_templates(
         self: Self,
         ids: list[CheckTemplateId] | None = None,
     ) -> AsyncIterable[CheckTemplate]:
         # TODO: See if there is a way to loop directly over the check templates
         template_ids = list(self._templates.keys())
+        # print(f"template_ids {template_ids}")
         if ids is None:
             for id in template_ids:
                 cronjob_template = self._templates.get(id)
@@ -74,21 +70,17 @@ class K8sBackend(CheckBackend):
                         yield cronjob_template.get_check_template()
 
     @override
-    async def new_check(
-        self: Self,
-        auth_obj: AuthenticationObject,
-        template_id: CheckTemplateId,
-        template_args: Json,
-        schedule: CronExpression,
-    ) -> Check:
-        template = self._templates.get(template_id)
+    async def create_check(
+        self: Self, auth_obj: AuthenticationObject, attributes: InCheckAttributes
+    ) -> OutCheck:
+        template = self._templates.get(attributes.metadata.template_id)
         if template is None:
-            raise CheckTemplateIdError(f"No template found for ID: {template_id}")
+            raise CheckTemplateIdError.create(attributes.metadata.template_id)
         check_template = template.get_check_template()
-        validate(template_args, check_template.arguments)
+        validate(attributes.metadata.template_args, check_template.attributes.arguments)
         cronjob = template.make_cronjob(
-            template_args=template_args,
-            schedule=schedule
+            metadata=attributes.metadata,
+            schedule=attributes.schedule,
         )
         await load_config()
         async with self._api_client() as api_client:
@@ -102,11 +94,11 @@ class K8sBackend(CheckBackend):
             except ApiException as e:
                 logger.error(f"Failed to create new cron job: {e}")
                 if e.status == 422:
-                    raise CheckInternalError("Unprocessable content")
+                    raise APIInternalError.create("Unprocessable content")
                 raise e
             except aiohttp.ClientConnectionError as e:
                 logger.error(f"Failed to create new cron job: {e}")
-                raise CheckConnectionError("Cannot connect to cluster")
+                raise CheckConnectionError.create("Cannot connect to cluster")
             check = template.make_check(api_response)
         return check
 
@@ -172,21 +164,21 @@ class K8sBackend(CheckBackend):
                 logger.info(f"Succesfully deleted cron job: {api_response}")
             except aiohttp.ClientConnectionError as e:
                 logger.error(f"Failed to delete cron job: {e}")
-                raise CheckConnectionError("Cannot connect to cluster")
+                raise CheckConnectionError.create("Cannot connect to cluster")
             except ApiException as e:
                 logger.info(f"Failed to delete check with id '{check_id}': {e}")
                 if e.status == 404:
-                    raise CheckIdError(f"Check with id '{check_id}' not found")
+                    raise CheckIdError.create(check_id)
                 else:
                     raise e
         return None
 
     @override
-    async def list_checks(
+    async def get_checks(
         self: Self,
         auth_obj: AuthenticationObject,
         ids: list[CheckId] | None = None,
-    ) -> AsyncIterable[Check]:
+    ) -> AsyncIterable[OutCheck]:
         await load_config()
         async with self._api_client() as api_client:
             api_instance = client.BatchV1Api(api_client)
@@ -199,15 +191,13 @@ class K8sBackend(CheckBackend):
                 raise e
             except aiohttp.ClientConnectionError as e:
                 logger.error(f"Failed to list cron jobs: {e}")
-                raise CheckConnectionError("Cannot connect to cluster")
+                raise CheckConnectionError.create("Cannot connect to cluster")
             template_id: str | None
             if ids is None:
                 for cronjob in cronjobs.items:
                     template_id = None
-                    if (cronjob.metadata and cronjob.metadata.annotations):
-                        template_id = (
-                            cronjob.metadata.annotations.get("template_id")
-                        )
+                    if cronjob.metadata and cronjob.metadata.annotations:
+                        template_id = cronjob.metadata.annotations.get("template_id")
                     template = self._templates.get(template_id or "")
                     if template is not None:
                         yield template.make_check(cronjob)
@@ -217,9 +207,9 @@ class K8sBackend(CheckBackend):
                 for cronjob in cronjobs.items:
                     if cronjob.metadata.name in ids:
                         template_id = None
-                        if (cronjob.metadata and cronjob.metadata.annotations):
-                            template_id = (
-                                cronjob.metadata.annotations.get("template_id")
+                        if cronjob.metadata and cronjob.metadata.annotations:
+                            template_id = cronjob.metadata.annotations.get(
+                                "template_id"
                             )
                         template = self._templates.get(template_id or "")
                         if template is not None:

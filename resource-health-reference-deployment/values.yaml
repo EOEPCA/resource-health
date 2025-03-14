@@ -119,7 +119,7 @@ resource-health:
   #   environmentSecrets: []
   #   environmentFixed:
   #     - name: NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT
-  #       value: http://resource-health-check-api:8000
+  #       value: http://resource-health-check-api:8000/v1
   #     - name: NEXT_PUBLIC_TELEMETRY_ENDPOINT
   #       value: http://resource-health-telemetry-api:8080/v1
   #   tls:

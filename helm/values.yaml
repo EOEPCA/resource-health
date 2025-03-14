@@ -63,12 +63,14 @@ check_api:
   image:
     repository: docker.io/eoepca/resourcehealth_check_api
     pullPolicy: IfNotPresent
-    tag: "v0.3.0-internal1"
+    tag: "v0.3.0-internal2"
   serviceType: ClusterIP
   containerPort: 8000
   servicePort: 8000
   replicaCount: 2
-  environmentFixed: []
+  environmentFixed:
+    - name: RH_CHECK_API_BASE_URL
+      value: https://resource-health.apx.develop.eoepca.org/api/healthchecks/
   # - name: ...
   #   secret: ...
   #   key: ...
@@ -84,12 +86,14 @@ telemetry_api:
   image:
     repository: docker.io/eoepca/resourcehealth_telemetry_api
     pullPolicy: IfNotPresent
-    tag: "2.0.0-beta2.03"
+    tag: "v0.3.0-internal1"
   serviceType: ClusterIP
   containerPort: 8080
   servicePort: 8080
   replicaCount: 2
-  environmentFixed: []
+  environmentFixed:
+    - name: RH_TELEMETRY_API_BASE_URL
+      value: https://resource-health.apx.develop.eoepca.org/api/telemetry/
   # - name: ...
   #   secret: ...
   #   key: ...
@@ -101,7 +105,7 @@ web:
   image:
     repository: docker.io/eoepca/resourcehealth_web
     pullPolicy: IfNotPresent
-    tag: "2.0.0-beta2.06"
+    tag: "v0.3.0-internal1"
   serviceType: ClusterIP
   containerPort: 3000
   servicePort: 80
@@ -109,7 +113,7 @@ web:
   environmentSecrets: []
   environmentFixed:
     - name: NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT
-      value: http://resource-health-check-api:8000
+      value: http://resource-health-check-api:8000/v1
     - name: NEXT_PUBLIC_TELEMETRY_ENDPOINT
       value: http://resource-health-telemetry-api:8080/v1
   tls:

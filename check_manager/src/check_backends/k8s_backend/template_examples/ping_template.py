@@ -1,40 +1,58 @@
 import json
+from typing import override
+from pydantic import TypeAdapter
+from kubernetes_asyncio.client.models.v1_cron_job import V1CronJob
+from kubernetes_asyncio.client.models.v1_env_var import V1EnvVar
 
-from check_backends.k8s_backend.template_utils import *
+from api_utils.json_api_types import Json
+from check_backends.check_backend import (
+    CheckTemplate,
+    CheckTemplateAttributes,
+    CheckTemplateId,
+    CheckTemplateMetadata,
+    CronExpression,
+)
+from check_backends.k8s_backend.template_utils import make_base_cronjob
+from check_backends.k8s_backend.templates import CronjobTemplate
 
-class SimplePing:
+
+class SimplePing(CronjobTemplate):
+    @override
     def get_check_template(self) -> CheckTemplate:
         return CheckTemplate(
             id=CheckTemplateId("simple_ping"),
-            metadata={
-                "label": "Simple ping template",
-                "description": "Simple template with preset script for pinging single endpoint.",
-            },
-            arguments={
-                "$schema": "http://json-schema.org/draft-07/schema",
-                "type": "object",
-                "properties": {
-                    "health_check.name": {
-                        "type": "string",
+            attributes=CheckTemplateAttributes(
+                metadata=CheckTemplateMetadata(
+                    label="Simple ping template",
+                    description="Simple template with preset script for pinging single endpoint.",
+                ),
+                arguments={
+                    "$schema": "http://json-schema.org/draft-07/schema",
+                    "type": "object",
+                    "properties": {
+                        "health_check.name": {
+                            "type": "string",
+                        },
+                        "endpoint": {
+                            "type": "string",
+                            "format": "textarea",
+                        },
+                        "expected_status_code": {
+                            "type": "integer",
+                            "minimum": 100,
+                            "exclusiveMaximum": 600,
+                            "default": 200,
+                        },
                     },
-                    "endpoint": {
-                        "type": "string",
-                        "format": "textarea",
-                    },
-                    "expected_status_code": {
-                        "type": "integer",
-                        "minimum": 100,
-                        "exclusiveMaximum": 600,
-                        "default": 200,
-                    },
+                    "required": [
+                        "health_check.name",
+                        "endpoint",
+                    ],
                 },
-                "required": [
-                    "health_check.name",
-                    "endpoint",
-                ],
-            },
+            ),
         )
 
+    @override
     def make_cronjob(
         self,
         template_args: Json,
@@ -44,7 +62,9 @@ class SimplePing:
             template_args["health_check.name"]
         )
         endpoint = TypeAdapter(str).validate_python(template_args["endpoint"])
-        expected_status_code = TypeAdapter(str).validate_python(str(template_args.get("expected_status_code", 200)))
+        expected_status_code = TypeAdapter(str).validate_python(
+            str(template_args.get("expected_status_code", 200))
+        )
         cronjob = make_base_cronjob(
             schedule=schedule,
             health_check_name=health_check_name,

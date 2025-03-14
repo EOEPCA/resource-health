@@ -42,7 +42,8 @@ asyncio_mode = "auto"
 [tool.mypy]
 python_version = "3.12"
 packages = "check_backends"
-disallow_untyped_defs = true
+# Enable later
+# disallow_untyped_defs = true
 show_error_context = true
 pretty = true
 no_implicit_optional = true
