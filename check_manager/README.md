@@ -59,13 +59,13 @@ docker build -t check_manager -f Dockerfile .
 Run the image with (to use the default k8s backend)
 
 ```bash
-docker run -p 8000:8000 -it check_manager
+docker run -p 8000:8000 -it --env RH_CHECK_API_BASE_URL=http://127.0.0.1:8000 check_manager
 ```
 
 Run the following to use the dummy backend
 
 ```bash
-docker run -p 8000:8000 -it check_manager check-api-server-dummy-prod
+docker run -p 8000:8000 -it --env RH_CHECK_API_BASE_URL=http://127.0.0.1:8000 check_manager check-api-server-dummy-prod
 ```
 
 ## Creating cronjob templates
