@@ -48,6 +48,8 @@ spec:
             readOnly: true
             mountPath: "/certs"
           env:
+            - name: RH_TELEMETRY_API_BASE_URL
+              value: {{ toYaml .Values.global.defaultTelemetryAPIBaseURL }}
           {{- range .Values.telemetry_api.environmentSecrets }}
             - name: {{ toYaml .name | trim }}
               valueFrom:

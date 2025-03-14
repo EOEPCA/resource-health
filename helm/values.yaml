@@ -12,6 +12,9 @@ global:
   ## TODO: Remove this default and make sure it is set or unused
   defaultOTLPEndpoint: https://resource-health-opentelemetry-collector:4317
 
+  defaultCheckAPIBaseURL: https://resource-health.apx.develop.eoepca.org/api/healthchecks/
+  defaultTelemetryAPIBaseURL: https://resource-health.apx.develop.eoepca.org/api/telemetry/
+
 mock_api:
   image:
     repository: docker.io/eoepca/mock_service
@@ -69,8 +72,8 @@ check_api:
   servicePort: 8000
   replicaCount: 2
   environmentFixed:
-    - name: RH_CHECK_API_BASE_URL
-      value: https://resource-health.apx.develop.eoepca.org/api/healthchecks/
+  # - name: RH_CHECK_API_BASE_URL
+  #   value: https://resource-health.apx.develop.eoepca.org/api/healthchecks/
   # - name: ...
   #   secret: ...
   #   key: ...
@@ -92,8 +95,8 @@ telemetry_api:
   servicePort: 8080
   replicaCount: 2
   environmentFixed:
-    - name: RH_TELEMETRY_API_BASE_URL
-      value: https://resource-health.apx.develop.eoepca.org/api/telemetry/
+  # - name: RH_TELEMETRY_API_BASE_URL
+  #   value: https://resource-health.apx.develop.eoepca.org/api/telemetry/
   # - name: ...
   #   secret: ...
   #   key: ...
