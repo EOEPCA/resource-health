@@ -68,7 +68,9 @@ check_api:
   containerPort: 8000
   servicePort: 8000
   replicaCount: 2
-  environmentFixed: []
+  environmentFixed:
+    - name: RH_CHECK_API_BASE_URL
+      value: https://resource-health.apx.develop.eoepca.org/api/healthchecks/
   # - name: ...
   #   secret: ...
   #   key: ...
@@ -89,7 +91,9 @@ telemetry_api:
   containerPort: 8080
   servicePort: 8080
   replicaCount: 2
-  environmentFixed: []
+  environmentFixed:
+    - name: RH_TELEMETRY_API_BASE_URL
+      value: https://resource-health.apx.develop.eoepca.org/api/telemetry/
   # - name: ...
   #   secret: ...
   #   key: ...

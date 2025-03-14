@@ -20,8 +20,7 @@ To execute with instrumentation, you need something to listen for opentelemetry 
 
 You should now be able to run the trivial test example **with** instrumentation as follows:
 ```
-pytest --export-traces examples/triv
-ial_check.py
+pytest --export-traces examples/trivial_check.py
 ```
 If you check your browser window again, you should see a trace with the following structure
 ```
