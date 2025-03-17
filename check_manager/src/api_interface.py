@@ -1,40 +1,50 @@
-from typing import Final
-from exceptions import (
-    CheckException,
-    CheckInternalError,
-    CheckTemplateIdError,
+from typing import Any, Final
+
+from api_utils.exceptions import APIExceptions, APIInternalError, get_exceptions
+from check_backends.check_backend import (
     CheckIdError,
     CheckIdNonUniqueError,
-    CheckConnectionError,
+    CheckTemplateIdError,
 )
-
-type Json = dict[str, object]
-
-
-ERROR_CODE_KEY: Final[str] = "error"
-ERROR_MESSAGE_KEY: Final[str] = "detail"
-
-
-LIST_CHECK_TEMPLATES_PATH: Final[str] = "/check_templates/"
-NEW_CHECK_PATH: Final[str] = "/checks/"
-UPDATE_CHECK_PATH: Final[str] = "/checks/{check_id}"
-REMOVE_CHECK_PATH: Final[str] = "/checks/{check_id}"
-LIST_CHECKS_PATH: Final[str] = "/checks/"
+from exceptions import (
+    APIException,
+    CheckConnectionError,
+    JsonValidationError,
+)
+from api_utils.json_api_types import Error
 
 
-def get_exception(status_code: int, content: Json) -> CheckException:
-    error_code = content[ERROR_CODE_KEY]
-    message = content[ERROR_MESSAGE_KEY]
-    match error_code:
-        case CheckInternalError.__name__:
-            return CheckInternalError(message)
+ROUTE_PREFIX = "/v1"
+GET_CHECK_TEMPLATES_PATH: Final[str] = ROUTE_PREFIX + "/check_templates/"
+GET_CHECK_TEMPLATE_PATH: Final[str] = (
+    ROUTE_PREFIX + "/check_templates/{check_template_id}"
+)
+CREATE_CHECK_PATH: Final[str] = ROUTE_PREFIX + "/checks/"
+GET_CHECK_PATH: Final[str] = ROUTE_PREFIX + "/checks/{check_id}"
+UPDATE_CHECK_PATH: Final[str] = ROUTE_PREFIX + "/checks/{check_id}"
+REMOVE_CHECK_PATH: Final[str] = ROUTE_PREFIX + "/checks/{check_id}"
+GET_CHECKS_PATH: Final[str] = ROUTE_PREFIX + "/checks/"
+
+
+def get_check_exceptions(
+    status_code: int, content: dict[str, Any]
+) -> APIException | APIExceptions:
+    return get_exceptions(_get_exception, status_code, content)
+
+
+def _get_exception(error: Error) -> APIException:
+    match error.code:
+        case JsonValidationError.__name__:
+            return JsonValidationError(error)
+        case APIInternalError.__name__:
+            return APIInternalError(error)
         case CheckTemplateIdError.__name__:
-            return CheckTemplateIdError(message)
+            return CheckTemplateIdError(error)
         case CheckIdError.__name__:
-            return CheckIdError(message)
+            return CheckIdError(error)
         case CheckIdNonUniqueError.__name__:
-            return CheckIdNonUniqueError(message)
+            return CheckIdNonUniqueError(error)
         case CheckConnectionError.__name__:
-            return CheckConnectionError(message)
+            return CheckConnectionError(error)
         case _:
-            return CheckInternalError(f"{error_code}: {message}")
+            return APIException(error)

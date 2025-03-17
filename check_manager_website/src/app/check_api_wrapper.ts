@@ -2,43 +2,148 @@
 'use client'
 
 import { StrictRJSFSchema } from '@rjsf/utils'
-import axios from 'axios'
+import axios, { AxiosResponse } from 'axios'
 import { env } from 'next-runtime-env';
 
 export type CheckTemplateId = string
 export type CheckId = string
 export type CronExpression = string
 
+export type Json = Record<string, unknown>
+
+type Link = string | {
+  href: string
+  title?: string
+}
+
+type Links = {
+    self?: Link
+    describedby?: Link
+    first?: Link
+    next?: Link
+    root?: Link
+} & Record<string, unknown>
+
+type Resource<T> = {
+    id: string
+    type: string
+    attributes: T
+    links?: Record<string, Link>
+}
+
+
+// A JSON Pointer [RFC6901] to the value in the request document that caused the error
+// [e.g. "/data" for a primary data object, or "/data/attributes/title" for a specific attribute].
+// This MUST point to a value in the request document that exists; if it doesn’t, the client SHOULD simply ignore the pointer.
+type ErrorSourcePointer = {
+  pointer: string
+}
+
+
+// A string indicating which URI query parameter caused the error.
+type ErrorSourceParameter = {
+  parameter: string
+}
+
+
+// a string indicating the name of a single request header which caused the error.
+type ErrorSourceHeader = {
+  header: string
+}
+
+
+// See https://jsonapi.org/examples/#error-objects
+type ErrorSource = ErrorSourcePointer | ErrorSourceParameter | ErrorSourceHeader
+
+type Error = {
+  status: string
+  code: string
+  title: string
+  detail?: string
+  source?: ErrorSource
+  meta?: Json
+}
+
+type APIOKResponse<T> = {
+  data: Resource<T>
+  links?: Links
+}
+
+
+type APIOKResponseList<T, U> = {
+  data: Resource<T>[]
+  meta: U
+  links?: Links
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type APIErrorResponse = {
+  errors: Error[]
+}
+
+
 export type CheckTemplateMetadata = object & {
   label?: string
   description?: string
 }
 
-export type CheckMetadata = object & {
-  template_id?: CheckTemplateId
-  template_args?: object & {
-    ['health_check.name']?: string
-    description?: string
-  }
-}
-
-export type CheckTemplate = {
-  id: CheckTemplateId
+export type CheckTemplateAttributes = {
   metadata: CheckTemplateMetadata
   arguments: StrictRJSFSchema
 }
 
-type Attributes = Record<string, string | number | boolean>
+export type CheckTemplate = Resource<CheckTemplateAttributes>
 
-export type Check = {
-  id: CheckId
-  metadata: CheckMetadata
+type InCheckMetadata = {
+  // SHOULD have name and description
+  name: string
+  description: string
+  // MAY have template_id and template_args
+  template_id: CheckTemplateId
+  template_args: Json
+}
+
+type OutCheckMetadata = {
+  // SHOULD have name and description
+  name?: string
+  description?: string
+  // MAY have template_id and template_args
+  template_id?: CheckTemplateId
+  template_args?: Json
+} & Record<string, unknown>
+
+type InCheckAttributes = {
+  metadata: InCheckMetadata
   schedule: CronExpression
-  outcome_filter: {
-    resource_attributes?: Attributes
-    scope_attributes?: Attributes
-    span_attributes?: Attributes
-  }
+}
+
+type TelemetryAttributes = Record<string, string | number | boolean>
+
+
+type OutcomeFilter = {
+  resource_attributes?: TelemetryAttributes
+  scope_attributes?: TelemetryAttributes
+  span_attributes?: TelemetryAttributes
+}
+
+type OutCheckAttributes = {
+  metadata: OutCheckMetadata
+  schedule: CronExpression
+  // Conditions to determine which spans belong to this check outcome
+  outcome_filter: OutcomeFilter
+  // NOTE: For now the above can just be a set of equality conditions on Span/Resource attributes
+}
+
+export type Check = Resource<OutCheckAttributes>
+
+type InCheckData = {
+  // Should always be "check"
+  type: string,
+  attributes: InCheckAttributes
+}
+
+type InCheck = {
+  data: InCheckData
 }
 
 function GetCheckManagerURL(): string {
@@ -58,14 +163,88 @@ function GetTelemetryURL(): string {
   return url
 }
 
-export async function ListCheckTemplates(ids?: CheckTemplateId[]): Promise<CheckTemplate[]> {
-  const response = await axios.get(GetCheckManagerURL() + "/check_templates/", {params: ids, withCredentials: true})
-  return response.data
+type MakeRequestParams = {
+  method: "GET" | "POST" | "DELETE",
+  baseURL: string,
+  path: string,
+  pathParameters: (string | undefined)[],
+  queryParameters: Record<string, string | string[] | undefined>,
+  body?: Record<string, unknown> | undefined
 }
 
-export async function NewCheck(templateId: CheckTemplateId, templateArgs: object, schedule: CronExpression): Promise<Check> {
-  const response = await axios.post(GetCheckManagerURL() + "/checks/", {template_id: templateId, template_args: templateArgs, schedule: schedule, withCredentials: true})
-  return response.data
+async function MakeRequest<T>({method, baseURL, path, pathParameters, queryParameters, body}: MakeRequestParams): Promise<AxiosResponse<T, unknown>> {
+  if (method !== "POST" && body !== undefined)
+    throw new Error(`${method} request can't have a body`)
+  return await axios.request<unknown, AxiosResponse<T, unknown>, unknown>({
+    url: path + pathParameters.filter((param) => param).map((param) => encodeURIComponent(param!)).join("/"),
+    method: method,
+    baseURL: baseURL,
+    params: queryParameters,
+    data: body,
+    headers: {"content-type": "application/vnd.api+json"},
+    withCredentials: true,
+    paramsSerializer: {
+      // Omit brackets when serialize array into the URL.
+      // Based on https://stackoverflow.com/a/76517213
+      indexes: null,
+    },
+  })
+}
+
+export async function GetCheckTemplates(ids?: CheckTemplateId[]): Promise<CheckTemplate[]> {
+  const response = await MakeRequest<APIOKResponseList<CheckTemplateAttributes, null>>({
+    method: "GET",
+    baseURL: GetCheckManagerURL(),
+    path: "/check_templates/",
+    pathParameters: [],
+    queryParameters: {"ids": ids}
+  })
+  return response.data.data
+}
+
+export async function GetCheckTemplate(id: CheckTemplateId): Promise<CheckTemplate> {
+  const response = await MakeRequest<APIOKResponse<CheckTemplateAttributes>>({
+    method: "GET",
+    baseURL: GetCheckManagerURL(),
+    path: "/check_templates/",
+    pathParameters: [id],
+    queryParameters: {}
+  })
+  return response.data.data
+}
+
+export async function GetChecks(ids?: CheckId[]): Promise<Check[]> {
+  const response = await MakeRequest<APIOKResponseList<OutCheckAttributes, null>>({
+    method: "GET",
+    baseURL: GetCheckManagerURL(),
+    path: "/checks/",
+    pathParameters: [],
+    queryParameters: {ids: ids}
+  })
+  return response.data.data
+}
+
+export async function CreateCheck(inCheck: InCheck): Promise<Check> {
+  const response = await MakeRequest<APIOKResponse<OutCheckAttributes>>({
+    method: "POST",
+    baseURL: GetCheckManagerURL(),
+    path: "/checks/",
+    pathParameters: [],
+    queryParameters: {},
+    body: inCheck
+  })
+  return response.data.data
+}
+
+export async function GetCheck(checkId: CheckId): Promise<Check> {
+  const response = await MakeRequest<APIOKResponse<OutCheckAttributes>>({
+    method: "GET",
+    baseURL: GetCheckManagerURL(),
+    path: "/checks/",
+    pathParameters: [checkId],
+    queryParameters: {}
+  })
+  return response.data.data
 }
 
 // export async function UpdateCheck(oldCheck: Check, templateId?: CheckTemplateId, templateArgs?: object, schedule?: CronExpression): Promise<Check> {
@@ -80,17 +259,18 @@ export async function NewCheck(templateId: CheckTemplateId, templateArgs: object
 //   if (schedule === oldCheck.schedule) {
 //     schedule = undefined
 //   }
-//   const response = await axios.patch(GetCheckManagerURL() + `/checks/${oldCheck.id}`, {template_id: templateId, template_args: templateArgs, schedule: schedule, withCredentials: true})
+//   const response = await axios.patch(GetCheckManagerURL() + `/checks/${oldCheck.id}`, {template_id: templateId, template_args: templateArgs, schedule: schedule, withCredentials: true, headers: {"content-type": "application/vnd.api+json"}})
 //   return response.data
 // }
 
 export async function RemoveCheck(checkId: CheckId): Promise<void> {
-  await axios.delete(GetCheckManagerURL() + `/checks/${checkId}`, {withCredentials: true})
-}
-
-export async function ListChecks(ids?: CheckId[]): Promise<Check[]> {
-  const response = await axios.get(GetCheckManagerURL() + "/checks/", {params: ids, withCredentials: true})
-  return response.data
+  await MakeRequest({
+    method: "DELETE",
+    baseURL: GetCheckManagerURL(),
+    path: "/checks/",
+    pathParameters: [checkId],
+    queryParameters: {}
+  })
 }
 
 type Span = {
@@ -129,22 +309,28 @@ type SpanResult = {
   }[]
 }
 
-export type SpansResponse = {
-  results: SpanResult[]
+type SpansResponseNextPageToken = {
   next_page_token?: string
 }
+
+
+type SpansResponseMeta = {
+  page: SpansResponseNextPageToken
+}
+
+export type SpansResponse = APIOKResponseList<SpanResult, SpansResponseMeta>
 
 export type GetSpansQueryParams = {
   traceId?: string
   spanId?: string
   fromTime?: Date
   toTime?: Date
-  resourceAttributes?: Attributes
-  scopeAttributes?: Attributes
-  spanAttributes?: Attributes
+  resourceAttributes?: TelemetryAttributes
+  scopeAttributes?: TelemetryAttributes
+  spanAttributes?: TelemetryAttributes
 }
 
-function AttributesDictToList(attributes?: Attributes): string[] {
+function AttributesDictToList(attributes?: TelemetryAttributes): string[] {
   if (attributes === undefined) {
     return []
   }
@@ -155,25 +341,20 @@ export async function GetSpans({traceId, spanId, fromTime, toTime, resourceAttri
   if (traceId === undefined && spanId !== undefined) {
     throw new Error("spanId must only be set if traceId is also set")
   }
-  const response = await axios.get(
-    GetTelemetryURL() + `/spans` + (traceId === undefined ? "" : `/${traceId}`) + (spanId === undefined ? "" : `/${spanId}`),
-    {
-      params: {
-        from_time: fromTime?.toISOString(),
-        to_time: toTime?.toISOString(),
-        resource_attributes: AttributesDictToList(resourceAttributes),
-        scope_attributes: AttributesDictToList(scopeAttributes),
-        span_attributes: AttributesDictToList(spanAttributes),
-        page_token: pageToken
-      },
-      paramsSerializer: {
-        // Omit brackets when serialize array into the URL.
-        // Based on https://stackoverflow.com/a/76517213
-        indexes: null,
-      },
-      withCredentials: true
-    }
-  )
+  const response = await MakeRequest<SpansResponse>({
+    method: "GET",
+    baseURL: GetTelemetryURL(),
+    path: `/spans/`,
+    pathParameters: [traceId, spanId],
+    queryParameters: {
+      from_time: fromTime?.toISOString(),
+      to_time: toTime?.toISOString(),
+      resource_attributes: AttributesDictToList(resourceAttributes),
+      scope_attributes: AttributesDictToList(scopeAttributes),
+      span_attributes: AttributesDictToList(spanAttributes),
+      page_token: pageToken
+    },
+  })
   return response.data
 }
 
@@ -181,10 +362,10 @@ export async function ReduceSpans<T>(getSpansQueryParams: GetSpansQueryParams, c
   let pageToken: string | undefined = undefined
   let accumulator: T = initialValue
   do {
-    const {results, next_page_token} = await GetSpans({pageToken: pageToken, ...getSpansQueryParams})
-    pageToken = next_page_token
-    for (const spanResult of results) {
-      accumulator = callbackFn(accumulator, spanResult)
+    const spansResponse = await GetSpans({pageToken: pageToken, ...getSpansQueryParams})
+    pageToken = spansResponse.meta.page.next_page_token
+    for (const spanResult of spansResponse.data) {
+      accumulator = callbackFn(accumulator, spanResult.attributes)
     }
   } while (pageToken)
   return accumulator

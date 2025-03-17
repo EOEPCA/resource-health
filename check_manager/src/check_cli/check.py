@@ -2,31 +2,27 @@ import asyncio
 from base64 import b64encode
 import importlib
 import json
-from check_backends import (
-    AggregationBackend,
-    AuthenticationObject,
-    Check,
-    CheckId,
-    CheckBackend,
-    CheckTemplateId,
-    CronExpression,
-    MockBackend,
-    K8sBackend,
-    RestBackend,
-)
 from pathlib import Path
 from typer import Argument, Context, Exit, Option, Typer
 from typing import Optional
 from typing_extensions import Annotated
 
-from exceptions import (
-    CheckException,
-    CheckInternalError,
-    CheckTemplateIdError,
+from api_utils.exceptions import APIException
+from check_backends.check_backend import (
+    AggregationBackend,
+    AuthenticationObject,
+    CheckBackend,
+    CheckId,
     CheckIdError,
-    CheckIdNonUniqueError,
-    CheckConnectionError,
+    CheckTemplateId,
+    CronExpression,
+    InCheckAttributes,
+    InCheckMetadata,
 )
+from check_backends.k8s_backend import K8sBackend
+from check_backends.mock_backend import MockBackend
+from check_backends.rest_backend import RestBackend
+from exceptions import CheckConnectionError
 from check_cli.check_config import config_app, make_default_config, ServiceName
 
 
@@ -152,7 +148,7 @@ class ExceptionHandler:
 
 async def print_templates(ids: Optional[list[CheckTemplateId]] = None) -> None:
     check_backend = load_backend()
-    template_list = ExceptionHandler(check_backend.list_check_templates(ids))
+    template_list = ExceptionHandler(check_backend.get_check_templates(ids))
     async for template in template_list:
         print(f"- Template id: {template.id}")
         print(f"  Label: {template.metadata['label']}")
@@ -166,7 +162,7 @@ async def print_templates(ids: Optional[list[CheckTemplateId]] = None) -> None:
 
 async def print_checks(auth_obj: AuthenticationObject) -> None:
     check_backend = load_backend()
-    check_list = ExceptionHandler(check_backend.list_checks(auth_obj))
+    check_list = ExceptionHandler(check_backend.get_checks(auth_obj))
     async for check in check_list:
         print(f"- Check id: {check.id}")
         print(f"  Schedule: {check.schedule}")
@@ -198,7 +194,7 @@ def get_auth_obj() -> str:
     config_file: Path = Path(".check/config.json")
     with open(config_file, "r") as c:
         config_dict = json.load(c)
-        auth_obj = config_dict["authentication object"]
+        auth_obj: str | None = config_dict["authentication object"]
         if auth_obj is None:
             print(
                 "No preset value for authentication object in configuration. Set calue with '--auth-obj'."
@@ -230,6 +226,7 @@ def create_check(
     template_id: Annotated[str, Option()],
     schedule: Annotated[str, Option()],
     health_check_name: Annotated[str, Option()],
+    health_check_description: Annotated[str, Option()],
     url: Annotated[Optional[str], Option()] = None,
     file: Annotated[Optional[str], Option()] = None,
     url_req: Annotated[Optional[str], Option()] = None,
@@ -238,7 +235,7 @@ def create_check(
     """
     Create and deploy a new health check.
     """
-    template_args: dict = {"script": None, "health_check.name": health_check_name}
+    template_args: dict = {"script": None}
 
     if url is not None and file is not None:
         print("Use one of '--url' or '--file'.")
@@ -267,27 +264,30 @@ def create_check(
     check_backend = load_backend()
 
     try:
-        check: Check = asyncio.run(
-            check_backend.new_check(
+        check = asyncio.run(
+            check_backend.create_check(
                 auth_obj=AuthenticationObject(auth_obj),
-                template_id=CheckTemplateId(template_id),
-                template_args=template_args,
-                schedule=CronExpression(schedule),
+                attributes=InCheckAttributes(
+                    metadata=InCheckMetadata(
+                        name=health_check_name,
+                        description=health_check_description,
+                        template_id=CheckTemplateId(template_id),
+                        template_args=template_args,
+                    ),
+                    schedule=CronExpression(schedule),
+                ),
             )
         )
-    except CheckTemplateIdError as e:
-        print(f"Could not find template with id {e.args[0]}")
-        raise Exit()
     except CheckConnectionError as e:
         print(f"Encountered an error when trying to connect to service: {str(e)}")
         raise Exit()
-    except CheckInternalError as e:
-        print(f"Error: {e.args[0]}")
+    except APIException as e:
+        print(f"Error: {e}")
         raise Exit()
 
     print("Created health check")
     print(f"- Check id: {check.id}")
-    print(f"  Schedule: {check.schedule}")
+    print(f"  Schedule: {check.attributes.schedule}")
 
 
 @app.command("delete")
@@ -307,12 +307,12 @@ def delete_check(
             )
         )
         print(f"Deleted check with id:{id}")
-    except CheckIdError as e:
+    except CheckIdError:
         print(f"No check with id:{id}")
         raise Exit()
     except CheckConnectionError as e:
         print(f"Encountered an error when trying to connect to service: {str(e)}")
         raise Exit()
-    except CheckInternalError as e:
-        print(f"Error: {e.args[0]}")
+    except APIException as e:
+        print(f"Error: {e}")
         raise Exit()
