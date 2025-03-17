@@ -344,7 +344,7 @@ export async function GetSpans({traceId, spanId, fromTime, toTime, resourceAttri
   const response = await MakeRequest<SpansResponse>({
     method: "GET",
     baseURL: GetTelemetryURL(),
-    path: `/spans/`,
+    path: `/spans`,
     pathParameters: [traceId, spanId],
     queryParameters: {
       from_time: fromTime?.toISOString(),
