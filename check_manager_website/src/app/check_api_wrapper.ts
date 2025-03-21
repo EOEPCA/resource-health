@@ -273,6 +273,17 @@ export async function RemoveCheck(checkId: CheckId): Promise<void> {
   })
 }
 
+export async function RunCheck(checkId: CheckId): Promise<void> {
+  await MakeRequest({
+    method: "POST",
+    baseURL: GetCheckManagerURL(),
+    path: "/checks/",
+    // Including "run" here is a slight hack, but need it to appear at the end of the path and this is one way achieve that
+    pathParameters: [checkId, "run/"],
+    queryParameters: {}
+  })
+}
+
 type Span = {
   traceId: string
   spanId: string

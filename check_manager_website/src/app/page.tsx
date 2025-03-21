@@ -2,9 +2,11 @@
 
 import { JSX, useState } from 'react'
 import Form from '@rjsf/chakra-ui';
-import { CheckId, CheckTemplateId, GetSpansQueryParams, GetChecks, GetCheckTemplates, CreateCheck, ReduceSpans, RemoveCheck, CheckTemplate, Check } from "@/app/check_api_wrapper"
+import { CheckId, CheckTemplateId, GetSpansQueryParams, GetChecks, GetCheckTemplates, CreateCheck, ReduceSpans, RemoveCheck, CheckTemplate, Check, RunCheck } from "@/app/check_api_wrapper"
 import validator from '@rjsf/validator-ajv8';
-import { Button, CSSReset, FormControl, FormLabel, Grid, GridItem, Heading, Input, Select, Table, TableContainer, Tbody, Td, Text, Textarea, Th, Thead, theme, ThemeProvider, Tr } from '@chakra-ui/react';
+import { Button, CSSReset, FormControl, FormLabel, Grid, GridItem, Heading, IconButton, Input, Select, Table, TableContainer, Tbody, Td, Text, Textarea, Th, Thead, theme, ThemeProvider, Tr } from '@chakra-ui/react';
+import { IoCheckmarkCircle as Checkmark } from "react-icons/io5";
+import { IoReload as Reload } from "react-icons/io5";
 
 const log = (type: string) => console.log.bind(console, type);
 const LOADING_STRING = "Loading ..."
@@ -137,6 +139,7 @@ function ChecksDiv({checks, onCreateCheck, ...commonProps}: {checks: Check[], on
           <Thead>
             <Tr>
               <Th>Check info</Th>
+              <Th>Actions</Th>
               <Th>Run count</Th>
               <Th>Problematic run count</Th>
               <Th>Average duration</Th>
@@ -165,6 +168,7 @@ function SummaryRowDiv({fromTime, toTime, setError}: {fromTime?: Date, toTime?: 
   return (
     <Tr>
       <Td>From all checks (not only those in the table)</Td>
+      <Td><IconButton aria-label="Reload" onClick={() => setSpansSummary(null)}><Reload/></IconButton></Td>
       <Td>{spansSummary?.durationCount ?? LOADING_STRING}</Td>
       <Td>{spansSummary?.failedTraceIds.size ?? LOADING_STRING}</Td>
       <Td>{spansSummary !== null ? GetAverageDuration(spansSummary) : LOADING_STRING}</Td>
@@ -375,7 +379,7 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
       >
         {isDisabled ? "Enable Editing" : "Disable Editing (and delete unsaved changes)"}
       </Button> */}
-      <Button type="button" onClick={() => {RemoveCheck(check.id); onCheckRemove(check.id)}}>Remove Check</Button>
+      <Button type="button" onClick={() => {RemoveCheck(check.id).then(() => onCheckRemove(check.id)).catch(setError); }}>Remove Check</Button>
     </>)
   }
   else {
@@ -416,6 +420,7 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
       </FormControl>
     </>)
   }
+  const [checkRunSubmitted, setCheckRunSubmitted] = useState(false)
   return (
     <Tr>
       <Td>
@@ -433,6 +438,13 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
           </Grid>
           {checkDiv}
         </details>
+      </Td>
+      <Td className="flex flex-row gap-4 items-center">
+        <IconButton aria-label="Reload" onClick={() => setSpansSummary(null)}><Reload/></IconButton>
+        <div className="flex flex-row gap-1 items-center">
+          <Button onClick={() => RunCheck(check.id).then(() => setCheckRunSubmitted(true)).catch(setError)}>Run Check</Button>
+          { checkRunSubmitted && <Checkmark />}
+        </div>
       </Td>
       <Td>{spansSummary?.durationCount ?? LOADING_STRING}</Td>
       <Td>{spansSummary?.failedTraceIds.size ?? LOADING_STRING}</Td>
