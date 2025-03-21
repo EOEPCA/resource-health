@@ -10,6 +10,7 @@ from api_interface import (
     GET_CHECKS_PATH,
     CREATE_CHECK_PATH,
     REMOVE_CHECK_PATH,
+    RUN_CHECK_PATH,
     get_check_exceptions,
 )
 from api_utils.api_utils import get_url_str
@@ -160,3 +161,21 @@ class RestBackend(CheckBackend):
             raise get_check_exceptions(
                 status_code=response.status_code, content=response.json()
             )
+
+    @override
+    async def run_check(
+        self: Self, auth_obj: AuthenticationObject, check_id: CheckId
+    ) -> None:
+        try:
+            response = await self._client.post(
+                get_url_str(
+                    self._url, RUN_CHECK_PATH, path_params={"check_id": check_id}
+                )
+            )
+        except httpx.HTTPError as e:
+            raise CheckConnectionError.create(str(e))
+        if response.is_success:
+            return None
+        raise get_check_exceptions(
+            status_code=response.status_code, content=response.json()
+        )

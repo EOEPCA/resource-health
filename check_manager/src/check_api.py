@@ -18,6 +18,7 @@ from api_interface import (
     GET_CHECKS_PATH,
     CREATE_CHECK_PATH,
     REMOVE_CHECK_PATH,
+    RUN_CHECK_PATH,
 )
 from api_utils.api_utils import (
     JSONAPIResponse,
@@ -322,6 +323,18 @@ async def remove_check(
     return await check_backend.remove_check(auth_obj, check_id)
 
 
+@router.post(
+    RUN_CHECK_PATH,
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_model_exclude_unset=True,
+)
+async def run_check(
+    response: Response, check_id: Annotated[CheckId, Path()]
+) -> None:
+    response.headers["Allow"] = "POST"
+    return await check_backend.run_check(auth_obj, check_id)
+
+
 app.include_router(router)
 
 set_custom_json_schema(app, "Check Manager API", "v1")
@@ -364,7 +377,9 @@ def uvicorn_k8s() -> None:
     from check_backends.k8s_backend import K8sBackend
 
     global check_backend
-    check_backend = K8sBackend(["templates"])
+    check_backend = K8sBackend(
+        ["templates", "src/check_backends/k8s_backend/template_examples"]
+    )
 
     import uvicorn
 

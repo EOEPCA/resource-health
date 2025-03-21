@@ -30,9 +30,6 @@ class SimplePing(CronjobTemplate):
                     "$schema": "http://json-schema.org/draft-07/schema",
                     "type": "object",
                     "properties": {
-                        "health_check.name": {
-                            "type": "string",
-                        },
                         "endpoint": {
                             "type": "string",
                             "format": "textarea",
@@ -45,7 +42,6 @@ class SimplePing(CronjobTemplate):
                         },
                     },
                     "required": [
-                        "health_check.name",
                         "endpoint",
                     ],
                 },
@@ -58,16 +54,12 @@ class SimplePing(CronjobTemplate):
         template_args: Json,
         schedule: CronExpression,
     ) -> V1CronJob:
-        health_check_name = TypeAdapter(str).validate_python(
-            template_args["health_check.name"]
-        )
         endpoint = TypeAdapter(str).validate_python(template_args["endpoint"])
         expected_status_code = TypeAdapter(str).validate_python(
             str(template_args.get("expected_status_code", 200))
         )
         cronjob = make_base_cronjob(
             schedule=schedule,
-            health_check_name=health_check_name,
         )
         cronjob.metadata.annotations["template_id"] = "simple_ping"
         cronjob.metadata.annotations["template_args"] = json.dumps(template_args)

@@ -29,14 +29,10 @@ class DefaultK8sTemplate(CronjobTemplate):
                     "$schema": "http://json-schema.org/draft-07/schema",
                     "type": "object",
                     "properties": {
-                        "health_check.name": {
-                            "type": "string",
-                        },
                         "script": {"type": "string", "format": "textarea"},
                         "requirements": {"type": "string", "format": "textarea"},
                     },
                     "required": [
-                        "health_check.name",
                         "script",
                     ],
                 },
@@ -49,16 +45,12 @@ class DefaultK8sTemplate(CronjobTemplate):
         template_args: Json,
         schedule: CronExpression,
     ) -> V1CronJob:
-        health_check_name = TypeAdapter(str).validate_python(
-            template_args["health_check.name"]
-        )
         script = TypeAdapter(str).validate_python(template_args["script"])
         requirements: str | None = TypeAdapter(str | None).validate_python(
             template_args.get("requirements")
         )
         cronjob = make_base_cronjob(
             schedule=schedule,
-            health_check_name=health_check_name,
         )
         env = cronjob.spec.job_template.spec.template.spec.containers[0].env or []
         if script:

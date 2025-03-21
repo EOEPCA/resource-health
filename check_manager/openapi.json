@@ -268,6 +268,38 @@
           }
         }
       }
+    },
+    "/v1/checks/{check_id}/run/": {
+      "post": {
+        "summary": "Run Check",
+        "operationId": "run_check_v1_checks__check_id__run__post",
+        "parameters": [
+          {
+            "name": "check_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Check Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          }
+        }
+      }
     }
   },
   "components": {

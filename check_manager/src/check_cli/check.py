@@ -73,12 +73,11 @@ def load_config() -> dict:
         c = open(config_file, "r")
         config_dict = json.load(c)
 
-    match config_dict:
-        case None:
-            print("Could not find configuration. Has this directory been initialized?")
-            raise Exit()
-        case dict():
-            return config_dict
+    if config_dict:
+        return config_dict
+    else:
+        print("Could not find configuration. Has this directory been initialized?")
+        raise Exit()
 
 
 @app.command("init")
@@ -151,8 +150,8 @@ async def print_templates(ids: Optional[list[CheckTemplateId]] = None) -> None:
     template_list = ExceptionHandler(check_backend.get_check_templates(ids))
     async for template in template_list:
         print(f"- Template id: {template.id}")
-        print(f"  Label: {template.metadata['label']}")
-        print(f"  Description: {template.metadata['description']}")
+        print(f"  Label: {template.attributes.metadata.label}")
+        print(f"  Description: {template.attributes.metadata.description}")
         if ids is not None:
             ids.remove(template.id)
     if ids is not None and len(ids) > 0:
@@ -165,7 +164,7 @@ async def print_checks(auth_obj: AuthenticationObject) -> None:
     check_list = ExceptionHandler(check_backend.get_checks(auth_obj))
     async for check in check_list:
         print(f"- Check id: {check.id}")
-        print(f"  Schedule: {check.schedule}")
+        print(f"  Schedule: {check.attributes.schedule}")
 
 
 @list_app.command("templates")
@@ -197,7 +196,7 @@ def get_auth_obj() -> str:
         auth_obj: str | None = config_dict["authentication object"]
         if auth_obj is None:
             print(
-                "No preset value for authentication object in configuration. Set calue with '--auth-obj'."
+                "No preset value for authentication object in configuration. Set value with '--auth-obj'."
             )
             raise Exit()
     return auth_obj

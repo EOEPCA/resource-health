@@ -1,4 +1,4 @@
-import typing
+from typing import Optional
 
 from kubernetes_asyncio.client.models.v1_container import V1Container
 from kubernetes_asyncio.client.models.v1_cron_job import V1CronJob
@@ -15,16 +15,14 @@ DEFAULT_CONTAINER_IMAGE: str = "docker.io/eoepca/healthcheck_runner:2.0.0-beta2"
 
 
 def make_base_cronjob(
-    schedule: typing.Optional[CronExpression] = None,
-    health_check_name: typing.Optional[str] = None,
+    schedule: CronExpression,
+    container_image: Optional[str] = DEFAULT_CONTAINER_IMAGE,
 ) -> V1CronJob:
-    cronjob = V1CronJob(
+    return V1CronJob(
         api_version="batch/v1",
         kind="CronJob",
         metadata=V1ObjectMeta(
-            annotations={
-                "health_check_label": health_check_name,
-            },
+            annotations={},
         ),
         spec=V1CronJobSpec(
             schedule=schedule,
@@ -35,7 +33,7 @@ def make_base_cronjob(
                             containers=[
                                 V1Container(
                                     name="healthcheck",
-                                    image=DEFAULT_CONTAINER_IMAGE,
+                                    image=container_image,
                                     image_pull_policy="IfNotPresent",
                                 ),
                             ],
@@ -46,6 +44,3 @@ def make_base_cronjob(
             ),
         ),
     )
-    if schedule:
-        cronjob.spec.schedule = schedule
-    return cronjob

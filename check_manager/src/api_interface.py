@@ -24,6 +24,7 @@ GET_CHECK_PATH: Final[str] = ROUTE_PREFIX + "/checks/{check_id}"
 UPDATE_CHECK_PATH: Final[str] = ROUTE_PREFIX + "/checks/{check_id}"
 REMOVE_CHECK_PATH: Final[str] = ROUTE_PREFIX + "/checks/{check_id}"
 GET_CHECKS_PATH: Final[str] = ROUTE_PREFIX + "/checks/"
+RUN_CHECK_PATH: Final[str] = ROUTE_PREFIX + "/checks/{check_id}/run/"
 
 
 def get_check_exceptions(
