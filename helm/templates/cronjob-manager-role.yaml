@@ -7,5 +7,5 @@ metadata:
     {{- include "resource-health.labels" . | nindent 4 }}
 rules:
 - apiGroups: ["batch"] # "" indicates the core API group
-  resources: ["cronjobs"]
+  resources: ["cronjobs", "jobs"]
   verbs: ["get", "watch", "list", "create", "patch", "delete"]
