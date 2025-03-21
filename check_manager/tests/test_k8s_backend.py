@@ -9,6 +9,7 @@ from kubernetes_asyncio.client.api_client import ApiClient  # noqa: F401, used t
 from kubernetes_asyncio.client.models.v1_cron_job import V1CronJob
 from kubernetes_asyncio.client.models.v1_cron_job_spec import V1CronJobSpec
 from kubernetes_asyncio.client.models.v1_job_list import V1JobList
+from kubernetes_asyncio.client.models.v1_job_spec import V1JobSpec
 from kubernetes_asyncio.client.models.v1_job_template_spec import V1JobTemplateSpec
 from kubernetes_asyncio.client.models.v1_object_meta import V1ObjectMeta
 from kubernetes_asyncio.client.rest import ApiException
@@ -29,7 +30,10 @@ from check_backends.check_backend import (
 from exceptions import CheckConnectionError
 
 NAMESPACE: str = "resource-health"
-TEMPLATES: str = "templates"
+TEMPLATES: list[str] = [
+    # "templates",
+    "src/check_backends/k8s_backend/template_examples",
+]
 test_auth = "test-auth"
 check_name = "Dummy name"
 check_description = "Dummy description"
@@ -45,9 +49,11 @@ check_id_1 = "check_id_1"
 check_id_2 = "check_id_2"
 check_id_3 = "check_id_3"
 check_id_4 = "check_id_4"
+check_uuid_1 = "check_uuid_1"
 cronjob_1 = V1CronJob(
     metadata=V1ObjectMeta(
         name=check_id_1,
+        uid=check_uuid_1,
         annotations={
             "name": check_name,
             "description": check_description,
@@ -91,7 +97,7 @@ cronjob_3 = V1CronJob(
 async def test_aclose(mock_api_client: AsyncMock) -> None:
     try:
         k8s_backend = K8sBackend(
-            template_dirs=[TEMPLATES],
+            template_dirs=TEMPLATES,
             api_client=mock_api_client,
         )
     finally:
@@ -142,7 +148,7 @@ async def test_get_check_templates(
     expected: list[CheckTemplateId],
 ) -> None:
     k8s_backend = K8sBackend(
-        template_dirs=[TEMPLATES],
+        template_dirs=TEMPLATES,
         api_client=mock_api_client,
     )
     template_async_iterator = k8s_backend.get_check_templates(template_ids)
@@ -209,7 +215,7 @@ async def test_create_check(
     mock_api_client.return_value.__aenter__ = AsyncMock()
 
     k8s_backend = K8sBackend(
-        template_dirs=[TEMPLATES],
+        template_dirs=TEMPLATES,
         api_client=mock_api_client,
     )
 
@@ -287,7 +293,7 @@ async def test_remove_check(
     mock_api_client.return_value.__aenter__ = AsyncMock()
 
     k8s_backend = K8sBackend(
-        template_dirs=[TEMPLATES],
+        template_dirs=TEMPLATES,
         api_client=mock_api_client,
     )
 
@@ -301,7 +307,11 @@ async def test_remove_check(
         mock_batch_v1_api.assert_called_once()
         mock_batch_v1_api.return_value.delete_namespaced_cron_job.assert_called_once()
         call_kwargs = (
-            mock_batch_v1_api.return_value.delete_namespaced_cron_job.call_args.kwargs
+            mock_batch_v1_api
+            .return_value
+            .delete_namespaced_cron_job
+            .call_args
+            .kwargs
         )
         assert call_kwargs["name"] == check_id_1
         assert call_kwargs["namespace"] == NAMESPACE
@@ -391,7 +401,7 @@ async def test_get_checks(
     mock_api_client.return_value.__aenter__ = AsyncMock()
 
     k8s_backend = K8sBackend(
-        template_dirs=[TEMPLATES],
+        template_dirs=TEMPLATES,
         api_client=mock_api_client,
     )
 
@@ -413,3 +423,115 @@ async def test_get_checks(
             mock_batch_v1_api.return_value.list_namespaced_cron_job.call_args.kwargs
         )
         assert call_kwargs["namespace"] == NAMESPACE
+
+
+@pytest.mark.parametrize(
+    ("side_effect_read, side_effect_create, expectation"),
+    [
+        (
+            None,
+            None,
+            contextlib.nullcontext(),
+        ),
+        (
+            ApiException(status=404),
+            None,
+            pytest.raises(CheckIdError),
+        ),
+        (
+            ApiException(),
+            None,
+            pytest.raises(ApiException),
+        ),
+        (
+            aiohttp.ClientConnectionError(),
+            None,
+            pytest.raises(CheckConnectionError),
+        ),
+        (
+            Exception(),
+            None,
+            pytest.raises(Exception),
+        ),
+        (
+            None,
+            ApiException(status=404),
+            pytest.raises(CheckIdError),
+        ),
+        (
+            None,
+            ApiException(),
+            pytest.raises(ApiException),
+        ),
+        (
+            None,
+            aiohttp.ClientConnectionError(),
+            pytest.raises(CheckConnectionError),
+        ),
+        (
+            None,
+            Exception(),
+            pytest.raises(Exception),
+        ),
+    ],
+)
+@patch("check_backends.k8s_backend.load_config", new_callable=AsyncMock)
+@patch("test_k8s_backend.ApiClient")
+@patch("test_k8s_backend.client.BatchV1Api")
+async def test_run_check(
+    mock_batch_v1_api: Mock,
+    mock_api_client: Mock,
+    mock_load_config: AsyncMock,
+    side_effect_read: Exception | None,
+    side_effect_create: Exception | None,
+    expectation: contextlib.AbstractContextManager,
+) -> None:
+    mock_batch_v1_api.return_value.read_namespaced_cron_job = AsyncMock(
+        side_effect=side_effect_read,
+        return_value=cronjob_1,
+    )
+    mock_batch_v1_api.return_value.create_namespaced_job = AsyncMock(
+        side_effect=side_effect_create,
+    )
+    mock_api_client.return_value.__aenter__ = AsyncMock()
+
+    k8s_backend = K8sBackend(
+        template_dirs=TEMPLATES,
+        api_client=mock_api_client,
+    )
+
+    with expectation:
+        await k8s_backend.run_check(
+            AuthenticationObject(test_auth),
+            CheckId(check_id_1),
+        )
+
+        mock_load_config.assert_called_once()
+        mock_batch_v1_api.assert_called_once()
+        mock_batch_v1_api.return_value.read_namespaced_cron_job.assert_called_once()
+        call_kwargs_read = (
+            mock_batch_v1_api
+            .return_value
+            .read_namespaced_cron_job
+            .call_args
+            .kwargs
+        )
+        assert call_kwargs_read["name"] == check_id_1
+        assert call_kwargs_read["namespace"] == NAMESPACE
+        mock_batch_v1_api.return_value.create_namespaced_job.assert_called_once()
+        call_kwargs_create = (
+            mock_batch_v1_api
+            .return_value
+            .create_namespaced_job
+            .call_args
+            .kwargs
+        )
+        assert call_kwargs_create["namespace"] == NAMESPACE
+        assert (
+            call_kwargs_create["body"].metadata.owner_references[0].name
+            == check_id_1
+        )
+        assert (
+            call_kwargs_create["body"].metadata.owner_references[0].uid
+            == check_uuid_1
+        )

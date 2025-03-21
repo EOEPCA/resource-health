@@ -3,9 +3,14 @@ import aiohttp
 from kubernetes_asyncio import client, config
 from kubernetes_asyncio.client.api_client import ApiClient
 from kubernetes_asyncio.client.rest import ApiException
+from kubernetes_asyncio.client.models.v1_cron_job import V1CronJob
+from kubernetes_asyncio.client.models.v1_job import V1Job
+from kubernetes_asyncio.client.models.v1_object_meta import V1ObjectMeta
+from kubernetes_asyncio.client.models.v1_owner_reference import V1OwnerReference
 import logging
 from os import environ
 from typing import AsyncIterable, Self, override
+import uuid
 
 from api_utils.exceptions import APIInternalError
 from check_backends.check_backend import (
@@ -36,6 +41,24 @@ async def load_config() -> None:
         config.load_incluster_config()
     else:
         await config.load_kube_config()
+
+
+def job_from(cronjob: V1CronJob):
+    return V1Job(
+        spec=cronjob.spec.job_template.spec,
+        metadata=V1ObjectMeta(
+            name=str(uuid.uuid4()),
+            owner_references=[
+                V1OwnerReference(
+                    api_version="batch/v1",
+                    controller=True,
+                    kind="Cronjob",
+                    name=cronjob.metadata.name,
+                    uid=cronjob.metadata.uid,
+                ),
+            ],
+        )
+    )
 
 
 class K8sBackend(CheckBackend):
@@ -216,3 +239,31 @@ class K8sBackend(CheckBackend):
                             yield template.make_check(cronjob)
                         else:
                             yield default_make_check(cronjob)
+
+    @override
+    async def run_check(
+        self: Self, auth_obj: AuthenticationObject, check_id: CheckId
+    ) -> None:
+        await load_config()
+        async with self._api_client() as api_client:
+            api_instance = client.BatchV1Api(api_client)
+            try:
+                cronjob = await api_instance.read_namespaced_cron_job(
+                    name=check_id,
+                    namespace=NAMESPACE,
+                )
+                api_response = await api_instance.create_namespaced_job(
+                    namespace=NAMESPACE,
+                    body=job_from(cronjob),
+                )
+                logger.info(f"Succesfully created new cron job: {api_response}")
+            except aiohttp.ClientConnectionError as e:
+                logger.error(f"Failed to delete cron job: {e}")
+                raise CheckConnectionError.create("Cannot connect to cluster")
+            except ApiException as e:
+                logger.info(f"Failed to delete check with id '{check_id}': {e}")
+                if e.status == 404:
+                    raise CheckIdError.create(check_id)
+                else:
+                    raise e
+        return None

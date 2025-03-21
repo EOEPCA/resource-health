@@ -201,3 +201,11 @@ class MockBackend(CheckBackend):
                 check_attributes = self._get_check_attributes(auth_obj, id)
                 if check_attributes is not None:
                     yield OutCheck(id=id, attributes=check_attributes)
+
+    @override
+    async def run_check(
+        self: Self, auth_obj: AuthenticationObject, check_id: CheckId
+    ) -> None:
+        id_to_check = self._auth_to_check_id_to_attributes[auth_obj]
+        if check_id not in id_to_check:
+            raise CheckIdError.create(check_id)

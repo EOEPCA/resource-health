@@ -199,6 +199,14 @@ class CheckBackend(ABC):
         if False:
             yield
 
+    # Raise CheckIdError if check_id doesn't exist.
+    # Otherwise don't use that error code
+    @abstractmethod
+    async def run_check(
+        self: Self, auth_obj: AuthenticationObject, check_id: CheckId
+    ) -> None:
+        pass
+
 
 class AggregationBackend(CheckBackend):
     def __init__(self, backends: list[CheckBackend]) -> None:
@@ -309,6 +317,18 @@ class AggregationBackend(CheckBackend):
         for backend in self._backends:
             async for check in backend.get_checks(auth_obj, ids):
                 yield check
+
+    @override
+    async def run_check(
+        self: Self, auth_obj: AuthenticationObject, check_id: CheckId
+    ) -> None:
+        results = await asyncio.gather(
+            *(backend.run_check(auth_obj, check_id) for backend in self._backends),
+            return_exceptions=True,
+        )
+        return AggregationBackend._process_results(
+            results, f"Check id {check_id} exists in multiple backends"
+        )
 
 
 class CheckBackendContextManager:
