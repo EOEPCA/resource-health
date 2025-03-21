@@ -21,6 +21,7 @@
     "avj": "^0.0",
     "axios": "^1.7",
     "chakra-react-select": "^5.0",
+    "date-fns": "^4.1.0",
     "framer-motion": "^11.11",
     "next": "^14.0",
     "next-runtime-env": "3",

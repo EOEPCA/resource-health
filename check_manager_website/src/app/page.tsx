@@ -7,6 +7,7 @@ import validator from '@rjsf/validator-ajv8';
 import { Button, CSSReset, FormControl, FormLabel, Grid, GridItem, Heading, IconButton, Input, Select, Table, TableContainer, Tbody, Td, Text, Textarea, Th, Thead, theme, ThemeProvider, Tr } from '@chakra-ui/react';
 import { IoCheckmarkCircle as Checkmark } from "react-icons/io5";
 import { IoReload as Reload } from "react-icons/io5";
+import { Duration, formatDuration, sub as subDuration} from "date-fns";
 
 const log = (type: string) => console.log.bind(console, type);
 const LOADING_STRING = "Loading ..."
@@ -55,18 +56,13 @@ export default function Home(): JSX.Element {
       </ThemeProvider>
     )
   }
-  const now = new Date()
-  const before = new Date()
-  // before.setMonth(before.getMonth() - 1);
-  before.setDate(before.getDate() - 5);
   return (
     <ThemeProvider theme={theme}>
       <CSSReset />
       <main className="flex min-h-screen flex-col items-start p-24">
         <ChecksDiv
           checks={checks}
-          fromTime={before}
-          toTime={now}
+          telemetryDuration={{days: 5}}
           templates={checkTemplates}
           onCreateCheck={(check) => setChecks([check, ...checks])}
           onCheckUpdate={(updatedCheck) => setChecks(checks.map((check) => check.id === updatedCheck.id ? updatedCheck : check))}
@@ -93,7 +89,7 @@ function GetAverageDuration(spansSummary: SpansSummary): string {
 async function ComputeSpansSummary(getSpansQueryParams: GetSpansQueryParams): Promise<SpansSummary> {
   return ReduceSpans<SpansSummary>(
     getSpansQueryParams,
-    ({traceIds, failedTraceIds, totalDurationSecs, durationCount, totalTestCount}, spanResult) => {
+    ({ traceIds, failedTraceIds, totalDurationSecs, durationCount, totalTestCount }, spanResult) => {
       for (const resourceSpans of spanResult.resourceSpans) {
         for (const scopeSpans of resourceSpans.scopeSpans) {
           for (const span of scopeSpans.spans) {
@@ -114,26 +110,25 @@ async function ComputeSpansSummary(getSpansQueryParams: GetSpansQueryParams): Pr
           }
         }
       }
-      return {traceIds, failedTraceIds, totalDurationSecs, durationCount, totalTestCount}
+      return { traceIds, failedTraceIds, totalDurationSecs, durationCount, totalTestCount }
     },
-    {traceIds: new Set<string>(), failedTraceIds: new Set<string>(), totalDurationSecs: 0, durationCount: 0, totalTestCount: 0}
+    { traceIds: new Set<string>(), failedTraceIds: new Set<string>(), totalDurationSecs: 0, durationCount: 0, totalTestCount: 0 }
   )
 }
 
 type CheckDivCommonProps = {
-  fromTime?: Date
-  toTime?: Date
+  telemetryDuration: Duration
   templates: CheckTemplate[]
   onCheckUpdate: (check: Check) => void
   onCheckRemove: (checkId: CheckId) => void
   setError: (error: Error) => void
 }
 
-function ChecksDiv({checks, onCreateCheck, ...commonProps}: {checks: Check[], onCreateCheck: (check: Check) => void} & CheckDivCommonProps): JSX.Element {
+function ChecksDiv({ checks, onCreateCheck, ...commonProps }: { checks: Check[], onCreateCheck: (check: Check) => void } & CheckDivCommonProps): JSX.Element {
   return (
     <div>
       <Heading>Check List</Heading>
-      <Text>From {commonProps.fromTime?.toLocaleString()} to {commonProps.toTime?.toLocaleString()}</Text>
+      <Text>Displaying data from the last {formatDuration(commonProps.telemetryDuration)}</Text>
       <TableContainer>
         <Table variant='simple'>
           <Thead>
@@ -148,7 +143,7 @@ function ChecksDiv({checks, onCreateCheck, ...commonProps}: {checks: Check[], on
           </Thead>
           <Tbody>
             {SummaryRowDiv(commonProps)}
-            {CreateCheckDiv({onCreateCheck: onCreateCheck, ...commonProps})}
+            {CreateCheckDiv({ onCreateCheck: onCreateCheck, ...commonProps })}
             {checks.map((check) => <CheckDiv key={check.id} check={check} {...commonProps} />)}
           </Tbody>
         </Table>
@@ -157,18 +152,19 @@ function ChecksDiv({checks, onCreateCheck, ...commonProps}: {checks: Check[], on
   )
 }
 
-function SummaryRowDiv({fromTime, toTime, setError}: {fromTime?: Date, toTime?: Date, setError: (error: Error) => void}): JSX.Element {
+function SummaryRowDiv({ telemetryDuration, setError }: { telemetryDuration: Duration, setError: (error: Error) => void }): JSX.Element {
+  const [now, setNow] = useState(new Date())
   const [spansSummary, setSpansSummary] = useState<SpansSummary | null>(null)
   if (spansSummary === null) {
     ComputeSpansSummary({
-      fromTime: fromTime,
-      toTime: toTime,
+      fromTime: subDuration(now, telemetryDuration),
+      toTime: now,
     }).then(setSpansSummary).catch(setError)
   }
   return (
     <Tr>
       <Td>From all checks (not only those in the table)</Td>
-      <Td><IconButton aria-label="Reload" onClick={() => setSpansSummary(null)}><Reload/></IconButton></Td>
+      <Td><IconButton aria-label="Reload" onClick={() => {setNow(new Date()); setSpansSummary(null)}}><Reload /></IconButton></Td>
       <Td>{spansSummary?.durationCount ?? LOADING_STRING}</Td>
       <Td>{spansSummary?.failedTraceIds.size ?? LOADING_STRING}</Td>
       <Td>{spansSummary !== null ? GetAverageDuration(spansSummary) : LOADING_STRING}</Td>
@@ -177,7 +173,7 @@ function SummaryRowDiv({fromTime, toTime, setError}: {fromTime?: Date, toTime?: 
   )
 }
 
-function CreateCheckDiv({templates, onCreateCheck, setError}: {templates: CheckTemplate[], onCreateCheck: (check: Check) => void, setError: (error: Error) => void}): JSX.Element {
+function CreateCheckDiv({ templates, onCreateCheck, setError }: { templates: CheckTemplate[], onCreateCheck: (check: Check) => void, setError: (error: Error) => void }): JSX.Element {
   const [templateId, setTemplateId] = useState(templates[0].id)
   // Only used as a hacky way to force clearing of form data
   const [key, setKey] = useState(0)
@@ -213,7 +209,7 @@ function CreateCheckDiv({templates, onCreateCheck, setError}: {templates: CheckT
               <Text>{template.id}</Text>
             </GridItem>
             <GridItem>
-            <FormControl isRequired>
+              <FormControl isRequired>
                 <FormLabel>Name</FormLabel>
                 <Input
                   form={form_id}
@@ -279,18 +275,19 @@ function CreateCheckDiv({templates, onCreateCheck, setError}: {templates: CheckT
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRemove, setError}: {check: Check} & CheckDivCommonProps): JSX.Element {
+function CheckDiv({ check, telemetryDuration, templates, onCheckUpdate, onCheckRemove, setError }: { check: Check } & CheckDivCommonProps): JSX.Element {
   const [templateId, setTemplateId] = useState(check.attributes.metadata.template_id)
   const [name, setName] = useState(check.attributes.metadata.name)
   const [description, setDescription] = useState(check.attributes.metadata.description)
   const [schedule, setSchedule] = useState(check.attributes.schedule)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isDisabled, setIsDisabled] = useState(true)
+  const [now, setNow] = useState(new Date())
   const [spansSummary, setSpansSummary] = useState<SpansSummary | null>(null)
   if (spansSummary === null) {
     ComputeSpansSummary({
-      fromTime: fromTime,
-      toTime: toTime,
+      fromTime: subDuration(now, telemetryDuration),
+      toTime: now,
       resourceAttributes: check.attributes.outcome_filter.resource_attributes,
       scopeAttributes: check.attributes.outcome_filter.scope_attributes,
       spanAttributes: check.attributes.outcome_filter.span_attributes
@@ -302,72 +299,72 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
     const template = FindCheckTemplate(templates, templateId)
     const form_id = "existing_check_" + check.id
     checkDiv = (
-    <>
-      <FormControl isDisabled={isDisabled}>
-        <Grid gap={6} marginBottom={6}>
-          <GridItem>
-            <FormLabel>Check Template Id</FormLabel>
-            <Select
-              form={form_id}
-              value={template.id}
-              onChange={e => setTemplateId(e.target.value)}
-            >
-              {templates.map((template) => (<option key={template.id} value={template.id}>{template.id}</option>))}
-            </Select>
-          </GridItem>
-          <GridItem>
-            <FormControl isRequired isDisabled={isDisabled}>
-              <FormLabel>Name</FormLabel>
-              <Input
+      <>
+        <FormControl isDisabled={isDisabled}>
+          <Grid gap={6} marginBottom={6}>
+            <GridItem>
+              <FormLabel>Check Template Id</FormLabel>
+              <Select
                 form={form_id}
-                value={name}
-                onChange={e => setName(e.target.value)}
-              />
-            </FormControl>
-          </GridItem>
-          <GridItem>
-            <FormControl isRequired isDisabled={isDisabled}>
-              <FormLabel>Description</FormLabel>
-              <Input
-                form={form_id}
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-              />
-            </FormControl>
-          </GridItem>
-          <GridItem>
-            <FormControl isRequired isDisabled={isDisabled}>
-              <FormLabel>Schedule</FormLabel>
-              <Input
-                form={form_id}
-                value={schedule}
-                onChange={e => setSchedule(e.target.value)}
-              />
-            </FormControl>
-          </GridItem>
-        </Grid>
-        <Form
-          idPrefix={form_id + "_"}
-          schema={template.attributes.arguments}
-          formData={check.attributes.metadata.template_args}
-          uiSchema={{
-            "ui:readonly": isDisabled,
-            "ui:options": {
-              submitButtonOptions: {
-                norender: true,
-                props: {
-                  disabled: isDisabled
-                },
+                value={template.id}
+                onChange={e => setTemplateId(e.target.value)}
+              >
+                {templates.map((template) => (<option key={template.id} value={template.id}>{template.id}</option>))}
+              </Select>
+            </GridItem>
+            <GridItem>
+              <FormControl isRequired isDisabled={isDisabled}>
+                <FormLabel>Name</FormLabel>
+                <Input
+                  form={form_id}
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                />
+              </FormControl>
+            </GridItem>
+            <GridItem>
+              <FormControl isRequired isDisabled={isDisabled}>
+                <FormLabel>Description</FormLabel>
+                <Input
+                  form={form_id}
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                />
+              </FormControl>
+            </GridItem>
+            <GridItem>
+              <FormControl isRequired isDisabled={isDisabled}>
+                <FormLabel>Schedule</FormLabel>
+                <Input
+                  form={form_id}
+                  value={schedule}
+                  onChange={e => setSchedule(e.target.value)}
+                />
+              </FormControl>
+            </GridItem>
+          </Grid>
+          <Form
+            idPrefix={form_id + "_"}
+            schema={template.attributes.arguments}
+            formData={check.attributes.metadata.template_args}
+            uiSchema={{
+              "ui:readonly": isDisabled,
+              "ui:options": {
+                submitButtonOptions: {
+                  norender: true,
+                  props: {
+                    disabled: isDisabled
+                  },
+                }
               }
-            }
-          }}
-          validator={validator}
-          onChange={log('changed')}
-          // onSubmit={(data) => {setIsDisabled(!isDisabled); UpdateCheck(check, templateId, data.formData, schedule).then((updatedCheck) => { onCheckUpdate(updatedCheck)}).catch(setError)}}
-          onError={log('errors')}
-        />
-      </FormControl>
-      {/* <Button
+            }}
+            validator={validator}
+            onChange={log('changed')}
+            // onSubmit={(data) => {setIsDisabled(!isDisabled); UpdateCheck(check, templateId, data.formData, schedule).then((updatedCheck) => { onCheckUpdate(updatedCheck)}).catch(setError)}}
+            onError={log('errors')}
+          />
+        </FormControl>
+        {/* <Button
         type="button"
         onClick={() => {
           if (!isDisabled) {
@@ -379,46 +376,46 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
       >
         {isDisabled ? "Enable Editing" : "Disable Editing (and delete unsaved changes)"}
       </Button> */}
-      <Button type="button" onClick={() => {RemoveCheck(check.id).then(() => onCheckRemove(check.id)).catch(setError); }}>Remove Check</Button>
-    </>)
+        <Button type="button" onClick={() => { RemoveCheck(check.id).then(() => onCheckRemove(check.id)).catch(setError); }}>Remove Check</Button>
+      </>)
   }
   else {
     const template_args = check.attributes.metadata.template_args!
     checkDiv = (
-    <>
-      <FormControl isDisabled={isDisabled}>
-        <Grid gap={6} marginBottom={6}>
-        <GridItem>
-            <FormLabel>Name</FormLabel>
-            <Input
-              value={name}
-              onChange={e => setName(e.target.value)}
-            />
-          </GridItem>
-          <GridItem>
-            <FormLabel>Description</FormLabel>
-            <Input
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-            />
-          </GridItem>
-          <GridItem>
-            <FormLabel>Schedule</FormLabel>
-            <Input
-              value={schedule}
-              onChange={e => setSchedule(e.target.value)}
-            />
-          </GridItem>
-          {Object.entries(template_args).map(([key, value]) => (
-            <GridItem key={key}>
-              <FormLabel>{key}</FormLabel>
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              <Textarea value={value as any} />
+      <>
+        <FormControl isDisabled={isDisabled}>
+          <Grid gap={6} marginBottom={6}>
+            <GridItem>
+              <FormLabel>Name</FormLabel>
+              <Input
+                value={name}
+                onChange={e => setName(e.target.value)}
+              />
             </GridItem>
-          ))}
-        </Grid>
-      </FormControl>
-    </>)
+            <GridItem>
+              <FormLabel>Description</FormLabel>
+              <Input
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+              />
+            </GridItem>
+            <GridItem>
+              <FormLabel>Schedule</FormLabel>
+              <Input
+                value={schedule}
+                onChange={e => setSchedule(e.target.value)}
+              />
+            </GridItem>
+            {Object.entries(template_args).map(([key, value]) => (
+              <GridItem key={key}>
+                <FormLabel>{key}</FormLabel>
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                <Textarea value={value as any} />
+              </GridItem>
+            ))}
+          </Grid>
+        </FormControl>
+      </>)
   }
   const [checkRunSubmitted, setCheckRunSubmitted] = useState(false)
   return (
@@ -440,10 +437,10 @@ function CheckDiv({check, fromTime, toTime, templates, onCheckUpdate, onCheckRem
         </details>
       </Td>
       <Td className="flex flex-row gap-4 items-center">
-        <IconButton aria-label="Reload" onClick={() => setSpansSummary(null)}><Reload/></IconButton>
+        <IconButton aria-label="Reload" onClick={() => {setNow(new Date()); setSpansSummary(null)}}><Reload /></IconButton>
         <div className="flex flex-row gap-1 items-center">
           <Button onClick={() => RunCheck(check.id).then(() => setCheckRunSubmitted(true)).catch(setError)}>Run Check</Button>
-          { checkRunSubmitted && <Checkmark />}
+          {checkRunSubmitted && <Checkmark />}
         </div>
       </Td>
       <Td>{spansSummary?.durationCount ?? LOADING_STRING}</Td>
