@@ -325,13 +325,13 @@ async def remove_check(
 
 @router.post(
     RUN_CHECK_PATH,
-    status_code=status.HTTP_200_OK,
+    status_code=status.HTTP_204_NO_CONTENT,
     response_model_exclude_unset=True,
 )
 async def run_check(
     response: Response, check_id: Annotated[CheckId, Path()]
 ) -> None:
-    response.headers["Allow"] = "GET,POST"
+    response.headers["Allow"] = "POST"
     return await check_backend.run_check(auth_obj, check_id)
 
 
