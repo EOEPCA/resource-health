@@ -218,11 +218,6 @@ def b64encode_file(file_name: str) -> str:
         return b64encode(f.read().encode("ascii")).decode("ascii")
 
 
-async def call_create(auth_obj, attributes):
-    check_backend = load_backend()
-    return await check_backend.create_check(auth_obj, attributes)
-
-
 @app.command("create")
 def create_check(
     auth_obj: Annotated[str, Option(default_factory=get_auth_obj)],
@@ -270,7 +265,6 @@ def create_check(
     try:
         check = asyncio.run(
             check_backend.create_check(
-            # call_create(
                 auth_obj=AuthenticationObject(auth_obj),
                 attributes=InCheckAttributes(
                     metadata=InCheckMetadata(

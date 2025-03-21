@@ -256,7 +256,7 @@ class K8sBackend(CheckBackend):
                     namespace=NAMESPACE,
                     body=job_from(cronjob),
                 )
-                logger.info(f"Succesfully created new cron job: {api_response}")
+                logger.info(f"Succesfully created new job: {api_response}")
             except aiohttp.ClientConnectionError as e:
                 logger.error(f"Failed to delete cron job: {e}")
                 raise CheckConnectionError.create("Cannot connect to cluster")
