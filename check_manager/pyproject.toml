@@ -9,6 +9,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "eoepca-security",
     "fastapi[standard]",
     "httpx>=0.27.2",
     "jsonschema>=4.23.0",
@@ -31,6 +32,7 @@ dev-dependencies = [
 
 [tool.uv.sources]
 plugin_utils = { git = "https://github.com/EOEPCA/resource-health.git", branch = "deploy-develop", subdirectory = "plugin-utils" }
+eoepca-security = { git = "https://github.com/EOEPCA/python-eoepca-security.git" }
 
 [tool.pytest.ini_options]
 minversion = "6.0"
