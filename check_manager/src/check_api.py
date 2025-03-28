@@ -7,6 +7,7 @@ from fastapi import (
     Request,
     Response,
     status,
+    Depends,
 )
 from fastapi.middleware.cors import CORSMiddleware
 from os import environ
@@ -61,6 +62,8 @@ from api_utils.json_api_types import (
     Resource,
 )
 
+from eoepca_security import OIDCProxyScheme, Tokens
+
 BASE_URL = get_env_var_or_throw("RH_CHECK_API_BASE_URL")
 
 
@@ -82,6 +85,18 @@ app.add_middleware(
 )
 add_exception_handlers(app)
 
+## TODO: Make this configurable/optional
+security_scheme = OIDCProxyScheme(
+    openIdConnectUrl=get_env_var_or_throw('OPEN_ID_CONNECT_URL'),
+    audience=get_env_var_or_throw('OPEN_ID_CONNECT_AUDIENCE'),
+    id_token_header="x-id-token",
+    refresh_token_header="x-refresh-token",
+    auth_token_header="Authorization",
+    auth_token_in_authorization=True,
+    auto_error=True, ## Set False to allow unauthenticated access!
+    scheme_name="OIDC behind auth proxy",
+)
+
 router = get_api_router_with_defaults()
 
 
@@ -92,7 +107,7 @@ router = get_api_router_with_defaults()
     response_model_exclude_unset=True,
     response_class=JSONAPIResponse,
 )
-async def root() -> APIOKResponseList[None, None]:
+async def root(tokens: Annotated[Tokens, Depends(security_scheme)]) -> APIOKResponseList[None, None]:
     return APIOKResponseList[None, None](
         data=[
             Resource[None](
@@ -149,6 +164,7 @@ def check_template_to_resource(
     response_model_exclude_unset=True,
 )
 async def get_check_templates(
+    tokens: Annotated[Tokens, Depends(security_scheme)],
     request: Request,
     response: Response,
     ids: Annotated[
@@ -176,7 +192,10 @@ async def get_check_templates(
     response_model_exclude_unset=True,
 )
 async def get_check_template(
-    request: Request, response: Response, check_template_id: CheckTemplateId
+    tokens: Annotated[Tokens, Depends(security_scheme)],
+    request: Request,
+    response: Response,
+    check_template_id: CheckTemplateId
 ) -> APIOKResponse[CheckTemplateAttributes]:
     check_templates = [
         check_template
@@ -231,6 +250,7 @@ def check_to_resource(check: OutCheck) -> Resource[OutCheckAttributes]:
     response_model_exclude_unset=True,
 )
 async def get_checks(
+    tokens: Annotated[Tokens, Depends(security_scheme)],
     request: Request,
     response: Response,
     ids: Annotated[
@@ -255,6 +275,7 @@ async def get_checks(
     response_model_exclude_unset=True,
 )
 async def create_check(
+    tokens: Annotated[Tokens, Depends(security_scheme)],
     request: Request,
     response: Response,
     in_check: InCheck,
@@ -277,7 +298,10 @@ async def create_check(
     response_model_exclude_unset=True,
 )
 async def get_check(
-    request: Request, response: Response, check_id: CheckId
+    tokens: Annotated[Tokens, Depends(security_scheme)],
+    request: Request,
+    response: Response,
+    check_id: CheckId
 ) -> APIOKResponse[OutCheckAttributes]:
     checks = [
         check async for check in check_backend.get_checks(auth_obj, ids=[check_id])
@@ -317,7 +341,9 @@ async def get_check(
     response_model_exclude_unset=True,
 )
 async def remove_check(
-    response: Response, check_id: Annotated[CheckId, Path()]
+    tokens: Annotated[Tokens, Depends(security_scheme)],
+    response: Response,
+    check_id: Annotated[CheckId, Path()]
 ) -> None:
     response.headers["Allow"] = "GET,DELETE"
     return await check_backend.remove_check(auth_obj, check_id)
@@ -329,7 +355,9 @@ async def remove_check(
     response_model_exclude_unset=True,
 )
 async def run_check(
-    response: Response, check_id: Annotated[CheckId, Path()]
+    tokens: Annotated[Tokens, Depends(security_scheme)],
+    response: Response,
+    check_id: Annotated[CheckId, Path()]
 ) -> None:
     response.headers["Allow"] = "POST"
     return await check_backend.run_check(auth_obj, check_id)
