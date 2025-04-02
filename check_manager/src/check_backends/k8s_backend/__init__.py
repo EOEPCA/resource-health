@@ -1,16 +1,16 @@
+import logging
+import re
+from typing import AsyncIterable, Callable, Self, override
+import uuid
+
 from jsonschema import validate
 import aiohttp
-from kubernetes_asyncio import client, config
-from kubernetes_asyncio.client.api_client import ApiClient
+from kubernetes_asyncio import client  # , config
 from kubernetes_asyncio.client.rest import ApiException
 from kubernetes_asyncio.client.models.v1_cron_job import V1CronJob
 from kubernetes_asyncio.client.models.v1_job import V1Job
 from kubernetes_asyncio.client.models.v1_object_meta import V1ObjectMeta
 from kubernetes_asyncio.client.models.v1_owner_reference import V1OwnerReference
-import logging
-from os import environ
-from typing import AsyncIterable, Self, override
-import uuid
 
 from api_utils.exceptions import APIInternalError
 from check_backends.check_backend import (
@@ -29,18 +29,35 @@ from check_backends.k8s_backend.templates import (
     load_templates,
     default_make_check,
 )
-from exceptions import CheckConnectionError
+from exceptions import (
+    CheckConnectionError,
+    CronExpressionValidationError,
+)
 
 NAMESPACE: str = "resource-health"
 
 logger = logging.getLogger("HEALTH_CHECK")
 
+minute_pattern = r"(\*|[0-5]?\d)(/\d+)?([-,][0-5]?\d)*"
+hour_pattern = r"(\*|[01]?\d|2[0-3])(/\d+)?([-,]([01]?\d|2[0-3]))*"
+day_of_month_pattern = r"(\*|[1-9]|[12]\d|3[01])(/\d+)?([-,]([1-9]|[12]\d|3[01]))*"
+month_pattern = r"(\*|1[0-2]|0?[1-9])(/\d+)?([-,](1[0-2]|0?[1-9]))*"
+day_of_week_pattern = r"(\*|[0-7])(/\d+)?([-,][0-7])*"
 
-async def load_config() -> None:
-    if "KUBERNETES_SERVICE_HOST" in environ:
-        config.load_incluster_config()
-    else:
-        await config.load_kube_config()
+cron_pattern = " ".join([
+    minute_pattern,
+    hour_pattern,
+    day_of_month_pattern,
+    month_pattern,
+    day_of_week_pattern,
+])
+
+
+def validate_kubernetes_cron(cron_expr: str) -> bool:
+    if not re.match(cron_pattern, cron_expr):
+        raise CronExpressionValidationError.create(
+            "Invalid cron expression for use with Kubernetes"
+        )
 
 
 def job_from(cronjob: V1CronJob):
@@ -61,12 +78,16 @@ def job_from(cronjob: V1CronJob):
     )
 
 
-class K8sBackend(CheckBackend):
+class K8sBackend(CheckBackend[AuthenticationObject]):
     def __init__(
-        self: Self, template_dirs: list[str], api_client: type[ApiClient] | None = None
+        self: Self,
+        template_dirs: list[str],
+        authentication: dict[str, Callable],
     ) -> None:
-        self._templates: dict[str, CronjobMaker] = load_templates(template_dirs)
-        self._api_client: type[ApiClient] = api_client or ApiClient
+        self._templates: dict[str, CronjobMaker] = load_templates(
+            template_dirs
+        )
+        self._authentication = authentication
 
     @override
     async def aclose(self: Self) -> None:
@@ -75,42 +96,66 @@ class K8sBackend(CheckBackend):
     @override
     async def get_check_templates(
         self: Self,
+        auth_obj: AuthenticationObject,
         ids: list[CheckTemplateId] | None = None,
     ) -> AsyncIterable[CheckTemplate]:
-        # TODO: See if there is a way to loop directly over the check templates
+        auth = self._authentication["on_auth"](auth_obj)
+        if auth is None:
+            raise Exception("Invalid credentials")
         template_ids = list(self._templates.keys())
-        # print(f"template_ids {template_ids}")
-        if ids is None:
-            for id in template_ids:
+        template_access = self._authentication["template_access"]
+
+        for id in template_ids:
+            if (
+                template_access(auth, id) and
+                (ids is None or id in ids)
+            ):
                 cronjob_template = self._templates.get(id)
                 if cronjob_template is not None:
                     yield cronjob_template.get_check_template()
-        else:
-            for id in ids:
-                if id in template_ids:
-                    cronjob_template = self._templates.get(id)
-                    if cronjob_template is not None:
-                        yield cronjob_template.get_check_template()
 
     @override
     async def create_check(
-        self: Self, auth_obj: AuthenticationObject, attributes: InCheckAttributes
+        self: Self,
+        auth_obj: AuthenticationObject,
+        attributes: InCheckAttributes,
     ) -> OutCheck:
-        template = self._templates.get(attributes.metadata.template_id)
-        if template is None:
-            raise CheckTemplateIdError.create(attributes.metadata.template_id)
-        check_template = template.get_check_template()
-        validate(attributes.metadata.template_args, check_template.attributes.arguments)
-        cronjob = template.make_cronjob(
-            metadata=attributes.metadata,
-            schedule=attributes.schedule,
+        auth = self._authentication["on_auth"](auth_obj)
+        if auth is None:
+            raise Exception("Invalid credentials")
+        Client = await self._authentication["create_check_client"](auth)
+        namespace = self._authentication["get_namespace"](auth)
+        template_access = self._authentication["template_access"]
+        tag_cronjob = self._authentication["tag_cronjob"]
+
+        template_id = attributes.metadata.template_id
+        template_denied = not template_access(
+            auth, template_id
         )
-        await load_config()
-        async with self._api_client() as api_client:
+        template = self._templates.get(template_id)
+
+        if template_denied or template is None:
+            raise CheckTemplateIdError.create(template_id)
+
+        check_template = template.get_check_template()
+        validate(
+            attributes.metadata.template_args,
+            check_template.attributes.arguments,
+        )
+        validate_kubernetes_cron(attributes.schedule)
+        cronjob = tag_cronjob(
+            auth,
+            template.make_cronjob(
+                metadata=attributes.metadata,
+                schedule=attributes.schedule,
+            ),
+        )
+
+        async with Client() as api_client:
             api_instance = client.BatchV1Api(api_client)
             try:
                 api_response = await api_instance.create_namespaced_cron_job(
-                    namespace=NAMESPACE,
+                    namespace=namespace,
                     body=cronjob,
                 )
                 logger.info(f"Succesfully created new cron job: {api_response}")
@@ -174,15 +219,30 @@ class K8sBackend(CheckBackend):
 
     @override
     async def remove_check(
-        self: Self, auth_obj: AuthenticationObject, check_id: CheckId
+        self: Self,
+        auth_obj: AuthenticationObject,
+        check_id: CheckId,
     ) -> None:
-        await load_config()
-        async with self._api_client() as api_client:
+        auth = self._authentication["on_auth"](auth_obj)
+        if auth is None:
+            raise Exception("Invalid!")
+        Client = await self._authentication["remove_check_client"](auth)
+        namespace = self._authentication["get_namespace"](auth)
+        cronjob_access = self._authentication["cronjob_access"]
+
+        async with Client() as api_client:
             api_instance = client.BatchV1Api(api_client)
             try:
+                cronjob = await api_instance.read_namespaced_cron_job(
+                    name=check_id,
+                    namespace=namespace,
+                )
+                if not cronjob_access(auth, cronjob):
+                    raise CheckIdError.create(check_id)
+
                 api_response = await api_instance.delete_namespaced_cron_job(
                     name=check_id,
-                    namespace=NAMESPACE,
+                    namespace=namespace,
                 )
                 logger.info(f"Succesfully deleted cron job: {api_response}")
             except aiohttp.ClientConnectionError as e:
@@ -202,12 +262,18 @@ class K8sBackend(CheckBackend):
         auth_obj: AuthenticationObject,
         ids: list[CheckId] | None = None,
     ) -> AsyncIterable[OutCheck]:
-        await load_config()
-        async with self._api_client() as api_client:
+        auth = self._authentication["on_auth"](auth_obj)
+        if auth is None:
+            raise Exception("Invalid!")
+        Client = await self._authentication["get_checks_client"](auth)
+        namespace = self._authentication["get_namespace"](auth)
+        cronjob_access = self._authentication["cronjob_access"]
+
+        async with Client() as api_client:
             api_instance = client.BatchV1Api(api_client)
             try:
                 cronjobs = await api_instance.list_namespaced_cron_job(
-                    namespace=NAMESPACE
+                    namespace=namespace,
                 )
             except ApiException as e:
                 logger.error(f"Failed to list cron jobs: {e}")
@@ -216,8 +282,12 @@ class K8sBackend(CheckBackend):
                 logger.error(f"Failed to list cron jobs: {e}")
                 raise CheckConnectionError.create("Cannot connect to cluster")
             template_id: str | None
-            if ids is None:
-                for cronjob in cronjobs.items:
+
+            for cronjob in cronjobs.items:
+                if (
+                    cronjob_access(auth, cronjob) and
+                    (ids is None or cronjob.metadata.name in ids)
+                ):
                     template_id = None
                     if cronjob.metadata and cronjob.metadata.annotations:
                         template_id = cronjob.metadata.annotations.get("template_id")
@@ -226,34 +296,32 @@ class K8sBackend(CheckBackend):
                         yield template.make_check(cronjob)
                     else:
                         yield default_make_check(cronjob)
-            else:
-                for cronjob in cronjobs.items:
-                    if cronjob.metadata.name in ids:
-                        template_id = None
-                        if cronjob.metadata and cronjob.metadata.annotations:
-                            template_id = cronjob.metadata.annotations.get(
-                                "template_id"
-                            )
-                        template = self._templates.get(template_id or "")
-                        if template is not None:
-                            yield template.make_check(cronjob)
-                        else:
-                            yield default_make_check(cronjob)
 
     @override
     async def run_check(
-        self: Self, auth_obj: AuthenticationObject, check_id: CheckId
+        self: Self,
+        auth_obj: AuthenticationObject,
+        check_id: CheckId,
     ) -> None:
-        await load_config()
-        async with self._api_client() as api_client:
+        auth = self._authentication["on_auth"](auth_obj)
+        if auth is None:
+            raise Exception("Invalid!")
+        Client = await self._authentication["run_check_client"](auth)
+        namespace = self._authentication["get_namespace"](auth)
+        cronjob_access = self._authentication["cronjob_access"]
+
+        async with Client() as api_client:
             api_instance = client.BatchV1Api(api_client)
             try:
                 cronjob = await api_instance.read_namespaced_cron_job(
                     name=check_id,
-                    namespace=NAMESPACE,
+                    namespace=namespace,
                 )
+                if not cronjob_access(auth, cronjob):
+                    raise CheckIdError.create(check_id)
+
                 api_response = await api_instance.create_namespaced_job(
-                    namespace=NAMESPACE,
+                    namespace=namespace,
                     body=job_from(cronjob),
                 )
                 logger.info(f"Succesfully created new job: {api_response}")

@@ -182,7 +182,8 @@ def default_make_check(cronjob: V1CronJob) -> OutCheck:
             cronjob.metadata.annotations.get("template_args", "{}")
         )
     cronjob_name: str = (
-        cronjob.metadata.name if cronjob.metadata and cronjob.metadata.name else ""
+        cronjob.metadata.name if cronjob.metadata and cronjob.metadata.name
+        else ""
     )
     # raise NotImplementedError("Add name and description")
     return OutCheck(

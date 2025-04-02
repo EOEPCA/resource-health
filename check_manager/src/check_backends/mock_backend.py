@@ -1,6 +1,7 @@
 from collections import defaultdict
 from typing import (
     AsyncIterable,
+    NewType,
     Self,
     override,
 )
@@ -8,7 +9,6 @@ import uuid
 from jsonschema import ValidationError, validate
 
 from check_backends.check_backend import (
-    AuthenticationObject,
     CheckIdError,
     CheckTemplate,
     CheckTemplateIdError,
@@ -26,8 +26,10 @@ from check_backends.check_backend import (
 )
 from exceptions import JsonValidationError
 
+AuthenticationObject = NewType("AuthenticationObject", str)
 
-class MockBackend(CheckBackend):
+
+class MockBackend(CheckBackend[AuthenticationObject]):
     def __init__(self: Self, template_id_prefix: str = "") -> None:
         check_templates = [
             (

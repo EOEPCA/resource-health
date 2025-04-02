@@ -32,7 +32,7 @@ from exceptions import CheckConnectionError
 from api_utils.json_api_types import APIOKResponse, APIOKResponseList
 
 
-class RestBackend(CheckBackend):
+class RestBackend(CheckBackend[AuthenticationObject]):
     def __init__(self: Self, rest_url: str) -> None:
         self._url = rest_url
         self._client = httpx.AsyncClient()
