@@ -34,6 +34,13 @@ mock_api:
     #   name: null ## INSTRUCTION: Set to name of certificate issuer for the internal cluster domain
 
 healthchecks:
+  templates:
+    ping_template.py: |
+      from check_backends.k8s_backend.template_examples import SimplePing as SimplePing
+
+    script_template.py: |
+      from check_backends.k8s_backend.template_examples import SimpleScript as SimpleScript
+
   checks: []
   # - name: hourly-mockapi-check
   #   # image:
