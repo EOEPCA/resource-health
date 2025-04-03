@@ -184,13 +184,15 @@ async function MakeRequest<T>({
 }: MakeRequestParams): Promise<AxiosResponse<T, unknown>> {
   if (method !== "POST" && body !== undefined)
     throw new Error(`${method} request can't have a body`);
+  let pathParamsConcat = pathParameters
+    .filter((param) => param)
+    .map((param) => encodeURIComponent(param!))
+    .join("/");
+  if (!path.endsWith("/") && pathParamsConcat) {
+    pathParamsConcat = "/" + pathParamsConcat;
+  }
   return await axios.request<unknown, AxiosResponse<T, unknown>, unknown>({
-    url:
-      path +
-      pathParameters
-        .filter((param) => param)
-        .map((param) => encodeURIComponent(param!))
-        .join("/"),
+    url: path + pathParamsConcat,
     method: method,
     baseURL: baseURL,
     params: queryParameters,

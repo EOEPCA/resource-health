@@ -14,6 +14,10 @@ import { TELEMETRY_DURATION } from "./config";
 
 export const LOADING_STRING = "Loading ...";
 
+export function StringifyPretty(json: object): string {
+  return JSON.stringify(json, null, 2);
+}
+
 export function GetSpanFilterParams(
   check: Check,
   now: Date

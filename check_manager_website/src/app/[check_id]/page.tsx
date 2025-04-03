@@ -43,6 +43,7 @@ import {
   GetTraceIdToSpans,
   IsSpanError,
   LOADING_STRING,
+  StringifyPretty,
 } from "@/lib/helpers";
 import { CheckError } from "@/components/CheckError";
 import { TELEMETRY_DURATION } from "@/lib/config";
@@ -108,10 +109,6 @@ function HealthCheckDetails({ checkId }: { checkId: string }): JSX.Element {
       setError={setError}
     />
   );
-}
-
-function StringifyPretty(json: object): string {
-  return JSON.stringify(json, null, 2);
 }
 
 export type CheckDivProps = {
@@ -328,17 +325,21 @@ function CheckDiv({
           </Button>
           {checkRunSubmitted && <Checkmark />}
         </div>
-        <CheckRunsTable allSpans={allSpans} />
+        <CheckRunsTable checkId={check.id} allSpans={allSpans} />
       </div>
     </>
   );
 }
 
 type CheckRunsTableProps = {
+  checkId: string;
   allSpans: SpanResult | null;
 };
 
-function CheckRunsTable({ allSpans }: CheckRunsTableProps): JSX.Element {
+function CheckRunsTable({
+  checkId,
+  allSpans,
+}: CheckRunsTableProps): JSX.Element {
   if (allSpans === null) {
     return <Text>{LOADING_STRING}</Text>;
   }
@@ -349,7 +350,7 @@ function CheckRunsTable({ allSpans }: CheckRunsTableProps): JSX.Element {
       <Thead>
         <Tr>
           <Th>Check Result</Th>
-          <Th>Trace Id</Th>
+          <Th>Health Check Run Id (same as Trace id)</Th>
           <Th>Error Details</Th>
         </Tr>
       </Thead>
@@ -357,6 +358,7 @@ function CheckRunsTable({ allSpans }: CheckRunsTableProps): JSX.Element {
         {Object.entries(traceIdToSpans).map(([traceId, traceSpans]) => (
           <CheckRunTableRow
             key={traceId}
+            checkId={checkId}
             traceId={traceId}
             traceSpans={traceSpans}
           />
@@ -368,9 +370,11 @@ function CheckRunsTable({ allSpans }: CheckRunsTableProps): JSX.Element {
 }
 
 function CheckRunTableRow({
+  checkId,
   traceId,
   traceSpans,
 }: {
+  checkId: string;
   traceId: string;
   traceSpans: SpanResult;
 }): JSX.Element {
@@ -393,7 +397,9 @@ function CheckRunTableRow({
       <Td className={checkPass ? "bg-green-300" : "bg-red-300"}>
         <Text>{checkPass ? "PASS" : "FAIL"}</Text>
       </Td>
-      <Td>{traceId}</Td>
+      <Td>
+        <Link href={"/" + checkId + "/" + traceId}>{traceId}</Link>
+      </Td>
       <Td>
         <div className="flex flex-col gap-6">
           {errorMessages.map((message) => (
