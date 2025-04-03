@@ -4,7 +4,7 @@ import { JSX, useState } from 'react'
 import Form from '@rjsf/chakra-ui';
 import { RemoveCheck, Check, RunCheck, GetCheck, GetCheckTemplates, CheckTemplate, CheckId } from "@/lib/backend-wrapper"
 import validator from '@rjsf/validator-ajv8';
-import { Button, FormControl, FormLabel, Grid, GridItem, Heading, IconButton, Input, Link, Select, Table, Td, Text, Textarea, Tr } from '@chakra-ui/react';
+import { Button, FormControl, FormLabel, Grid, GridItem, Heading, IconButton, Input, Link, Select, Text, Textarea } from '@chakra-ui/react';
 import { IoCheckmarkCircle as Checkmark } from "react-icons/io5";
 import { IoReload as Reload } from "react-icons/io5";
 import { Duration, sub as subDuration} from "date-fns";
@@ -46,18 +46,16 @@ function HealthCheckDetails({checkId}: {checkId: string}): JSX.Element {
   }
 
   return (
-    <Table>
-      <CheckDiv
-        check={check}
-        telemetryDuration={TELEMETRY_DURATION}
-        templates={checkTemplates}
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        onCheckUpdate={(_check) => {throw new Error("Update is not yet implemented")}}
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        onCheckRemove={(_checkId) => router.push('/')}
-        setError={setError}
-      />
-    </Table>
+    <CheckDiv
+      check={check}
+      telemetryDuration={TELEMETRY_DURATION}
+      templates={checkTemplates}
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      onCheckUpdate={(_check) => {throw new Error("Update is not yet implemented")}}
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      onCheckRemove={(_checkId) => router.push('/')}
+      setError={setError}
+    />
   )
 }
 
@@ -217,32 +215,32 @@ function CheckDiv({ check, telemetryDuration, templates, onCheckUpdate, onCheckR
   }
   const [checkRunSubmitted, setCheckRunSubmitted] = useState(false)
   return (
-    <Tr>
-      <Td>
-        <Heading>{check_label}</Heading>
-        <Grid gap={6} marginBottom={6}>
-          <div>
-            <FormLabel>Check id</FormLabel>
-            <Text>{check.id}</Text>
-          </div>
-          <div>
-            <FormLabel>Outcome Filter</FormLabel>
-            <Text className="whitespace-pre">{StringifyPretty(check.attributes.outcome_filter)}</Text>
-          </div>
-        </Grid>
+    <>
+      <Heading>{check_label}</Heading>
+      <div className="flex flex-row gap-4">
+        <div>
+          <Grid gap={6} marginBottom={6}>
+            <div>
+              <FormLabel>Check id</FormLabel>
+              <Text>{check.id}</Text>
+            </div>
+            <div>
+              <FormLabel>Outcome Filter</FormLabel>
+              <Text className="whitespace-pre">{StringifyPretty(check.attributes.outcome_filter)}</Text>
+            </div>
+          </Grid>
         {checkDiv}
-      </Td>
-      <Td className="flex flex-row gap-4 items-center">
+        </div>
         <IconButton aria-label="Reload" onClick={() => {setNow(new Date()); setSpansSummary(null)}}><Reload /></IconButton>
-        <div className="flex flex-row gap-1 items-center">
+        <div className="flex flex-row gap-1"> {/* items-center */}
           <Button onClick={() => RunCheck(check.id).then(() => setCheckRunSubmitted(true)).catch(setError)}>Run Check</Button>
           {checkRunSubmitted && <Checkmark />}
         </div>
-      </Td>
-      <Td>{spansSummary?.durationCount ?? LOADING_STRING}</Td>
-      <Td>{spansSummary?.failedTraceIds.size ?? LOADING_STRING}</Td>
-      <Td>{spansSummary !== null ? GetAverageDuration(spansSummary) : LOADING_STRING}</Td>
-      <Td>{spansSummary?.totalTestCount ?? LOADING_STRING}</Td>
-    </Tr>
+        <Text>{spansSummary?.durationCount ?? LOADING_STRING}</Text>
+        <Text>{spansSummary?.failedTraceIds.size ?? LOADING_STRING}</Text>
+        <Text>{spansSummary !== null ? GetAverageDuration(spansSummary) : LOADING_STRING}</Text>
+        <Text>{spansSummary?.totalTestCount ?? LOADING_STRING}</Text>
+      </div>
+    </>
   )
 }
