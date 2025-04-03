@@ -2,14 +2,14 @@ from check_backends.k8s_backend.template_utils import *
 
 class DefaultK8sArguments(BaseModel):
     script : str = Field(json_schema_extra={'format':'textarea'})
-    requirements : str|None = Field(json_schema_extra={'format':'textarea'}, default=None)
+    requirements : str = Field(json_schema_extra={'format':'textarea'}, default="")
 
 def default_k8s_template_containers(template_args : DefaultK8sArguments) -> list[Container]:
     env = {
         "RESOURCE_HEALTH_RUNNER_SCRIPT": template_args.script
     }
 
-    if template_args.requirements is not None:
+    if template_args.requirements:
         env["RESOURCE_HEALTH_RUNNER_REQUIREMENTS"] = template_args.requirements
     
     return [
