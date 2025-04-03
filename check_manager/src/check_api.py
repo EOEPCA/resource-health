@@ -1,5 +1,7 @@
 import json
 from typing import Annotated
+import pathlib
+import os
 from fastapi import (
     FastAPI,
     Path,
@@ -376,9 +378,15 @@ def unicorn_dummy_prod() -> None:
 def uvicorn_k8s() -> None:
     from check_backends.k8s_backend import K8sBackend
 
+    import check_backends.k8s_backend.template_examples as ex
+    templates_path : str = (
+        os.environ.get("RH_CHECK_K8S_TEMPLATE_PATH") or
+        str(pathlib.Path(ex.__file__).resolve().parent)
+    )
+
     global check_backend
     check_backend = K8sBackend(
-        ["templates", "src/check_backends/k8s_backend/template_examples"]
+        [templates_path]
     )
 
     import uvicorn
