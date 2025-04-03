@@ -26,18 +26,26 @@ function FindCheckTemplate(templates: CheckTemplate[], templateId: CheckTemplate
 
 
 export default function Home(): JSX.Element {
+  return (
+    <ThemeProvider theme={theme}>
+      <CSSReset />
+      <main className="flex min-h-screen flex-col items-start p-24">
+        <HomeDetails />
+      </main>
+    </ThemeProvider>
+  )
+}
+
+function HomeDetails(): JSX.Element {
   const [error, setError] = useState<Error | null>(null)
   const [checkTemplates, setCheckTemplates] = useState<CheckTemplate[] | null>(null)
   const [checks, setChecks] = useState<Check[] | null>(null)
   if (error !== null) {
     return (
-      <ThemeProvider theme={theme}>
-        <CSSReset />
-        <main className="flex min-h-screen flex-col items-start p-24">
-          <Heading>Error occurred</Heading>
-          <Text>{`${error.name}: ${error.message}`}</Text>
-        </main>
-      </ThemeProvider>
+      <>
+        <Heading>Error occurred</Heading>
+        <Text>{`${error.name}: ${error.message}`}</Text>
+      </>
     )
   }
   if (checkTemplates === null) {
@@ -47,30 +55,18 @@ export default function Home(): JSX.Element {
     GetChecks().then(setChecks).catch(setError)
   }
   if (checkTemplates === null || checks === null) {
-    return (
-      <ThemeProvider theme={theme}>
-        <CSSReset />
-        <main className="flex min-h-screen flex-col items-start p-24">
-          <Text>{LOADING_STRING}</Text>
-        </main>
-      </ThemeProvider>
-    )
+    return <Text>{LOADING_STRING}</Text>
   }
   return (
-    <ThemeProvider theme={theme}>
-      <CSSReset />
-      <main className="flex min-h-screen flex-col items-start p-24">
-        <ChecksDiv
-          checks={checks}
-          telemetryDuration={{days: 5}}
-          templates={checkTemplates}
-          onCreateCheck={(check) => setChecks([check, ...checks])}
-          onCheckUpdate={(updatedCheck) => setChecks(checks.map((check) => check.id === updatedCheck.id ? updatedCheck : check))}
-          onCheckRemove={(checkId) => setChecks(checks.filter((check) => check.id !== checkId))}
-          setError={setError}
-        />
-      </main>
-    </ThemeProvider>
+    <ChecksDiv
+      checks={checks}
+      telemetryDuration={{days: 5}}
+      templates={checkTemplates}
+      onCreateCheck={(check) => setChecks([check, ...checks])}
+      onCheckUpdate={(updatedCheck) => setChecks(checks.map((check) => check.id === updatedCheck.id ? updatedCheck : check))}
+      onCheckRemove={(checkId) => setChecks(checks.filter((check) => check.id !== checkId))}
+      setError={setError}
+    />
   )
 }
 
