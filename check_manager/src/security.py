@@ -100,6 +100,7 @@ def load_authentication(name):
         ValueError("Authentication underspecified")
 
     authentication["get_namespace"] = hooks["get_namespace"]
+    authentication["get_username"] = hooks["get_username"]
     authentication["template_access"] = hooks["template_access"]
     authentication["cronjob_access"] = hooks["cronjob_access"]
     authentication["tag_cronjob"] = hooks["tag_cronjob"]

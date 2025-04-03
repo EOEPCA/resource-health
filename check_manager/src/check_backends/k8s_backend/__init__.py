@@ -125,6 +125,7 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
             raise Exception("Invalid credentials")
         Client = await self._authentication["create_check_client"](auth)
         namespace = self._authentication["get_namespace"](auth)
+        username = self._authentication["get_username"](auth)
         template_access = self._authentication["template_access"]
         tag_cronjob = self._authentication["tag_cronjob"]
 
@@ -148,6 +149,7 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
             template.make_cronjob(
                 metadata=attributes.metadata,
                 schedule=attributes.schedule,
+                username=username,
             ),
         )
 

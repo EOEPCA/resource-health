@@ -11,7 +11,10 @@ from check_backends.check_backend import (
     CheckTemplateMetadata,
     CronExpression,
 )
-from check_backends.k8s_backend.template_utils import make_base_cronjob
+from check_backends.k8s_backend.template_utils import (
+    make_base_cronjob,
+    make_sidecar_container,
+)
 from check_backends.k8s_backend.templates import CronjobTemplate
 
 
@@ -44,6 +47,7 @@ class DefaultK8sTemplate(CronjobTemplate):
         self,
         template_args: Json,
         schedule: CronExpression,
+        username: str,
     ) -> V1CronJob:
         script = TypeAdapter(str).validate_python(template_args["script"])
         requirements: str | None = TypeAdapter(str | None).validate_python(
@@ -68,4 +72,21 @@ class DefaultK8sTemplate(CronjobTemplate):
                 )
             )
         cronjob.spec.job_template.spec.template.spec.containers[0].env = env
+        cronjob.spec.job_template.spec.template.spec.containers[0].command = [
+            "/usr/bin/bash",
+        ]
+        cronjob.spec.job_template.spec.template.spec.containers[0].args = [
+            "-c",
+            (
+                "/app/run_script.sh pytest --export-traces -rP "
+                "--suppress-tests-failed-exit-code tests.py "
+                f"--user-id {username}; ret=$?; "
+                "curl -s 'http://127.0.0.1:8080/quitquitquit'; "
+                "exit $ret"
+            ),
+        ]
+        cronjob.spec.job_template.spec.template.spec.containers.append(
+            make_sidecar_container(username),
+        )
+
         return cronjob

@@ -61,6 +61,7 @@ class CronjobTemplate(ABC):
         self,
         template_args: Json,
         schedule: CronExpression,
+        username: str,
     ) -> V1CronJob:
         """Returns a cronjob from the arguments and schedule."""
 
@@ -78,15 +79,17 @@ def _add_metadata(cronjob: V1CronJob, metadata: InCheckMetadata) -> None:
     cronjob.metadata.name = CheckId(str(uuid.uuid4()))
 
 
-def _add_otel_resource_attributes(cronjob: V1CronJob) -> None:
+def _add_otel_resource_attributes(
+    cronjob: V1CronJob,
+    username: str,
+) -> None:
     check_id = cronjob.metadata.name
-    user_id = "Health BB user"
     name = cronjob.metadata.annotations["name"]
 
     env = cronjob.spec.job_template.spec.template.spec.containers[0].env or []
     OTEL_RESOURCE_ATTRIBUTES = (
         f"k8s.cronjob.name={check_id},"
-        f"user.id={user_id},"
+        f"user.id={username},"
         f"health_check.name={name}"
     )
 
@@ -136,10 +139,14 @@ def _add_otel_exporter_variables(cronjob: V1CronJob) -> None:
     cronjob.spec.job_template.spec.template.spec.volumes = volumes
 
 
-def _tag_cronjob(cronjob: V1CronJob, metadata: InCheckMetadata) -> V1CronJob:
+def _tag_cronjob(
+    cronjob: V1CronJob,
+    metadata: InCheckMetadata,
+    username: str,
+) -> V1CronJob:
     _add_metadata(cronjob, metadata)
 
-    _add_otel_resource_attributes(cronjob)
+    _add_otel_resource_attributes(cronjob, username)
 
     _add_otel_exporter_variables(cronjob)
 
@@ -214,12 +221,14 @@ class CronjobMaker:
         self,
         metadata: InCheckMetadata,
         schedule: CronExpression,
+        username: str,
     ) -> V1CronJob:
         cronjob = self.cronjob_template.make_cronjob(
             metadata.template_args,
-            schedule
+            schedule,
+            username,
         )
-        return _tag_cronjob(cronjob, metadata)
+        return _tag_cronjob(cronjob, metadata, username)
 
     def make_check(self, cronjob: V1CronJob) -> OutCheck:
         return _make_check(cronjob)

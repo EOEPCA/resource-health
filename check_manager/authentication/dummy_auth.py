@@ -27,9 +27,9 @@ def get_namespace(auth):
 
 
 def template_access(auth, template_id):
-    username = get_username(auth)
-    if username == "bob" and template_id == "default_k8s_template":
-        return False
+    # username = get_username(auth)
+    # if username == "bob" and template_id == "default_k8s_template":
+    #     return False
     return True
 
 
