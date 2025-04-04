@@ -164,6 +164,9 @@ function CheckDiv({
     const form_id = "existing_check_" + check.id;
     checkDiv = (
       <>
+        {/* Use isDisabled here instead of isReadonly, as the latter does nothing for the select, option, and button HTML tags,
+            as discussed in this answer https://stackoverflow.com/a/7730719
+        */}
         <FormControl isDisabled={isDisabled}>
           <Grid gap={6} marginBottom={6}>
             <GridItem>
@@ -287,18 +290,20 @@ function CheckDiv({
       <Heading>{check_label}</Heading>
       <div className="flex flex-col gap-4">
         <div>
-          <Grid gap={6} marginBottom={6}>
-            <div>
-              <FormLabel>Check id</FormLabel>
-              <Text>{check.id}</Text>
-            </div>
-            <div>
-              <FormLabel>Outcome Filter</FormLabel>
-              <Text className="whitespace-pre">
-                {StringifyPretty(check.attributes.outcome_filter)}
-              </Text>
-            </div>
-          </Grid>
+          <FormControl isReadOnly>
+            <Grid gap={6} marginBottom={6}>
+              <div>
+                <FormLabel>Check id</FormLabel>
+                <Input value={check.id} />
+              </div>
+              <div>
+                <FormLabel>Outcome Filter</FormLabel>
+                <Textarea resize="none" className="whitespace-pre !h-32">
+                  {StringifyPretty(check.attributes.outcome_filter)}
+                </Textarea>
+              </div>
+            </Grid>
+          </FormControl>
           {checkDiv}
         </div>
         <div className="flex flex-row gap-6">
