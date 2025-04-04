@@ -111,7 +111,7 @@ class InCheckAttributes(BaseModel):
     schedule: CronExpression
 
 
-type TelemetryAttributes = dict[str, str | int | bool]
+type TelemetryAttributes = dict[str, list[str | int | bool] | None]
 
 
 class OutcomeFilter(BaseModel):

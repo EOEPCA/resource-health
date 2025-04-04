@@ -1007,13 +1007,23 @@
         "additionalProperties": {
           "anyOf": [
             {
-              "type": "string"
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "boolean"
+                  }
+                ]
+              },
+              "type": "array"
             },
             {
-              "type": "integer"
-            },
-            {
-              "type": "boolean"
+              "type": "null"
             }
           ]
         },
