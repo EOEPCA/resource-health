@@ -6,6 +6,7 @@ import uuid
 from jsonschema import validate
 import aiohttp
 from kubernetes_asyncio import client  # , config
+from kubernetes_asyncio.client.api_client import ApiClient
 from kubernetes_asyncio.client.rest import ApiException
 from kubernetes_asyncio.client.models.v1_cron_job import V1CronJob
 from kubernetes_asyncio.client.models.v1_job import V1Job
@@ -53,7 +54,7 @@ cron_pattern = " ".join([
 ])
 
 
-def validate_kubernetes_cron(cron_expr: str) -> bool:
+def validate_kubernetes_cron(cron_expr: str) -> None:
     if not re.match(cron_pattern, cron_expr):
         raise CronExpressionValidationError.create(
             "Invalid cron expression for use with Kubernetes"
@@ -123,9 +124,9 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
         auth = self._authentication["on_auth"](auth_obj)
         if auth is None:
             raise Exception("Invalid credentials")
-        Client = await self._authentication["create_check_client"](auth)
+        configuration = await self._authentication["create_check_configuration"](auth)
         namespace = self._authentication["get_namespace"](auth)
-        username = self._authentication["get_username"](auth)
+        userinfo = await self._authentication["get_userinfo"](auth, configuration)
         template_access = self._authentication["template_access"]
         tag_cronjob = self._authentication["tag_cronjob"]
 
@@ -149,11 +150,11 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
             template.make_cronjob(
                 metadata=attributes.metadata,
                 schedule=attributes.schedule,
-                username=username,
+                userinfo=userinfo,
             ),
         )
 
-        async with Client() as api_client:
+        async with ApiClient(configuration) as api_client:
             api_instance = client.BatchV1Api(api_client)
             try:
                 api_response = await api_instance.create_namespaced_cron_job(
@@ -228,11 +229,11 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
         auth = self._authentication["on_auth"](auth_obj)
         if auth is None:
             raise Exception("Invalid!")
-        Client = await self._authentication["remove_check_client"](auth)
+        configuration = await self._authentication["remove_check_configuration"](auth)
         namespace = self._authentication["get_namespace"](auth)
         cronjob_access = self._authentication["cronjob_access"]
 
-        async with Client() as api_client:
+        async with ApiClient(configuration) as api_client:
             api_instance = client.BatchV1Api(api_client)
             try:
                 cronjob = await api_instance.read_namespaced_cron_job(
@@ -267,11 +268,11 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
         auth = self._authentication["on_auth"](auth_obj)
         if auth is None:
             raise Exception("Invalid!")
-        Client = await self._authentication["get_checks_client"](auth)
+        configuration = await self._authentication["get_checks_configuration"](auth)
         namespace = self._authentication["get_namespace"](auth)
         cronjob_access = self._authentication["cronjob_access"]
 
-        async with Client() as api_client:
+        async with ApiClient(configuration) as api_client:
             api_instance = client.BatchV1Api(api_client)
             try:
                 cronjobs = await api_instance.list_namespaced_cron_job(
@@ -308,11 +309,11 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
         auth = self._authentication["on_auth"](auth_obj)
         if auth is None:
             raise Exception("Invalid!")
-        Client = await self._authentication["run_check_client"](auth)
+        configuration = await self._authentication["run_check_configuration"](auth)
         namespace = self._authentication["get_namespace"](auth)
         cronjob_access = self._authentication["cronjob_access"]
 
-        async with Client() as api_client:
+        async with ApiClient(configuration) as api_client:
             api_instance = client.BatchV1Api(api_client)
             try:
                 cronjob = await api_instance.read_namespaced_cron_job(

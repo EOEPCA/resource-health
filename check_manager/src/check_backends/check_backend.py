@@ -153,6 +153,7 @@ class CheckBackend(ABC, Generic[AuthenticationObject]):
     @abstractmethod
     async def get_check_templates(
         self: Self,
+        auth_obj: AuthenticationObject,
         ids: list[CheckTemplateId] | None = None,
     ) -> AsyncIterable[CheckTemplate]:
         # A trick to make the type of the function what I want
@@ -165,7 +166,9 @@ class CheckBackend(ABC, Generic[AuthenticationObject]):
     # Otherwise don't use that error code
     @abstractmethod
     async def create_check(
-        self: Self, auth_obj: AuthenticationObject, attributes: InCheckAttributes
+        self: Self,
+        auth_obj: AuthenticationObject,
+        attributes: InCheckAttributes,
     ) -> OutCheck:
         pass
 
@@ -252,10 +255,11 @@ class AggregationBackend(CheckBackend[AuthenticationObject]):
     @override
     async def get_check_templates(
         self: Self,
+        auth_obj: AuthenticationObject,
         ids: list[CheckTemplateId] | None = None,
     ) -> AsyncIterable[CheckTemplate]:
         for backend in self._backends:
-            async for template in backend.get_check_templates(ids):
+            async for template in backend.get_check_templates(auth_obj, ids):
                 yield template
 
     @override

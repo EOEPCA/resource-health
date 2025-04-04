@@ -39,7 +39,7 @@ class Settings(BaseSettings):
 
 
 def load_functions(dirs: str | list[str]) -> dict[str, Callable]:
-    paths: list[str] = [dirs] if isinstance(dirs, str) else dirs
+    paths: list[str] = dirs if isinstance(dirs, list) else [dirs]
     hooks: dict[str, Any] = {}
     for path in paths:
         hooks.update(
@@ -54,9 +54,11 @@ def load_functions(dirs: str | list[str]) -> dict[str, Callable]:
 
 
 @cache
-def load_authentication(name):
+def load_authentication(path: pathlib.Path):
+# def load_authentication(name, dirs: str | list[str]):
     # print("load_authentication")
-    hooks = load_functions("authentication")[name]
+    path = path.resolve()
+    hooks = load_functions(path.parent)[path.name.removesuffix('.py')]
 
     authentication = {}
 
@@ -65,42 +67,42 @@ def load_authentication(name):
         (lambda token: token)
     )
 
-    authentication["get_check_templates_client"] = (
-        hooks.get("get_check_templates_client") or
-        hooks.get("default_client")
+    authentication["get_check_templates_configuration"] = (
+        hooks.get("get_check_templates_configuration") or
+        hooks.get("default_configuration")
     )
 
-    authentication["create_check_client"] = (
-        hooks.get("create_check_client") or
-        hooks.get("default_client")
+    authentication["create_check_configuration"] = (
+        hooks.get("create_check_configuration") or
+        hooks.get("default_configuration")
     )
 
-    authentication["remove_check_client"] = (
-        hooks.get("remove_check_client") or
-        hooks.get("default_client")
+    authentication["remove_check_configuration"] = (
+        hooks.get("remove_check_configuration") or
+        hooks.get("default_configuration")
     )
 
-    authentication["run_check_client"] = (
-        hooks.get("run_check_client") or
-        hooks.get("default_client")
+    authentication["run_check_configuration"] = (
+        hooks.get("run_check_configuration") or
+        hooks.get("default_configuration")
     )
 
-    authentication["get_checks_client"] = (
-        hooks.get("get_checks_client") or
-        hooks.get("default_client")
+    authentication["get_checks_configuration"] = (
+        hooks.get("get_checks_configuration") or
+        hooks.get("default_configuration")
     )
 
     if not all([
-        authentication["get_check_templates_client"],
-        authentication["create_check_client"],
-        authentication["remove_check_client"],
-        authentication["run_check_client"],
-        authentication["get_checks_client"],
+        authentication["get_check_templates_configuration"],
+        authentication["create_check_configuration"],
+        authentication["remove_check_configuration"],
+        authentication["run_check_configuration"],
+        authentication["get_checks_configuration"],
     ]):
         ValueError("Authentication underspecified")
 
     authentication["get_namespace"] = hooks["get_namespace"]
-    authentication["get_username"] = hooks["get_username"]
+    authentication["get_userinfo"] = hooks["get_userinfo"]
     authentication["template_access"] = hooks["template_access"]
     authentication["cronjob_access"] = hooks["cronjob_access"]
     authentication["tag_cronjob"] = hooks["tag_cronjob"]

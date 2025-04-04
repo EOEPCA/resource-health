@@ -43,6 +43,7 @@ class CronjobTemplateProtocol(Protocol):
         self,
         template_args: Json,
         schedule: CronExpression,
+        userinfo: dict[str, Any],
     ) -> V1CronJob:
         pass
 
@@ -61,7 +62,7 @@ class CronjobTemplate(ABC):
         self,
         template_args: Json,
         schedule: CronExpression,
-        username: str,
+        userinfo: dict[str, Any],
     ) -> V1CronJob:
         """Returns a cronjob from the arguments and schedule."""
 
@@ -81,9 +82,10 @@ def _add_metadata(cronjob: V1CronJob, metadata: InCheckMetadata) -> None:
 
 def _add_otel_resource_attributes(
     cronjob: V1CronJob,
-    username: str,
+    userinfo: dict[str, Any],
 ) -> None:
     check_id = cronjob.metadata.name
+    username = userinfo.get("username", "Unkown user")
     name = cronjob.metadata.annotations["name"]
 
     env = cronjob.spec.job_template.spec.template.spec.containers[0].env or []
@@ -142,11 +144,11 @@ def _add_otel_exporter_variables(cronjob: V1CronJob) -> None:
 def _tag_cronjob(
     cronjob: V1CronJob,
     metadata: InCheckMetadata,
-    username: str,
+    userinfo: dict[str, Any],
 ) -> V1CronJob:
     _add_metadata(cronjob, metadata)
 
-    _add_otel_resource_attributes(cronjob, username)
+    _add_otel_resource_attributes(cronjob, userinfo)
 
     _add_otel_exporter_variables(cronjob)
 
@@ -158,7 +160,6 @@ def _make_check(cronjob: V1CronJob) -> OutCheck:
     description = cronjob.metadata.annotations.get("description")
     template_id = cronjob.metadata.annotations.get("template_id")
     template_args = json.loads(cronjob.metadata.annotations.get("template_args", "{}"))
-    # raise NotImplementedError("Add name and description")
     return OutCheck(
         id=CheckId(cronjob.metadata.name),
         attributes=OutCheckAttributes(
@@ -192,7 +193,6 @@ def default_make_check(cronjob: V1CronJob) -> OutCheck:
         cronjob.metadata.name if cronjob.metadata and cronjob.metadata.name
         else ""
     )
-    # raise NotImplementedError("Add name and description")
     return OutCheck(
         id=CheckId(cronjob_name),
         attributes=OutCheckAttributes(
@@ -221,14 +221,14 @@ class CronjobMaker:
         self,
         metadata: InCheckMetadata,
         schedule: CronExpression,
-        username: str,
+        userinfo: dict[str, Any],
     ) -> V1CronJob:
         cronjob = self.cronjob_template.make_cronjob(
             metadata.template_args,
             schedule,
-            username,
+            userinfo,
         )
-        return _tag_cronjob(cronjob, metadata, username)
+        return _tag_cronjob(cronjob, metadata, userinfo)
 
     def make_check(self, cronjob: V1CronJob) -> OutCheck:
         return _make_check(cronjob)

@@ -44,6 +44,7 @@ class RestBackend(CheckBackend[AuthenticationObject]):
     @override
     async def get_check_templates(
         self: Self,
+        auth_obj: AuthenticationObject,
         ids: list[CheckTemplateId] | None = None,
     ) -> AsyncIterable[CheckTemplate]:
         try:

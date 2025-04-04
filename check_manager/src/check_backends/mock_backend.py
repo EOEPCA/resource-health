@@ -108,7 +108,9 @@ class MockBackend(CheckBackend[AuthenticationObject]):
 
     @override
     async def get_check_templates(
-        self: Self, ids: list[CheckTemplateId] | None = None
+        self: Self,
+        auth_obj: AuthenticationObject,
+        ids: list[CheckTemplateId] | None = None,
     ) -> AsyncIterable[CheckTemplate]:
         if ids is None:
             for (

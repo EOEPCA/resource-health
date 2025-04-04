@@ -11,6 +11,7 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from os import environ
+import pathlib
 
 from api_interface import (
     GET_CHECK_PATH,
@@ -406,7 +407,8 @@ def uvicorn_k8s() -> None:
     global check_backend
     check_backend = K8sBackend[AuthenticationObject](
         ["templates", "src/check_backends/k8s_backend/template_examples"],
-        load_authentication(Settings().auth_hooks),
+        # load_authentication(Settings().auth_hooks),
+        load_authentication(pathlib.Path("hooks/hooks.py")),
     )
 
     import uvicorn
