@@ -116,7 +116,10 @@ type InCheckAttributes = {
   schedule: CronExpression;
 };
 
-type TelemetryAttributes = Record<string, string | number | boolean>;
+export type TelemetryAttributes = Record<
+  string,
+  (string | number | boolean)[] | null
+>;
 
 type OutcomeFilter = {
   resource_attributes?: TelemetryAttributes;
@@ -373,21 +376,44 @@ export type GetSpansQueryParams = {
   spanAttributes?: TelemetryAttributes;
 };
 
+// function AttributesDictToList(attributes?: TelemetryAttributes): string[] {
+//   if (attributes === undefined) {
+//     return [];
+//   }
+//   function AttributeToString(
+//     key: string,
+//     value: string | number | boolean
+//   ): string {
+//     if (typeof value == "string") {
+//       value = `"${value}"`;
+//     }
+//     return `${key}=${value}`;
+//   }
+//   return Object.entries(attributes).map(([key, value]) =>
+//     AttributeToString(key, value)
+//   );
+// }
+
 function AttributesDictToList(attributes?: TelemetryAttributes): string[] {
   if (attributes === undefined) {
     return [];
   }
   function AttributeToString(
     key: string,
-    value: string | number | boolean
-  ): string {
-    if (typeof value == "string") {
-      value = `"${value}"`;
+    values: (string | number | boolean)[] | null
+  ): string[] {
+    if (values === null) {
+      return [key];
     }
-    return `${key}=${value}`;
+    return values.map((value) => {
+      if (typeof value == "string") {
+        value = `"${value}"`;
+      }
+      return `${key}=${value}`;
+    });
   }
-  return Object.entries(attributes).map(([key, value]) =>
-    AttributeToString(key, value)
+  return Object.entries(attributes).flatMap(([key, values]) =>
+    AttributeToString(key, values)
   );
 }
 

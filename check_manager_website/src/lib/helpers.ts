@@ -7,6 +7,7 @@ import {
   Span,
   SpanResult,
   SpanStatus,
+  TelemetryAttributes,
 } from "./backend-wrapper";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { sub as subDuration } from "date-fns";
@@ -45,6 +46,88 @@ export function GetSpanFilterParams(
     scopeAttributes: check.attributes.outcome_filter.scope_attributes,
     spanAttributes: check.attributes.outcome_filter.span_attributes,
   };
+}
+
+// Escape special DQL characters
+function EscChars(str: string): string {
+  const specialChars = '\\():<>"*';
+  let result: string = "";
+  for (let i = 0; i < str.length; i++) {
+    result += specialChars.includes(str[i]) ? "\\" : "";
+    result += str[i];
+  }
+  return result;
+}
+
+function AttributesToFilters(
+  attributes: TelemetryAttributes,
+  keyPrefix: string
+): string {
+  const resultParts: string[] = [];
+  for (const [key, values] of Object.entries(attributes)) {
+    // console.error(key);
+    // console.error(values);
+    const finalKey = EscChars(keyPrefix + key);
+    if (values === null) {
+      resultParts.push(`${finalKey}:*`);
+    } else {
+      const parts = values.map(
+        (value) => `${finalKey}: ${EscChars(value.toString())}`
+      );
+      const innerString = parts.join(" or ");
+      resultParts.push(
+        parts.length > 1 ? "(" + innerString + ")" : innerString
+      );
+    }
+
+    // resultParts.push(
+    //   `${EscChars(keyPrefix + key)}: ${EscChars(value.toString())}`
+    // );
+  }
+  // console.error(resultParts.join(" and "));
+  return resultParts.join(" and ");
+}
+
+export function SpanFilterParamsToDql({
+  traceId,
+  spanId,
+  // Ignored for now as DQL search has its own separate time selection
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  fromTime,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  toTime,
+  resourceAttributes,
+  scopeAttributes,
+  spanAttributes,
+}: GetSpansQueryParams): string {
+  // function DateToUnixNano(date: Date): number {
+  //   return Math.floor(date.getTime() * 1_000_000);
+  // }
+  const queryParts: string[] = [];
+  if (traceId !== undefined) {
+    queryParts.push(`traceId: ${EscChars(traceId)}`);
+  }
+  if (spanId !== undefined) {
+    queryParts.push(`spanId: ${EscChars(spanId)}`);
+  }
+  // if (fromTime !== undefined) {
+  //   queryParts.push(`startTime >= ${EscChars(fromTime.toISOString())}`);
+  // }
+  // if (toTime !== undefined) {
+  //   queryParts.push(`endTime <= ${EscChars(toTime.toISOString())}`);
+  // }
+  if (resourceAttributes !== undefined) {
+    queryParts.push(AttributesToFilters(resourceAttributes, "resource."));
+  }
+  if (scopeAttributes !== undefined) {
+    queryParts.push(
+      AttributesToFilters(scopeAttributes, "instrumentationScope.")
+    );
+  }
+  if (spanAttributes !== undefined) {
+    queryParts.push(AttributesToFilters(spanAttributes, "attributes."));
+  }
+  return queryParts.join(" and ");
 }
 
 export function GetTraceIdToSpans(

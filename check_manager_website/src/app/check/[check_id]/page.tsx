@@ -41,7 +41,6 @@ import {
   Tr,
   useDisclosure,
 } from "@chakra-ui/react";
-import { IoCheckmarkCircle as Checkmark } from "react-icons/io5";
 import { IoReload as Reload } from "react-icons/io5";
 import { Duration } from "date-fns";
 import {
@@ -51,6 +50,7 @@ import {
   GetTraceIdToSpans,
   IsSpanError,
   LOADING_STRING,
+  SpanFilterParamsToDql,
   StringifyPretty,
 } from "@/lib/helpers";
 import { CheckError } from "@/components/CheckError";
@@ -58,6 +58,7 @@ import { TELEMETRY_DURATION } from "@/lib/config";
 import { useRouter } from "next/navigation";
 import DefaultLayout from "@/layouts/DefaultLayout";
 import CustomLink from "@/components/CustomLink";
+import ButtonWithCheckmark from "@/components/ButtonWithCheckmark";
 
 type HealthCheckPageProps = {
   params: { check_id: string };
@@ -95,10 +96,9 @@ function HealthCheckDetails({ checkId }: { checkId: string }): JSX.Element {
   if (checkTemplates === null || check === null) {
     return <Text>{LOADING_STRING}</Text>;
   }
+  const spanFilterParams = GetSpanFilterParams(check, now);
   if (allSpans === null) {
-    GetAllSpans(GetSpanFilterParams(check, now))
-      .then(setAllSpans)
-      .catch(setError);
+    GetAllSpans(spanFilterParams).then(setAllSpans).catch(setError);
   }
 
   return (
@@ -107,6 +107,7 @@ function HealthCheckDetails({ checkId }: { checkId: string }): JSX.Element {
       telemetryDuration={TELEMETRY_DURATION}
       templates={checkTemplates}
       setNow={setNow}
+      filterParamsDql={SpanFilterParamsToDql(spanFilterParams)}
       allSpans={allSpans}
       setAllSpans={setAllSpans}
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -125,6 +126,7 @@ export type CheckDivProps = {
   telemetryDuration: Duration;
   templates: CheckTemplate[];
   setNow: (now: Date) => void;
+  filterParamsDql: string;
   allSpans: SpanResult | null;
   setAllSpans: (allSpans: SpanResult | null) => void;
   onCheckUpdate: (check: Check) => void;
@@ -136,6 +138,7 @@ function CheckDiv({
   check,
   templates,
   setNow,
+  filterParamsDql,
   allSpans,
   setAllSpans,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -283,8 +286,6 @@ function CheckDiv({
       </>
     );
   }
-
-  const [checkRunSubmitted, setCheckRunSubmitted] = useState(false);
   return (
     <>
       <Heading>{check_label}</Heading>
@@ -298,9 +299,11 @@ function CheckDiv({
               </div>
               <div>
                 <FormLabel>Outcome Filter</FormLabel>
-                <Textarea resize="none" className="whitespace-pre !h-32">
-                  {StringifyPretty(check.attributes.outcome_filter)}
-                </Textarea>
+                <Textarea
+                  resize="none"
+                  className="whitespace-pre !h-32"
+                  value={StringifyPretty(check.attributes.outcome_filter)}
+                />
               </div>
             </Grid>
           </FormControl>
@@ -316,18 +319,16 @@ function CheckDiv({
           >
             <Reload />
           </IconButton>
-          <div className="flex flex-row gap-1 items-center">
-            <Button
-              onClick={() =>
-                RunCheck(check.id)
-                  .then(() => setCheckRunSubmitted(true))
-                  .catch(setError)
-              }
-            >
-              Run Check
-            </Button>
-            {checkRunSubmitted && <Checkmark />}
-          </div>
+          <ButtonWithCheckmark
+            onClick={() => navigator.clipboard.writeText(filterParamsDql)}
+          >
+            Copy filter parameters in DQL
+          </ButtonWithCheckmark>
+          <ButtonWithCheckmark
+            onClick={() => RunCheck(check.id).catch(setError)}
+          >
+            Run Check
+          </ButtonWithCheckmark>
           <RemoveCheckButton
             onClick={() => {
               RemoveCheck(check.id)

@@ -42,9 +42,9 @@ import {
 } from "@/lib/helpers";
 import { CheckError } from "@/components/CheckError";
 import { TELEMETRY_DURATION } from "@/lib/config";
-import { IoCheckmarkCircle as Checkmark } from "react-icons/io5";
 import DefaultLayout from "@/layouts/DefaultLayout";
 import CustomLink from "@/components/CustomLink";
+import ButtonWithCheckmark from "@/components/ButtonWithCheckmark";
 
 const log = (type: string) => console.log.bind(console, type);
 
@@ -319,7 +319,6 @@ function CheckSummaryDiv({
     check.attributes.metadata.template_args === undefined
       ? check.id
       : check.attributes.metadata.name ?? check.id;
-  const [checkRunSubmitted, setCheckRunSubmitted] = useState(false);
   return (
     <Tr>
       <Td>
@@ -337,7 +336,10 @@ function CheckSummaryDiv({
         >
           <Reload />
         </IconButton>
-        <div className="flex flex-row gap-1 items-center">
+        <ButtonWithCheckmark onClick={() => RunCheck(check.id).catch(setError)}>
+          Run Check
+        </ButtonWithCheckmark>
+        {/* <div className="flex flex-row gap-1 items-center">
           <Button
             onClick={() =>
               RunCheck(check.id)
@@ -348,7 +350,7 @@ function CheckSummaryDiv({
             Run Check
           </Button>
           {checkRunSubmitted && <Checkmark />}
-        </div>
+        </div> */}
       </Td>
       <Td>{spansSummary?.durationCount ?? LOADING_STRING}</Td>
       <Td>{spansSummary?.failedTraceIds.size ?? LOADING_STRING}</Td>

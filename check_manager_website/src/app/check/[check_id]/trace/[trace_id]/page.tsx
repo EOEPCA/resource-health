@@ -5,8 +5,14 @@ import { Text } from "@chakra-ui/react";
 import { useState } from "react";
 import { GetAllSpans, SpanResult } from "@/lib/backend-wrapper";
 import { CheckError } from "@/components/CheckError";
-import { GetRelLink, LOADING_STRING, StringifyPretty } from "@/lib/helpers";
+import {
+  GetRelLink,
+  LOADING_STRING,
+  SpanFilterParamsToDql,
+  StringifyPretty,
+} from "@/lib/helpers";
 import CustomLink from "@/components/CustomLink";
+import ButtonWithCheckmark from "@/components/ButtonWithCheckmark";
 
 type HealthCheckRunPageProps = {
   params: { check_id: string; trace_id: string };
@@ -36,11 +42,22 @@ function HealthCheckRunPageDetails({
   if (error !== null) {
     return <CheckError {...error} />;
   }
+  const spanFilterParams = { traceId: traceId };
+  const filterParamsDql = SpanFilterParamsToDql(spanFilterParams);
   if (allSpans === null) {
-    GetAllSpans({ traceId: traceId }).then(setAllSpans).catch(setError);
+    GetAllSpans(spanFilterParams).then(setAllSpans).catch(setError);
   }
   if (allSpans === null) {
     return <Text>{LOADING_STRING}</Text>;
   }
-  return <Text className="whitespace-pre">{StringifyPretty(allSpans)}</Text>;
+  return (
+    <>
+      <ButtonWithCheckmark
+        onClick={() => navigator.clipboard.writeText(filterParamsDql)}
+      >
+        Copy filter parameters in DQL
+      </ButtonWithCheckmark>
+      <Text className="whitespace-pre">{StringifyPretty(allSpans)}</Text>;
+    </>
+  );
 }
