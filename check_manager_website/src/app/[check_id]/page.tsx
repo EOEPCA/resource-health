@@ -222,27 +222,17 @@ function CheckDiv({
           />
         </FormControl>
         {/* <Button
-        type="button"
-        onClick={() => {
-          if (!isDisabled) {
-            setTemplateId(check.metadata.template_id!)
-            setSchedule(check.schedule)
-          }
-          setIsDisabled(!isDisabled)
-        }}
-      >
-        {isDisabled ? "Enable Editing" : "Disable Editing (and delete unsaved changes)"}
-      </Button> */}
-        <Button
           type="button"
           onClick={() => {
-            RemoveCheck(check.id)
-              .then(() => onCheckRemove(check.id))
-              .catch(setError);
+            if (!isDisabled) {
+              setTemplateId(check.metadata.template_id!)
+              setSchedule(check.schedule)
+            }
+            setIsDisabled(!isDisabled)
           }}
         >
-          Remove Check
-        </Button>
+          {isDisabled ? "Enable Editing" : "Disable Editing (and delete unsaved changes)"}
+        </Button> */}
       </>
     );
   } else {
@@ -302,28 +292,38 @@ function CheckDiv({
           </Grid>
           {checkDiv}
         </div>
-        <IconButton
-          aria-label="Reload"
-          onClick={() => {
-            setNow(new Date());
-            setAllSpans(null);
-          }}
-        >
-          <Reload />
-        </IconButton>
-        <div className="flex flex-row gap-1">
-          {" "}
-          {/* items-center */}
-          <Button
-            onClick={() =>
-              RunCheck(check.id)
-                .then(() => setCheckRunSubmitted(true))
-                .catch(setError)
-            }
+        <div className="flex flex-row gap-6">
+          <IconButton
+            aria-label="Reload"
+            onClick={() => {
+              setNow(new Date());
+              setAllSpans(null);
+            }}
           >
-            Run Check
+            <Reload />
+          </IconButton>
+          <div className="flex flex-row gap-1 items-center">
+            <Button
+              onClick={() =>
+                RunCheck(check.id)
+                  .then(() => setCheckRunSubmitted(true))
+                  .catch(setError)
+              }
+            >
+              Run Check
+            </Button>
+            {checkRunSubmitted && <Checkmark />}
+          </div>
+          <Button
+            type="button"
+            onClick={() => {
+              RemoveCheck(check.id)
+                .then(() => onCheckRemove(check.id))
+                .catch(setError);
+            }}
+          >
+            Remove Check
           </Button>
-          {checkRunSubmitted && <Checkmark />}
         </div>
         <CheckRunsTable checkId={check.id} allSpans={allSpans} />
       </div>
