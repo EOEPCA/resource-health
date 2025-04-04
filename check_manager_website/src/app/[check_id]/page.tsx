@@ -24,6 +24,13 @@ import {
   IconButton,
   Input,
   Link,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
   Select,
   Table,
   Tbody,
@@ -33,6 +40,7 @@ import {
   Th,
   Thead,
   Tr,
+  useDisclosure,
 } from "@chakra-ui/react";
 import { IoCheckmarkCircle as Checkmark } from "react-icons/io5";
 import { IoReload as Reload } from "react-icons/io5";
@@ -314,19 +322,40 @@ function CheckDiv({
             </Button>
             {checkRunSubmitted && <Checkmark />}
           </div>
-          <Button
-            type="button"
+          <RemoveCheckButton
             onClick={() => {
               RemoveCheck(check.id)
                 .then(() => onCheckRemove(check.id))
                 .catch(setError);
             }}
-          >
-            Remove Check
-          </Button>
+          />
         </div>
         <CheckRunsTable checkId={check.id} allSpans={allSpans} />
       </div>
+    </>
+  );
+}
+
+function RemoveCheckButton({ onClick }: { onClick: () => void }): JSX.Element {
+  const { isOpen, onOpen, onClose } = useDisclosure();
+
+  return (
+    <>
+      <Button onClick={onOpen}>Remove Check</Button>
+      <Modal onClose={onClose} isOpen={isOpen} isCentered>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Remove Check</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>Are you sure you want to remove the check?</ModalBody>
+          <ModalFooter>
+            <Button mr={3} onClick={onClick}>
+              Remove Check
+            </Button>
+            <Button onClick={onClose}>Cancel</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </>
   );
 }
