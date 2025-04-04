@@ -120,7 +120,7 @@ telemetry_api:
   image:
     repository: docker.io/eoepca/resourcehealth_telemetry_api
     pullPolicy: IfNotPresent
-    tag: "v0.3.0-internal6-f3e44"
+    tag: "v0.3.0-internal7-8bb49"
   serviceType: ClusterIP
   containerPort: 8080
   servicePort: 8080
