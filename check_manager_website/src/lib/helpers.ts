@@ -65,15 +65,14 @@ function AttributesToFilters(
 ): string {
   const resultParts: string[] = [];
   for (const [key, values] of Object.entries(attributes)) {
-    // console.error(key);
-    // console.error(values);
     const finalKey = EscChars(keyPrefix + key);
     if (values === null) {
       resultParts.push(`${finalKey}:*`);
     } else {
-      const parts = values.map(
-        (value) => `${finalKey}: ${EscChars(value.toString())}`
-      );
+      const parts = values.map((value) => {
+        const finalKeySuffix = typeof value == "string" ? ".keyword" : "";
+        return `${finalKey + finalKeySuffix}: ${EscChars(value.toString())}`;
+      });
       const innerString = parts.join(" or ");
       resultParts.push(
         parts.length > 1 ? "(" + innerString + ")" : innerString
@@ -84,7 +83,6 @@ function AttributesToFilters(
     //   `${EscChars(keyPrefix + key)}: ${EscChars(value.toString())}`
     // );
   }
-  // console.error(resultParts.join(" and "));
   return resultParts.join(" and ");
 }
 
