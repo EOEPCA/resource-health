@@ -14,6 +14,22 @@ import { TELEMETRY_DURATION } from "./config";
 
 export const LOADING_STRING = "Loading ...";
 
+export function GetRelLink({
+  checkId,
+  traceId,
+}: {
+  checkId?: string;
+  traceId?: string;
+}) {
+  if (checkId === undefined) {
+    return "/";
+  }
+  if (traceId === undefined) {
+    return `/check/${checkId}`;
+  }
+  return `/check/${checkId}/trace/${traceId}`;
+}
+
 export function StringifyPretty(json: object): string {
   return JSON.stringify(json, null, 2);
 }

@@ -46,6 +46,7 @@ import { IoReload as Reload } from "react-icons/io5";
 import { Duration } from "date-fns";
 import {
   FindCheckTemplate,
+  GetRelLink,
   GetSpanFilterParams,
   GetTraceIdToSpans,
   IsSpanError,
@@ -67,7 +68,7 @@ export default function HealthCheckPage({
 }: HealthCheckPageProps): JSX.Element {
   return (
     <DefaultLayout>
-      <CustomLink href="/">Home</CustomLink>
+      <CustomLink href={GetRelLink({})}>Home</CustomLink>
       <HealthCheckDetails checkId={check_id} />
     </DefaultLayout>
   );
@@ -427,7 +428,9 @@ function CheckRunTableRow({
         <Text>{checkPass ? "PASS" : "FAIL"}</Text>
       </Td>
       <Td>
-        <CustomLink href={"/" + checkId + "/" + traceId}>{traceId}</CustomLink>
+        <CustomLink href={GetRelLink({ checkId: checkId, traceId: traceId })}>
+          {traceId}
+        </CustomLink>
       </Td>
       <Td>
         <div className="flex flex-col gap-6">

@@ -36,6 +36,7 @@ import {
   ComputeSpansSummary,
   FindCheckTemplate,
   GetAverageDuration,
+  GetRelLink,
   LOADING_STRING,
   SpansSummary,
 } from "@/lib/helpers";
@@ -322,7 +323,9 @@ function CheckSummaryDiv({
   return (
     <Tr>
       <Td>
-        <CustomLink href={"/" + check.id}>{check_label}</CustomLink>
+        <CustomLink href={GetRelLink({ checkId: check.id })}>
+          {check_label}
+        </CustomLink>
       </Td>
       <Td className="flex flex-row gap-4 items-center">
         <IconButton

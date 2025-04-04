@@ -5,7 +5,7 @@ import { Text } from "@chakra-ui/react";
 import { useState } from "react";
 import { GetAllSpans, SpanResult } from "@/lib/backend-wrapper";
 import { CheckError } from "@/components/CheckError";
-import { LOADING_STRING, StringifyPretty } from "@/lib/helpers";
+import { GetRelLink, LOADING_STRING, StringifyPretty } from "@/lib/helpers";
 import CustomLink from "@/components/CustomLink";
 
 type HealthCheckRunPageProps = {
@@ -17,8 +17,10 @@ export default function HealthCheckRunPage({
 }: HealthCheckRunPageProps): JSX.Element {
   return (
     <DefaultLayout>
-      <CustomLink href="/">Home</CustomLink>
-      <CustomLink href={`/${check_id}`}>Health Check</CustomLink>
+      <CustomLink href={GetRelLink({})}>Home</CustomLink>
+      <CustomLink href={GetRelLink({ checkId: check_id })}>
+        Health Check
+      </CustomLink>
       <HealthCheckRunPageDetails traceId={trace_id} />
     </DefaultLayout>
   );
