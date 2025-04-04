@@ -10,6 +10,7 @@ from exceptions import (
     APIException,
     CheckConnectionError,
     JsonValidationError,
+    CronExpressionValidationError,
 )
 from api_utils.json_api_types import Error
 
@@ -37,6 +38,8 @@ def _get_exception(error: Error) -> APIException:
     match error.code:
         case JsonValidationError.__name__:
             return JsonValidationError(error)
+        case CronExpressionValidationError.__name__:
+            return CronExpressionValidationError(error)
         case APIInternalError.__name__:
             return APIInternalError(error)
         case CheckTemplateIdError.__name__:

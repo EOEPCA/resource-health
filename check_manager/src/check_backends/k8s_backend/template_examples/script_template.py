@@ -1,4 +1,4 @@
-from typing import override
+from typing import Any, override
 from pydantic import TypeAdapter
 from kubernetes_asyncio.client.models.v1_cron_job import V1CronJob
 from kubernetes_asyncio.client.models.v1_env_var import V1EnvVar
@@ -44,6 +44,7 @@ class DefaultK8sTemplate(CronjobTemplate):
         self,
         template_args: Json,
         schedule: CronExpression,
+        userinfo: Any,
     ) -> V1CronJob:
         script = TypeAdapter(str).validate_python(template_args["script"])
         requirements: str | None = TypeAdapter(str | None).validate_python(
@@ -68,4 +69,5 @@ class DefaultK8sTemplate(CronjobTemplate):
                 )
             )
         cronjob.spec.job_template.spec.template.spec.containers[0].env = env
+
         return cronjob

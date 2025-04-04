@@ -29,6 +29,9 @@ spec:
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       volumes:
+        - name: check-api-templates
+          configMap:
+            name: {{ include "resource-health.fullname" . }}-check-templates-configmap
         {{- range .Values.check_api.configmapMounts }}
         - name: {{ toYaml .name | trim }}
           configMap:
@@ -45,6 +48,8 @@ spec:
               containerPort: {{ .Values.check_api.containerPort }}
               protocol: TCP
           volumeMounts:
+            - name: check-api-templates
+              mountPath: /app/templates/
             {{- range .Values.check_api.configmapMounts }}
             - name: {{ toYaml .name | trim }}
               mountPath: {{ toYaml .mountPath | trim }}
@@ -54,6 +59,8 @@ spec:
               value: {{ .Values.check_api.overrideOTLPEndpoint | default .Values.global.defaultOTLPEndpoint }}
             - name: CHECK_MANAGER_COLLECTOR_TLS_SECRET
               value: {{ include "resource-health.fullname" . }}-healthchecks-certificate
+            - name: RH_CHECK_K8S_TEMPLATE_PATH
+              value: "/app/templates/"
             - name: RH_CHECK_API_BASE_URL
               value: {{ toYaml .Values.global.defaultCheckAPIBaseURL }}
           {{- range .Values.check_api.environmentSecrets }}

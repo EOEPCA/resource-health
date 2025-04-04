@@ -1,5 +1,3 @@
-from typing import Optional
-
 from kubernetes_asyncio.client.models.v1_container import V1Container
 from kubernetes_asyncio.client.models.v1_cron_job import V1CronJob
 from kubernetes_asyncio.client.models.v1_cron_job_spec import V1CronJobSpec
@@ -11,12 +9,12 @@ from kubernetes_asyncio.client.models.v1_object_meta import V1ObjectMeta
 
 from ..templates import CronExpression
 
-DEFAULT_CONTAINER_IMAGE: str = "docker.io/eoepca/healthcheck_runner:2.0.0-beta2"
+DEFAULT_CONTAINER_IMAGE: str = "docker.io/eoepca/healthcheck_runner:v0.3.0-internal5"
 
 
 def make_base_cronjob(
     schedule: CronExpression,
-    container_image: Optional[str] = DEFAULT_CONTAINER_IMAGE,
+    container_image: str = DEFAULT_CONTAINER_IMAGE,
 ) -> V1CronJob:
     return V1CronJob(
         api_version="batch/v1",
@@ -37,7 +35,7 @@ def make_base_cronjob(
                                     image_pull_policy="IfNotPresent",
                                 ),
                             ],
-                            restart_policy="OnFailure",
+                            restart_policy="Never",
                         ),
                     ),
                 ),

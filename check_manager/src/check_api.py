@@ -11,6 +11,7 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from os import environ
+import pathlib
 
 from api_interface import (
     GET_CHECK_PATH,
@@ -67,8 +68,6 @@ from eoepca_security import OIDCProxyScheme, Tokens
 BASE_URL = get_env_var_or_throw("RH_CHECK_API_BASE_URL")
 
 
-# Dummy for now
-auth_obj = AuthenticationObject("user1")
 # Use CheckBackend type so mypy warns is any specifics of MockBackend are used
 check_backend: CheckBackend = MockBackend(template_id_prefix="remote_")
 
@@ -176,7 +175,7 @@ async def get_check_templates(
     return APIOKResponseList[CheckTemplateAttributes, None](
         data=[
             check_template_to_resource(template)
-            async for template in check_backend.get_check_templates(ids)
+            async for template in check_backend.get_check_templates(tokens, ids)
         ],
         links=Links(
             self=get_request_url_str(BASE_URL, request),
@@ -262,7 +261,7 @@ async def get_checks(
     return APIOKResponseList[OutCheckAttributes, None](
         data=[
             check_to_resource(check)
-            async for check in check_backend.get_checks(auth_obj, ids)
+            async for check in check_backend.get_checks(tokens, ids)
         ],
         links=Links(self=get_request_url_str(BASE_URL, request), root=BASE_URL),
         meta=None,
@@ -283,7 +282,7 @@ async def create_check(
     if hasattr(in_check.data, "id"):
         raise NewCheckClientSpecifiedId.create()
     assert in_check.data.type == "check"
-    check = await check_backend.create_check(auth_obj, in_check.data.attributes)
+    check = await check_backend.create_check(tokens, in_check.data.attributes)
     response.headers["Allow"] = "GET,POST"
     response.headers["Location"] = check_url(check.id)
     return APIOKResponse[OutCheckAttributes](
@@ -304,7 +303,7 @@ async def get_check(
     check_id: CheckId
 ) -> APIOKResponse[OutCheckAttributes]:
     checks = [
-        check async for check in check_backend.get_checks(auth_obj, ids=[check_id])
+        check async for check in check_backend.get_checks(tokens, ids=[check_id])
     ]
     match checks:
         case []:
@@ -331,7 +330,7 @@ async def get_check(
 #     schedule: Annotated[CronExpression | None, Body()] = None,
 # ) -> Check:
 #     return await check_backend.update_check(
-#         auth_obj, check_id, template_id, template_args, schedule
+#         tokens, check_id, template_id, template_args, schedule
 #     )
 
 
@@ -346,7 +345,7 @@ async def remove_check(
     check_id: Annotated[CheckId, Path()]
 ) -> None:
     response.headers["Allow"] = "GET,DELETE"
-    return await check_backend.remove_check(auth_obj, check_id)
+    return await check_backend.remove_check(tokens, check_id)
 
 
 @router.post(
@@ -360,7 +359,7 @@ async def run_check(
     check_id: Annotated[CheckId, Path()]
 ) -> None:
     response.headers["Allow"] = "POST"
-    return await check_backend.run_check(auth_obj, check_id)
+    return await check_backend.run_check(tokens, check_id)
 
 
 app.include_router(router)
@@ -403,10 +402,13 @@ def unicorn_dummy_prod() -> None:
 
 def uvicorn_k8s() -> None:
     from check_backends.k8s_backend import K8sBackend
+    from security import Settings, load_authentication
 
     global check_backend
-    check_backend = K8sBackend(
-        ["templates", "src/check_backends/k8s_backend/template_examples"]
+    check_backend = K8sBackend[AuthenticationObject](
+        ["templates", "src/check_backends/k8s_backend/template_examples"],
+        # load_authentication(Settings().auth_hooks),
+        load_authentication(pathlib.Path("hooks/hooks.py")),
     )
 
     import uvicorn

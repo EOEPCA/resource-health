@@ -1,5 +1,5 @@
 import json
-from typing import override
+from typing import Any, override
 from pydantic import TypeAdapter
 from kubernetes_asyncio.client.models.v1_cron_job import V1CronJob
 from kubernetes_asyncio.client.models.v1_env_var import V1EnvVar
@@ -53,6 +53,7 @@ class SimplePing(CronjobTemplate):
         self,
         template_args: Json,
         schedule: CronExpression,
+        userinfo: dict[str, Any],
     ) -> V1CronJob:
         endpoint = TypeAdapter(str).validate_python(template_args["endpoint"])
         expected_status_code = TypeAdapter(str).validate_python(

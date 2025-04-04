@@ -345,7 +345,13 @@ function AttributesDictToList(attributes?: TelemetryAttributes): string[] {
   if (attributes === undefined) {
     return []
   }
-  return Object.entries(attributes).map(([key, value]) => `${key}=${value}`)
+  function AttributeToString(key: string, value: string | number | boolean): string {
+    if (typeof value == "string") {
+      value = `"${value}"`
+    }
+    return `${key}=${value}`
+  }
+  return Object.entries(attributes).map(([key, value]) => AttributeToString(key, value))
 }
 
 export async function GetSpans({traceId, spanId, fromTime, toTime, resourceAttributes, scopeAttributes, spanAttributes, pageToken}: GetSpansQueryParams & { pageToken?: string}): Promise<SpansResponse> {
