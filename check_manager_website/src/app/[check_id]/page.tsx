@@ -23,7 +23,6 @@ import {
   Heading,
   IconButton,
   Input,
-  Link,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -57,6 +56,7 @@ import { CheckError } from "@/components/CheckError";
 import { TELEMETRY_DURATION } from "@/lib/config";
 import { useRouter } from "next/navigation";
 import DefaultLayout from "@/layouts/DefaultLayout";
+import CustomLink from "@/components/CustomLink";
 
 type HealthCheckPageProps = {
   params: { check_id: string };
@@ -67,7 +67,7 @@ export default function HealthCheckPage({
 }: HealthCheckPageProps): JSX.Element {
   return (
     <DefaultLayout>
-      <Link href="/">Home</Link>
+      <CustomLink href="/">Home</CustomLink>
       <HealthCheckDetails checkId={check_id} />
     </DefaultLayout>
   );
@@ -427,7 +427,7 @@ function CheckRunTableRow({
         <Text>{checkPass ? "PASS" : "FAIL"}</Text>
       </Td>
       <Td>
-        <Link href={"/" + checkId + "/" + traceId}>{traceId}</Link>
+        <CustomLink href={"/" + checkId + "/" + traceId}>{traceId}</CustomLink>
       </Td>
       <Td>
         <div className="flex flex-col gap-6">

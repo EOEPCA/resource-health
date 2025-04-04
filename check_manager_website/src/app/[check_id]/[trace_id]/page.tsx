@@ -1,12 +1,12 @@
 "use client";
 
 import DefaultLayout from "@/layouts/DefaultLayout";
-import Link from "next/link";
 import { Text } from "@chakra-ui/react";
 import { useState } from "react";
 import { GetAllSpans, SpanResult } from "@/lib/backend-wrapper";
 import { CheckError } from "@/components/CheckError";
 import { LOADING_STRING, StringifyPretty } from "@/lib/helpers";
+import CustomLink from "@/components/CustomLink";
 
 type HealthCheckRunPageProps = {
   params: { check_id: string; trace_id: string };
@@ -17,8 +17,8 @@ export default function HealthCheckRunPage({
 }: HealthCheckRunPageProps): JSX.Element {
   return (
     <DefaultLayout>
-      <Link href="/">Home</Link>
-      <Link href={`/${check_id}`}>Health Check</Link>
+      <CustomLink href="/">Home</CustomLink>
+      <CustomLink href={`/${check_id}`}>Health Check</CustomLink>
       <HealthCheckRunPageDetails traceId={trace_id} />
     </DefaultLayout>
   );
