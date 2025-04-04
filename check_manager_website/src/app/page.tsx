@@ -107,14 +107,14 @@ function ChecksDiv({
   templates: CheckTemplate[];
   onCreateCheck: (check: Check) => void;
 } & CheckDivCommonProps): JSX.Element {
-  const [spansSummaries, setSpansSummaries] = useState<
-    Record<string, SpansSummary | null>
-  >(
-    checks.reduce((accum: Record<string, SpansSummary | null>, val: Check) => {
-      accum[val.id] = null;
-      return accum;
-    }, {})
-  );
+  // const [spansSummaries, setSpansSummaries] = useState<
+  //   Record<string, SpansSummary | null>
+  // >(
+  //   checks.reduce((accum: Record<string, SpansSummary | null>, val: Check) => {
+  //     accum[val.id] = null;
+  //     return accum;
+  //   }, {})
+  // );
   return (
     <div>
       <Heading>Check List</Heading>
@@ -135,7 +135,7 @@ function ChecksDiv({
             </Tr>
           </Thead>
           <Tbody>
-            <SummaryRowDiv spansSummaries={spansSummaries} />
+            {/* <SummaryRowDiv spansSummaries={spansSummaries} /> */}
             <CreateCheckDiv
               templates={templates}
               onCreateCheck={onCreateCheck}
@@ -145,13 +145,14 @@ function ChecksDiv({
               <CheckSummaryDiv
                 key={check.id}
                 check={check}
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 setCheckSpansSummary={(checkId, spansSummary) => {
-                  const newSpansSummaries = {
-                    ...spansSummaries,
-                    // This is at the end to override the existing value
-                    [checkId]: spansSummary,
-                  };
-                  setSpansSummaries(newSpansSummaries);
+                  // const newSpansSummaries = {
+                  //   ...spansSummaries,
+                  //   // This is at the end to override the existing value
+                  //   [checkId]: spansSummary,
+                  // };
+                  // setSpansSummaries(newSpansSummaries);
                 }}
                 {...commonProps}
               />
@@ -163,42 +164,42 @@ function ChecksDiv({
   );
 }
 
-function SummaryRowDiv({
-  spansSummaries,
-}: {
-  spansSummaries: Record<string, SpansSummary | null>;
-}): JSX.Element {
-  let finishedLoading = true;
-  let totalDurationSecs = 0;
-  let durationCount = 0;
-  let failedCheckCount = 0;
-  let totalTestCount = 0;
-  for (const [, spansSummary] of Object.entries(spansSummaries)) {
-    if (spansSummary === null) {
-      finishedLoading = false;
-    } else {
-      totalDurationSecs += spansSummary.totalDurationSecs;
-      durationCount += spansSummary.durationCount;
-      failedCheckCount += spansSummary.failedTraceIds.size;
-      totalTestCount += spansSummary.totalTestCount;
-    }
-  }
+// function SummaryRowDiv({
+//   spansSummaries,
+// }: {
+//   spansSummaries: Record<string, SpansSummary | null>;
+// }): JSX.Element {
+//   let finishedLoading = true;
+//   let totalDurationSecs = 0;
+//   let durationCount = 0;
+//   let failedCheckCount = 0;
+//   let totalTestCount = 0;
+//   for (const [, spansSummary] of Object.entries(spansSummaries)) {
+//     if (spansSummary === null) {
+//       finishedLoading = false;
+//     } else {
+//       totalDurationSecs += spansSummary.totalDurationSecs;
+//       durationCount += spansSummary.durationCount;
+//       failedCheckCount += spansSummary.failedTraceIds.size;
+//       totalTestCount += spansSummary.totalTestCount;
+//     }
+//   }
 
-  return (
-    <Tr>
-      <Td>Summary</Td>
-      <Td></Td>
-      <Td>{finishedLoading ? durationCount : LOADING_STRING}</Td>
-      <Td>{finishedLoading ? failedCheckCount : LOADING_STRING}</Td>
-      <Td>
-        {finishedLoading
-          ? GetAverageDuration(totalDurationSecs, durationCount)
-          : LOADING_STRING}
-      </Td>
-      <Td>{finishedLoading ? totalTestCount : LOADING_STRING}</Td>
-    </Tr>
-  );
-}
+//   return (
+//     <Tr>
+//       <Td>Summary</Td>
+//       <Td />
+//       <Td>{finishedLoading ? durationCount : LOADING_STRING}</Td>
+//       <Td>{finishedLoading ? failedCheckCount : LOADING_STRING}</Td>
+//       <Td>
+//         {finishedLoading
+//           ? GetAverageDuration(totalDurationSecs, durationCount)
+//           : LOADING_STRING}
+//       </Td>
+//       <Td>{finishedLoading ? totalTestCount : LOADING_STRING}</Td>
+//     </Tr>
+//   );
+// }
 
 function CreateCheckDiv({
   templates,
