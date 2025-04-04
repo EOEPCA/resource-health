@@ -1,31 +1,28 @@
-FROM python:3.12-slim AS compiler
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm AS compiler
+
 ENV PYTHONUNBUFFERED=1
-
-RUN python -m venv /venv
-ENV PATH="/venv/bin:$PATH"
-COPY ./utilities /utilities
-COPY ./runner-image/base_requirements.txt /requirements.txt
-RUN pip install -Ur /requirements.txt
-
-FROM python:3.12-slim AS runner
-
-RUN apt-get update -y && apt-get install -y --no-install-recommends \
-    wget && \
-    # Clean up after installation
-    apt-get clean && rm -rf /var/lib/apt-get/lists/*
-
-COPY --from=compiler /venv /venv
-ENV PATH="/venv/bin:$PATH"
 
 WORKDIR /app
 
-COPY ./runner-image/run_script.sh /app/
-COPY ./runner-image/tests.py /app/
+COPY ./utilities /app/utilities
+COPY ./runner-image/base_requirements.txt /app/requirements.txt
 
-## Replace with a (preinstalled) set of packages
-COPY ./instrumentation/conftest.py /app/
+RUN uv venv && uv pip install -Ur requirements.txt
 
-RUN chmod +x /app/run_script.sh
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS runner
+
+COPY --from=compiler /app/.venv /app/.venv
+
+WORKDIR /app
+
+## TODO: Replace conftest with a (preinstalled) package
+COPY ./runner-image/run_script.sh ./runner-image/tests.py ./instrumentation/conftest.py /app/
+
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+    curl git && \
+    # Clean up after installation
+    apt-get clean && rm -rf /var/lib/apt-get/lists/* && \
+    chmod +x /app/run_script.sh
 
 ENTRYPOINT [ "/app/run_script.sh" ]
 

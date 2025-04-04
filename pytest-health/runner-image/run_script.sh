@@ -1,14 +1,13 @@
 #!/bin/bash
 
-cd /app
-
-## TODO: Make optional by adding a default
-
 # Install requirements
 if [[ ! -z "$RESOURCE_HEALTH_RUNNER_REQUIREMENTS" ]]; then
-	pip3 install -r <(upcat "$RESOURCE_HEALTH_RUNNER_REQUIREMENTS")
+    uv run upcat "$RESOURCE_HEALTH_RUNNER_REQUIREMENTS" > requirements.txt
+	uv pip install -r requirements.txt
 fi
 
+uv run upcat "$RESOURCE_HEALTH_RUNNER_SCRIPT" > tests.py
+
 # Run tests
-opentelemetry-instrument --traces_exporter otlp --logs_exporter otlp "$@"
+uv run opentelemetry-instrument --traces_exporter otlp --logs_exporter otlp "$@"
 
