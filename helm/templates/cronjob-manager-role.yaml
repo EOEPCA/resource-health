@@ -9,3 +9,6 @@ rules:
 - apiGroups: ["batch"] # "" indicates the core API group
   resources: ["cronjobs", "jobs"]
   verbs: ["get", "watch", "list", "create", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "watch", "list", "create", "patch", "delete"]
