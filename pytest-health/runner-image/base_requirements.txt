@@ -1,4 +1,5 @@
 opentelemetry-exporter-otlp==1.25.0
+opensearch-py==2.8.0
 opentelemetry-instrumentation-requests==0.46b0
 opentelemetry-instrumentation==0.46b0
 pytest-custom-exit-code==0.3.0
@@ -6,4 +7,5 @@ pytest-xdist==3.6.1
 pytest==8.3.2
 requests==2.32.3
 opentelemetry-container-distro==0.2.0
+python-opentelemetry-access @ git+https://github.com/EOEPCA/python-opentelemetry-access.git@ab2a9b2b3d1b73e8d80c70c92ad535c7cf282fab
 ./utilities

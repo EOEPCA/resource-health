@@ -34,6 +34,21 @@ class JsonValidationError(APIException):
         )
 
 
+class CronExpressionValidationError(APIException):
+    """Cron expression is invalid"""
+
+    @classmethod
+    def create(cls, detail) -> Self:
+        return cls(
+            Error(
+                status="422",
+                code=cls._create_code(),
+                title=cls._create_title_from_doc(),
+                detail=detail,
+            )
+        )
+
+
 class NewCheckClientSpecifiedId(APIException):
     """Client must not specify new check id"""
 

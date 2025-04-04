@@ -6,7 +6,7 @@ global:
   ## A certificate issues for the above domain
   defaultInternalIssuerRef:
     kind: ClusterIssuer
-    name: null ## INSTRUCTION: Set to name of certificate issuer for the internal cluster domain
+    name: foo # null ## INSTRUCTION: Set to name of certificate issuer for the internal cluster domain
 
   # defaultHealthCheckImage:
   #   repository: docker.io/eoepca/healthcheck_runner

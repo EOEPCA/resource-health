@@ -36,7 +36,31 @@ mock_api:
 healthchecks:
   templates:
     ping_template.py: |
-      from check_backends.k8s_backend.template_examples import SimplePing as SimplePing
+      from check_backends.k8s_backend.template_utils import *
+
+      class SimplePingArguments(BaseModel):
+          endpoint: str = Field(json_schema_extra={"format": "textarea"})
+          expected_status_code: int = Field(ge=100, lt=600, default=200)
+
+      def simple_ping_containers(template_args):
+          return [
+              container(
+                  image=DEFAULT_CONTAINER_IMAGE,
+                  env={
+                      "RESOURCE_HEALTH_RUNNER_SCRIPT": "data:text/plain;base64,ZnJvbSBvcyBpbXBvcnQgZW52aXJvbgppbXBvcnQgcmVxdWVzdHMKCkdFTkVSSUNfRU5EUE9JTlQ6IHN0ciA9IGVudmlyb25bIkdFTkVSSUNfRU5EUE9JTlQiXQpFWFBFQ1RFRF9TVEFUVVNfQ09ERTogaW50ID0gaW50KGVudmlyb25bIkVYUEVDVEVEX1NUQVRVU19DT0RFIl0pCgoKZGVmIHRlc3RfcGluZygpIC0+IE5vbmU6CiAgICByZXNwb25zZSA9IHJlcXVlc3RzLmdldCgKICAgICAgICBHRU5FUklDX0VORFBPSU5ULAogICAgKQogICAgYXNzZXJ0IHJlc3BvbnNlLnN0YXR1c19jb2RlID09IEVYUEVDVEVEX1NUQVRVU19DT0RFCg==",
+                      "GENERIC_ENDPOINT": template_args.endpoint,
+                      "EXPECTED_STATUS_CODE": str(template_args.expected_status_code),
+                  },
+              )
+          ]
+
+      SimplePing = cronjob_template(
+          template_id="simple_http_ping",
+          argument_type=SimplePingArguments,
+          label="HTTP ping template",
+          description="Simple template for sending a HTTP request to a single endpoint.",
+          containers=simple_ping_containers,
+      )
 
     script_template.py: |
       from check_backends.k8s_backend.template_examples import SimpleScript as SimpleScript
@@ -73,7 +97,7 @@ check_api:
   image:
     repository: docker.io/eoepca/resourcehealth_check_api
     pullPolicy: IfNotPresent
-    tag: "v0.3.0-internal4"
+    tag: "v0.3.0-internal8-cd90ca"
   serviceType: ClusterIP
   containerPort: 8000
   servicePort: 8000
@@ -96,7 +120,7 @@ telemetry_api:
   image:
     repository: docker.io/eoepca/resourcehealth_telemetry_api
     pullPolicy: IfNotPresent
-    tag: "v0.3.0-internal4"
+    tag: "v0.3.0-internal7-8bb49"
   serviceType: ClusterIP
   containerPort: 8080
   servicePort: 8080
@@ -115,7 +139,7 @@ web:
   image:
     repository: docker.io/eoepca/resourcehealth_web
     pullPolicy: IfNotPresent
-    tag: "v0.3.0-internal4"
+    tag: "v0.3.0-internal8-91dec30"
   serviceType: ClusterIP
   containerPort: 3000
   servicePort: 80

@@ -9,6 +9,10 @@ metadata:
   labels:
     app.kubernetes.io/component: "mockapi"
     {{- include "resource-health.labels" $top | nindent 4 }}
+  {{ if $check.annotations -}}
+  annotations:
+    {{- toYaml $check.annotations | nindent 4 }}
+  {{- end }}
 spec:
   schedule: "{{ $check.schedule }}"
   jobTemplate:
