@@ -139,7 +139,7 @@ web:
   image:
     repository: docker.io/eoepca/resourcehealth_web
     pullPolicy: IfNotPresent
-    tag: "v0.3.0-internal10-9e4dd6c"
+    tag: "v0.3.0-internal11-ee37346"
   serviceType: ClusterIP
   containerPort: 3000
   servicePort: 80
