@@ -9,12 +9,11 @@ class DefaultK8sArguments(BaseModel):
 def default_k8s_template_containers(
     template_args: DefaultK8sArguments,
 ) -> list[Container]:
-    env = {"RESOURCE_HEALTH_RUNNER_SCRIPT": template_args.script}
-
-    if template_args.requirements:
-        env["RESOURCE_HEALTH_RUNNER_REQUIREMENTS"] = template_args.requirements
-
-    return [container(image=DEFAULT_CONTAINER_IMAGE, env=env)]
+    return [
+        runner_container(
+            script_url=template_args.script, requirements_url=template_args.requirements
+        )
+    ]
 
 
 DefaultK8sTemplate = cronjob_template(

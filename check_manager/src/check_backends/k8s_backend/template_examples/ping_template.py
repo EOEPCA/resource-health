@@ -9,13 +9,27 @@ class SimplePingArguments(BaseModel):
 # def simple_ping_annotations(self, template_args : SimplePingArguments) -> dict[str, Any]:
 #     return {}
 
+SIMPLE_PING_SRC = """from os import environ
+import requests
+
+GENERIC_ENDPOINT: str = environ["GENERIC_ENDPOINT"]
+EXPECTED_STATUS_CODE: int = int(environ["EXPECTED_STATUS_CODE"])
+
+
+def test_ping() -> None:
+    response = requests.get(
+        GENERIC_ENDPOINT,
+    )
+    assert response.status_code == EXPECTED_STATUS_CODE
+"""
+
 
 def simple_ping_containers(template_args: SimplePingArguments) -> list[Container]:
     return [
-        container(
-            image=DEFAULT_CONTAINER_IMAGE,
+        runner_container(
+            # "data:text/plain;base64,ZnJvbS...QVRVU19DT0RFCg=="
+            script_url=src_to_data_url(SIMPLE_PING_SRC),
             env={
-                "RESOURCE_HEALTH_RUNNER_SCRIPT": "data:text/plain;base64,ZnJvbSBvcyBpbXBvcnQgZW52aXJvbgppbXBvcnQgcmVxdWVzdHMKCkdFTkVSSUNfRU5EUE9JTlQ6IHN0ciA9IGVudmlyb25bIkdFTkVSSUNfRU5EUE9JTlQiXQpFWFBFQ1RFRF9TVEFUVVNfQ09ERTogaW50ID0gaW50KGVudmlyb25bIkVYUEVDVEVEX1NUQVRVU19DT0RFIl0pCgoKZGVmIHRlc3RfcGluZygpIC0+IE5vbmU6CiAgICByZXNwb25zZSA9IHJlcXVlc3RzLmdldCgKICAgICAgICBHRU5FUklDX0VORFBPSU5ULAogICAgKQogICAgYXNzZXJ0IHJlc3BvbnNlLnN0YXR1c19jb2RlID09IEVYUEVDVEVEX1NUQVRVU19DT0RFCg==",
                 "GENERIC_ENDPOINT": template_args.endpoint,
                 "EXPECTED_STATUS_CODE": str(template_args.expected_status_code),
             },
