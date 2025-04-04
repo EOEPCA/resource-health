@@ -441,7 +441,8 @@ function CheckRunsSummaryRow({
         }`}
       >
         PASS {passedCount}
-        <br /> FAIL {failedCount}
+        <br />
+        FAIL {failedCount}
       </Td>
       <Td />
       <Td />
