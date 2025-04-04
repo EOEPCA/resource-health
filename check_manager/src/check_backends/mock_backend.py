@@ -72,7 +72,7 @@ class MockBackend(CheckBackend[AuthenticationObject]):
                     ),
                     schedule=CronExpression("* * * * *"),
                     outcome_filter=OutcomeFilter(
-                        resource_attributes={"resource.foo": "bar"}
+                        resource_attributes={"resource.foo": ["bar"]}
                     ),
                 ),
             )
@@ -154,7 +154,7 @@ class MockBackend(CheckBackend[AuthenticationObject]):
             # Just return some filter which I know will have some results
             outcome_filter=OutcomeFilter(
                 resource_attributes={
-                    "k8s.cronjob.name": "resource-health-healthchecks-cronjob-3"
+                    "k8s.cronjob.name": ["resource-health-healthchecks-cronjob-3"]
                 }
             ),
         )

@@ -171,7 +171,7 @@ def _make_check(cronjob: V1CronJob) -> OutCheck:
             ),
             schedule=CronExpression(cronjob.spec.schedule),
             outcome_filter=OutcomeFilter(
-                resource_attributes={"k8s.cronjob.name": cronjob.metadata.name}
+                resource_attributes={"k8s.cronjob.name": [cronjob.metadata.name]}
             ),
         ),
     )
@@ -204,7 +204,7 @@ def default_make_check(cronjob: V1CronJob) -> OutCheck:
             ),
             schedule=CronExpression(cronjob.spec.schedule),
             outcome_filter=OutcomeFilter(
-                resource_attributes={"k8s.cronjob.name": cronjob_name}
+                resource_attributes={"k8s.cronjob.name": [cronjob_name]}
             ),
         ),
     )
