@@ -13,6 +13,7 @@ WORKDIR /app
 
 COPY --from=build /app/.venv /app/.venv
 COPY ./templates/ /app/templates/
+COPY ./hooks/ /app/hooks/
 
 EXPOSE 8000
 ENTRYPOINT [".venv/bin/check-api-server-k8s"]

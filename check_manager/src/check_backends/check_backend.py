@@ -3,6 +3,8 @@ import asyncio
 from types import TracebackType
 from typing import (
     AsyncIterable,
+    Generic,
+    TypeVar,
     Literal,
     NewType,
     Self,
@@ -15,7 +17,8 @@ from referencing.jsonschema import Schema
 from exceptions import APIException
 from api_utils.json_api_types import Error, Json
 
-AuthenticationObject = NewType("AuthenticationObject", str)
+AuthenticationObject = TypeVar("AuthenticationObject")
+
 CronExpression = NewType("CronExpression", str)
 CheckTemplateId = NewType("CheckTemplateId", str)
 CheckId = NewType("CheckId", str)
@@ -140,7 +143,7 @@ class InCheck(BaseModel):
 
 
 # Inherit from this class and implement the abstract methods for each new backend
-class CheckBackend(ABC):
+class CheckBackend(ABC, Generic[AuthenticationObject]):
     # Close connections, release resources and such
     # aclose is the standard name such methods when they are asynchronous
     @abstractmethod
@@ -150,6 +153,7 @@ class CheckBackend(ABC):
     @abstractmethod
     async def get_check_templates(
         self: Self,
+        auth_obj: AuthenticationObject,
         ids: list[CheckTemplateId] | None = None,
     ) -> AsyncIterable[CheckTemplate]:
         # A trick to make the type of the function what I want
@@ -162,7 +166,9 @@ class CheckBackend(ABC):
     # Otherwise don't use that error code
     @abstractmethod
     async def create_check(
-        self: Self, auth_obj: AuthenticationObject, attributes: InCheckAttributes
+        self: Self,
+        auth_obj: AuthenticationObject,
+        attributes: InCheckAttributes,
     ) -> OutCheck:
         pass
 
@@ -208,7 +214,7 @@ class CheckBackend(ABC):
         pass
 
 
-class AggregationBackend(CheckBackend):
+class AggregationBackend(CheckBackend[AuthenticationObject]):
     def __init__(self, backends: list[CheckBackend]) -> None:
         self._backends = backends
 
@@ -249,10 +255,11 @@ class AggregationBackend(CheckBackend):
     @override
     async def get_check_templates(
         self: Self,
+        auth_obj: AuthenticationObject,
         ids: list[CheckTemplateId] | None = None,
     ) -> AsyncIterable[CheckTemplate]:
         for backend in self._backends:
-            async for template in backend.get_check_templates(ids):
+            async for template in backend.get_check_templates(auth_obj, ids):
                 yield template
 
     @override
