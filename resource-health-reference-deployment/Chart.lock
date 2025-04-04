@@ -10,6 +10,6 @@ dependencies:
   version: 2.19.1
 - name: resource-health
   repository: file://../helm
-  version: v0.3.0-internal4
-digest: sha256:3ad1c5792d1a7e8727e1781ec4814236e339e8b99fb889e04eb12d5739b1f1cc
-generated: "2025-04-04T10:32:06.623886579+02:00"
+  version: v0.3.0-internal5
+digest: sha256:162680b5e23ec92e0ca21e4ce5d6adbca7762572ee8a625da2294adaeace96b2
+generated: "2025-04-04T10:41:27.933863043+02:00"
