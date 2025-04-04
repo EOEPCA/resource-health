@@ -42,7 +42,7 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { IoReload as Reload } from "react-icons/io5";
-import { Duration } from "date-fns";
+import { Duration, formatDuration } from "date-fns";
 import {
   FindCheckTemplate,
   GetRelLink,
@@ -337,6 +337,9 @@ function CheckDiv({
             }}
           />
         </div>
+        <Text>
+          Displaying data from the last {formatDuration(TELEMETRY_DURATION)}
+        </Text>
         <CheckRunsTable checkId={check.id} allSpans={allSpans} />
       </div>
     </>
@@ -391,6 +394,7 @@ function CheckRunsTable({
         </Tr>
       </Thead>
       <Tbody>
+        <CheckRunsSummaryRow traceIdToSpans={traceIdToSpans} />
         {Object.entries(traceIdToSpans).map(([traceId, traceSpans]) => (
           <CheckRunTableRow
             key={traceId}
@@ -402,6 +406,46 @@ function CheckRunsTable({
       </Tbody>
     </Table>
     // </TableContainer>
+  );
+}
+
+function CheckRunsSummaryRow({
+  traceIdToSpans,
+}: {
+  traceIdToSpans: Record<string, SpanResult>;
+}): JSX.Element {
+  let passedCount = 0;
+  let failedCount = 0;
+  for (const [, traceSpans] of Object.entries(traceIdToSpans)) {
+    let checkPass = true;
+    for (const resourceSpans of traceSpans.resourceSpans) {
+      for (const scopeSpans of resourceSpans.scopeSpans) {
+        for (const span of scopeSpans.spans) {
+          if (IsSpanError(span)) {
+            checkPass = false;
+          }
+        }
+      }
+    }
+    if (checkPass) {
+      passedCount++;
+    } else {
+      failedCount++;
+    }
+  }
+  return (
+    <Tr>
+      <Td
+        className={`whitespace-pre ${
+          failedCount === 0 ? "bg-green-300" : "bg-red-300"
+        }`}
+      >
+        PASS {passedCount}
+        <br /> FAIL {failedCount}
+      </Td>
+      <Td />
+      <Td />
+    </Tr>
   );
 }
 

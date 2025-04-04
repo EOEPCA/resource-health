@@ -173,7 +173,7 @@ function SummaryRowDiv({
   let durationCount = 0;
   let failedCheckCount = 0;
   let totalTestCount = 0;
-  for (const [_traceId, spansSummary] of Object.entries(spansSummaries)) {
+  for (const [, spansSummary] of Object.entries(spansSummaries)) {
     if (spansSummary === null) {
       finishedLoading = false;
     } else {
