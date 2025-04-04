@@ -107,6 +107,14 @@ function ChecksDiv({
   templates: CheckTemplate[];
   onCreateCheck: (check: Check) => void;
 } & CheckDivCommonProps): JSX.Element {
+  const [spansSummaries, setSpansSummaries] = useState<
+    Record<string, SpansSummary | null>
+  >(
+    checks.reduce((accum: Record<string, SpansSummary | null>, val: Check) => {
+      accum[val.id] = null;
+      return accum;
+    }, {})
+  );
   return (
     <div>
       <Heading>Check List</Heading>
@@ -127,14 +135,26 @@ function ChecksDiv({
             </Tr>
           </Thead>
           <Tbody>
-            {SummaryRowDiv(commonProps)}
-            {CreateCheckDiv({
-              templates,
-              onCreateCheck: onCreateCheck,
-              ...commonProps,
-            })}
+            <SummaryRowDiv spansSummaries={spansSummaries} />
+            <CreateCheckDiv
+              templates={templates}
+              onCreateCheck={onCreateCheck}
+              {...commonProps}
+            />
             {checks.map((check) => (
-              <CheckSummaryDiv key={check.id} check={check} {...commonProps} />
+              <CheckSummaryDiv
+                key={check.id}
+                check={check}
+                setCheckSpansSummary={(checkId, spansSummary) => {
+                  const newSpansSummaries = {
+                    ...spansSummaries,
+                    // This is at the end to override the existing value
+                    [checkId]: spansSummary,
+                  };
+                  setSpansSummaries(newSpansSummaries);
+                }}
+                {...commonProps}
+              />
             ))}
           </Tbody>
         </Table>
@@ -144,44 +164,38 @@ function ChecksDiv({
 }
 
 function SummaryRowDiv({
-  telemetryDuration,
-  setError,
+  spansSummaries,
 }: {
-  telemetryDuration: Duration;
-  setError: (error: Error) => void;
+  spansSummaries: Record<string, SpansSummary | null>;
 }): JSX.Element {
-  const [now, setNow] = useState(new Date());
-  const [spansSummary, setSpansSummary] = useState<SpansSummary | null>(null);
-  if (spansSummary === null) {
-    ComputeSpansSummary({
-      fromTime: subDuration(now, telemetryDuration),
-      toTime: now,
-    })
-      .then(setSpansSummary)
-      .catch(setError);
+  let finishedLoading = true;
+  let totalDurationSecs = 0;
+  let durationCount = 0;
+  let failedCheckCount = 0;
+  let totalTestCount = 0;
+  for (const [_traceId, spansSummary] of Object.entries(spansSummaries)) {
+    if (spansSummary === null) {
+      finishedLoading = false;
+    } else {
+      totalDurationSecs += spansSummary.totalDurationSecs;
+      durationCount += spansSummary.durationCount;
+      failedCheckCount += spansSummary.failedTraceIds.size;
+      totalTestCount += spansSummary.totalTestCount;
+    }
   }
+
   return (
     <Tr>
-      <Td>From all checks (not only those in the table)</Td>
+      <Td>Summary</Td>
+      <Td></Td>
+      <Td>{finishedLoading ? durationCount : LOADING_STRING}</Td>
+      <Td>{finishedLoading ? failedCheckCount : LOADING_STRING}</Td>
       <Td>
-        <IconButton
-          aria-label="Reload"
-          onClick={() => {
-            setNow(new Date());
-            setSpansSummary(null);
-          }}
-        >
-          <Reload />
-        </IconButton>
-      </Td>
-      <Td>{spansSummary?.durationCount ?? LOADING_STRING}</Td>
-      <Td>{spansSummary?.failedTraceIds.size ?? LOADING_STRING}</Td>
-      <Td>
-        {spansSummary !== null
-          ? GetAverageDuration(spansSummary)
+        {finishedLoading
+          ? GetAverageDuration(totalDurationSecs, durationCount)
           : LOADING_STRING}
       </Td>
-      <Td>{spansSummary?.totalTestCount ?? LOADING_STRING}</Td>
+      <Td>{finishedLoading ? totalTestCount : LOADING_STRING}</Td>
     </Tr>
   );
 }
@@ -294,9 +308,16 @@ function CreateCheckDiv({
 
 function CheckSummaryDiv({
   check,
+  setCheckSpansSummary,
   telemetryDuration,
   setError,
-}: { check: Check } & CheckDivCommonProps): JSX.Element {
+}: {
+  check: Check;
+  setCheckSpansSummary: (
+    checkId: string,
+    spansSummary: SpansSummary | null
+  ) => void;
+} & CheckDivCommonProps): JSX.Element {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [description, setDescription] = useState(
     check.attributes.metadata.description
@@ -311,7 +332,10 @@ function CheckSummaryDiv({
       scopeAttributes: check.attributes.outcome_filter.scope_attributes,
       spanAttributes: check.attributes.outcome_filter.span_attributes,
     })
-      .then(setSpansSummary)
+      .then((spansSummary) => {
+        setSpansSummary(spansSummary);
+        setCheckSpansSummary(check.id, spansSummary);
+      })
       .catch(setError);
   }
   const check_label =
@@ -331,6 +355,7 @@ function CheckSummaryDiv({
           onClick={() => {
             setNow(new Date());
             setSpansSummary(null);
+            setCheckSpansSummary(check.id, null);
           }}
         >
           <Reload />
@@ -338,24 +363,15 @@ function CheckSummaryDiv({
         <ButtonWithCheckmark onClick={() => RunCheck(check.id).catch(setError)}>
           Run Check
         </ButtonWithCheckmark>
-        {/* <div className="flex flex-row gap-1 items-center">
-          <Button
-            onClick={() =>
-              RunCheck(check.id)
-                .then(() => setCheckRunSubmitted(true))
-                .catch(setError)
-            }
-          >
-            Run Check
-          </Button>
-          {checkRunSubmitted && <Checkmark />}
-        </div> */}
       </Td>
       <Td>{spansSummary?.durationCount ?? LOADING_STRING}</Td>
       <Td>{spansSummary?.failedTraceIds.size ?? LOADING_STRING}</Td>
       <Td>
         {spansSummary !== null
-          ? GetAverageDuration(spansSummary)
+          ? GetAverageDuration(
+              spansSummary.totalDurationSecs,
+              spansSummary.durationCount
+            )
           : LOADING_STRING}
       </Td>
       <Td>{spansSummary?.totalTestCount ?? LOADING_STRING}</Td>

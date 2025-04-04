@@ -204,12 +204,13 @@ export type SpansSummary = {
   totalTestCount: number;
 };
 
-export function GetAverageDuration(spansSummary: SpansSummary): string {
-  return spansSummary.durationCount === 0
+export function GetAverageDuration(
+  totalDurationSecs: number,
+  durationCount: number
+): string {
+  return durationCount === 0
     ? "N/A"
-    : (
-        spansSummary.totalDurationSecs / spansSummary.durationCount
-      ).toLocaleString() + " s";
+    : (totalDurationSecs / durationCount).toLocaleString() + " s";
 }
 
 export async function ComputeSpansSummary(
