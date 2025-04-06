@@ -74,6 +74,8 @@ spec:
               value: {{ include "resource-health.fullname" . }}-healthchecks-certificate
             - name: RH_CHECK_K8S_TEMPLATE_PATH
               value: "/app/templates/"
+            - name: RH_CHECK_HOOK_DIR_PATH
+              value: "/app/hooks/"
             - name: RH_CHECK_API_BASE_URL
               value: {{ toYaml .Values.global.defaultCheckAPIBaseURL }}
           {{- range .Values.check_api.environmentSecrets }}
