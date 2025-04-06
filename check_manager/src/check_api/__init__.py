@@ -491,7 +491,7 @@ async def run_check(
     check_id: Annotated[CheckId, Path()]
 ) -> None:
     if ON_AUTH_HOOK_NAME in loaded_hooks:
-        auth_info = await wait_if_async(loaded_hooks[ON_AUTH_HOOK_NAME])(auth_info)
+        auth_info = await wait_if_async(loaded_hooks[ON_AUTH_HOOK_NAME](auth_info))
     
     check = await get_check_from_backend(auth_info, check_id)
 
