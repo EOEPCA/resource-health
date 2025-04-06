@@ -29,9 +29,16 @@ spec:
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       volumes:
+        {{- if .Values.healthchecks.use_template_configmap }}
         - name: check-api-templates
           configMap:
             name: {{ include "resource-health.fullname" . }}-check-templates-configmap
+        {{- end }}
+        {{- if .Values.check_api.use_hook_configmap }}
+        - name: check-api-hooks
+          configMap:
+            name: {{ include "resource-health.fullname" . }}-api-hooks-configmap
+        {{- end }}
         {{- range .Values.check_api.configmapMounts }}
         - name: {{ toYaml .name | trim }}
           configMap:
@@ -48,8 +55,14 @@ spec:
               containerPort: {{ .Values.check_api.containerPort }}
               protocol: TCP
           volumeMounts:
+            {{- if .Values.healthchecks.use_template_configmap }}
             - name: check-api-templates
               mountPath: /app/templates/
+            {{- end }}
+            {{- if .Values.check_api.use_hook_configmap }}
+            - name: check-api-hooks
+              mountPath: /app/hooks/
+            {{- end }}
             {{- range .Values.check_api.configmapMounts }}
             - name: {{ toYaml .name | trim }}
               mountPath: {{ toYaml .mountPath | trim }}
