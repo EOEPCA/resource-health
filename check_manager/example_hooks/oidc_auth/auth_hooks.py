@@ -41,7 +41,7 @@ def on_auth(tokens: Tokens | None) -> UserInfo:
     claims = {}
     claims.update(tokens["auth"].decoded["payload"])
     if tokens["id"] is not None:
-        claims.update(tokens["id"].decoded["payload"])
+        claims.update(tokens["id"].decoded)
 
     user_id_claim = os.environ.get("RH_CHECK_USER_ID_CLAIM") or "sub"
     username_claim = os.environ.get("RH_CHECK_USERNAME_CLAIM") or "preferred_username"
