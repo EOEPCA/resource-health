@@ -107,41 +107,41 @@ def _add_otel_resource_attributes(
         else:
             existing_var.value = existing_var.value + "," + extra_attrs
 
-def _add_otel_exporter_variables(cronjob: V1CronJob) -> None:
-    env = cronjob.spec.job_template.spec.template.spec.containers[0].env or []
-    volumes = (
-        cronjob.spec.job_template.spec.template.spec.containers[0].volume_mounts or []
-    )
-    volume_mounts = cronjob.spec.job_template.spec.template.spec.volumes or []
-    if os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"):
-        env.append(
-            V1EnvVar(
-                name="OTEL_EXPORTER_OTLP_ENDPOINT",
-                value=os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"],
-            )
-        )
-    if os.environ.get("CHECK_MANAGER_COLLECTOR_TLS_SECRET"):
-        env.append(V1EnvVar(name="OTEL_EXPORTER_OTLP_CERTIFICATE", value="/tls/ca.crt"))
-        env.append(V1EnvVar(name="OTEL_EXPORTER_OTLP_CLIENT_KEY", value="/tls/tls.key"))
-        env.append(
-            V1EnvVar(name="OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE", value="/tls/tls.crt")
-        )
-        volume_mounts.append(
-            V1VolumeMount(name="tls", mount_path="/tls", read_only=True)
-        )
-        volumes.append(
-            V1Volume(
-                name="tls",
-                secret=V1SecretVolumeSource(
-                    secret_name=os.environ["CHECK_MANAGER_COLLECTOR_TLS_SECRET"]
-                ),
-            )
-        )
-    cronjob.spec.job_template.spec.template.spec.containers[0].env = env
-    cronjob.spec.job_template.spec.template.spec.containers[
-        0
-    ].volume_mounts = volume_mounts
-    cronjob.spec.job_template.spec.template.spec.volumes = volumes
+# def _add_otel_exporter_variables(cronjob: V1CronJob) -> None:
+#     env = cronjob.spec.job_template.spec.template.spec.containers[0].env or []
+#     volumes = (
+#         cronjob.spec.job_template.spec.template.spec.containers[0].volume_mounts or []
+#     )
+#     volume_mounts = cronjob.spec.job_template.spec.template.spec.volumes or []
+#     if os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"):
+#         env.append(
+#             V1EnvVar(
+#                 name="OTEL_EXPORTER_OTLP_ENDPOINT",
+#                 value=os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"],
+#             )
+#         )
+#     if os.environ.get("CHECK_MANAGER_COLLECTOR_TLS_SECRET"):
+#         env.append(V1EnvVar(name="OTEL_EXPORTER_OTLP_CERTIFICATE", value="/tls/ca.crt"))
+#         env.append(V1EnvVar(name="OTEL_EXPORTER_OTLP_CLIENT_KEY", value="/tls/tls.key"))
+#         env.append(
+#             V1EnvVar(name="OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE", value="/tls/tls.crt")
+#         )
+#         volume_mounts.append(
+#             V1VolumeMount(name="tls", mount_path="/tls", read_only=True)
+#         )
+#         volumes.append(
+#             V1Volume(
+#                 name="tls",
+#                 secret=V1SecretVolumeSource(
+#                     secret_name=os.environ["CHECK_MANAGER_COLLECTOR_TLS_SECRET"]
+#                 ),
+#             )
+#         )
+#     cronjob.spec.job_template.spec.template.spec.containers[0].env = env
+#     cronjob.spec.job_template.spec.template.spec.containers[
+#         0
+#     ].volume_mounts = volume_mounts
+#     cronjob.spec.job_template.spec.template.spec.volumes = volumes
 
 
 def _tag_cronjob(
@@ -153,7 +153,7 @@ def _tag_cronjob(
 
     _add_otel_resource_attributes(cronjob, userinfo)
 
-    _add_otel_exporter_variables(cronjob)
+    # _add_otel_exporter_variables(cronjob)
 
     return cronjob
 

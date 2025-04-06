@@ -43,7 +43,7 @@ from kubernetes_asyncio.client.models.v1_secret_key_selector import V1SecretKeyS
 
 DEFAULT_RUNNER_IMAGE: str = (
     os.environ.get("RH_CHECK_K8S_DEFAULT_RUNNER_IMAGE")
-    or "docker.io/eoepca/healthcheck_runner:2.0.0-beta2"
+    or "docker.io/eoepca/healthcheck_runner:v0.3.0-internal5"
 )
 
 DEFAULT_OIDC_MITMPROXY_IMAGE: str = (
@@ -303,6 +303,154 @@ def cronjob_template[ArgumentType](
 
     return SimpleCronjobTemplate
 
+def simple_runner_template[ArgumentType](
+    template_id: str,
+    argument_type: type[ArgumentType],
+    *,
+    label: str | None = None,
+    description: str | None = None,
+    template_metadata: dict[str, str] | None = None,
+    annotations: Callable[[ArgumentType, Any], dict[str, str]]
+    | dict[str, str]
+    | None = None,
+    script_url: Callable[[ArgumentType, Any], str] | str,
+    requirements_url: Callable[[ArgumentType, Any], str] | str | None = None,
+    runner_env: Callable[[ArgumentType, Any], dict[str, str]] | dict[str,str] | None = None,
+    user_id: Callable[[ArgumentType, Any], str] | str | None = None,
+    otlp_exporter_endpoint : str | None = None,
+    otlp_tls_secret : str | None = None,
+    runner_image: str = DEFAULT_RUNNER_IMAGE,
+    resource_attributes: dict[str,str]|None = None,
+    proxy : bool = False,
+    proxy_oidc_client_secret : tuple[str,str,str]|None = None,
+    proxy_oidc_refresh_token_secret : Callable[[ArgumentType, Any], tuple[str, str]] | tuple[str,str] | None = None,
+    proxy_oidc_url : str|None = os.environ.get("OPEN_ID_CONNECT_URL"),
+    proxy_oidc_audience : str = "account",
+    proxy_remote_domain : str = "https://opensearch-cluster-master-headless:9200",
+    proxy_image : str = DEFAULT_OIDC_MITMPROXY_IMAGE,
+) -> type[CronjobTemplate]:
+    if proxy:
+        if proxy_oidc_url is None:
+            raise ValueError("Trying to create CronJob template with proxy requires proxy_oidc_url")
+        if proxy_oidc_refresh_token_secret is None:
+            raise ValueError("Trying to create CronJob template with proxy requires proxy_oidc_refresh_token_secret")
+        if proxy_oidc_client_secret is None:
+            raise ValueError("Trying to create CronJob template with proxy requires proxy_oidc_client_secret")
+
+    def template_containers(
+        template_args: ArgumentType,
+        userinfo: Any,
+    ) -> list[V1Container]:
+        if isinstance(script_url, str):
+            script = script_url
+        else:
+            script = script_url(template_args, userinfo)
+        
+        if requirements_url is None:
+            requirements = None
+        elif isinstance(requirements_url, str):
+            requirements = requirements_url
+        else:
+            requirements = requirements_url(template_args, userinfo)
+
+        if resource_attributes is None:
+            these_resource_attributes = {}
+        else:
+            these_resource_attributes = resource_attributes.copy()
+
+        if user_id is None:
+            pass
+        elif isinstance(user_id, str):
+            these_resource_attributes['user.id'] = user_id
+        else:
+            these_resource_attributes['user.id'] = user_id(template_args, userinfo)
+
+        if runner_env is None:
+            env = {}
+        elif isinstance(runner_env, dict):
+            env = runner_env.copy()
+        else:
+            env = runner_env(template_args, userinfo)
+
+        if otlp_exporter_endpoint is None:
+            if otlp_tls_secret is None:
+                env["OTEL_EXPORTER_OTLP_ENDPOINT"] = 'http://resource-health-opentelemetry-collector:4317'
+            else:
+                env["OTEL_EXPORTER_OTLP_ENDPOINT"] = 'https://resource-health-opentelemetry-collector:4317'
+        else:
+            env["OTEL_EXPORTER_OTLP_ENDPOINT"] = otlp_exporter_endpoint
+
+        if otlp_tls_secret is None:
+            volume_mounts = None
+        else:
+            volume_mounts = {
+                "otlp-tls": "/tls"
+            }
+            env["OTEL_EXPORTER_OTLP_CERTIFICATE"] = "/tls/ca.crt"
+            env["OTEL_EXPORTER_OTLP_CLIENT_KEY"] = "/tls/tls.key"
+            env["OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE"] = "/tls/tls.crt"
+
+        these_containers = [
+            runner_container(
+                script_url=script,
+                requirements_url=requirements,
+                resource_attributes=these_resource_attributes,
+                volume_mounts=volume_mounts,
+                env=env,
+                image=runner_image,
+                command=None if not proxy else ["/usr/bin/bash"],
+                args=None if not proxy else [
+                    "-c",
+                    "/app/run_script.sh pytest --export-traces -rP --suppress-tests-failed-exit-code tests.py; ret=$?; curl -s 'http://127.0.0.1:8080/quitquitquit'; exit $ret",
+                ]
+            )
+        ]
+
+        if proxy:
+            assert(proxy_oidc_refresh_token_secret is not None)
+            assert(proxy_oidc_url is not None)
+            assert(proxy_oidc_client_secret is not None)
+
+            if isinstance(proxy_oidc_refresh_token_secret, tuple):
+                this_proxy_oidc_refresh_token_secret = proxy_oidc_refresh_token_secret
+            else:
+                this_proxy_oidc_refresh_token_secret = proxy_oidc_refresh_token_secret(template_args, userinfo)
+            
+            these_containers.append(
+                oidc_mitmproxy_container(
+                    remote_domain=proxy_remote_domain,
+                    openid_connect_url=proxy_oidc_url,
+                    openid_client_id_secret = (proxy_oidc_client_secret[0],proxy_oidc_client_secret[1]),
+                    openid_client_secret_secret = (proxy_oidc_client_secret[0],proxy_oidc_client_secret[2]),
+                    openid_audience = proxy_oidc_audience,
+                    refresh_token_secret = this_proxy_oidc_refresh_token_secret,
+                    tls_verify = False,
+                    image = proxy_image,
+                )
+            )
+
+        return these_containers
+
+    
+    if otlp_tls_secret is None:
+        volumes : list[V1Volume] | None = None
+    else:
+        volumes = [
+            V1Volume(name="otlp-tls", secret=V1SecretVolumeSource(
+                secret_name=otlp_tls_secret
+            ))
+        ]
+
+    return cronjob_template(
+        template_id = template_id,
+        argument_type = argument_type,
+        label = label,
+        description = description,
+        template_metadata = template_metadata,
+        annotations = annotations,
+        containers=template_containers,
+        volumes=volumes,
+    )
 
 def src_to_data_url(src: str) -> str:
     return f"data:text/plain;base64,{base64.b64encode(src.encode('utf-8')).decode('ascii')}"

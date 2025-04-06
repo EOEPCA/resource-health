@@ -1,6 +1,7 @@
 from .utils import (
     make_base_cronjob,
     cronjob_template,
+    simple_runner_template,
     container,
     runner_container,
     oidc_mitmproxy_container,

@@ -228,7 +228,7 @@ async def _get_specific_check_template(
         )
         if (
             ON_TEMPLATE_ACCESS_HOOK_NAME not in loaded_hooks or
-            wait_if_async(loaded_hooks[ON_TEMPLATE_ACCESS_HOOK_NAME](auth_info, check_template)) != False # Treat None as True
+            await wait_if_async(loaded_hooks[ON_TEMPLATE_ACCESS_HOOK_NAME](auth_info, check_template)) != False # Treat None as True
         )
     ]
     match check_templates:

@@ -1,15 +1,6 @@
 from check_backends.k8s_backend.template_utils import *
 from typing import TypedDict
 
-
-class SimplePingArguments(BaseModel):
-    endpoint: str = Field(json_schema_extra={"format": "textarea"})
-    expected_status_code: int = Field(ge=100, lt=600, default=200)
-
-
-# def simple_ping_annotations(self, template_args : SimplePingArguments) -> dict[str, Any]:
-#     return {}
-
 SIMPLE_PING_SRC = """from os import environ
 import requests
 
@@ -25,32 +16,21 @@ def test_ping() -> None:
 """
 
 
-def simple_ping_containers(
-    template_args: SimplePingArguments, userinfo: Any
-) -> list[Container]:
-    assert isinstance(userinfo, dict)
-
-    return [
-        runner_container(
-            # "data:text/plain;base64,ZnJvbS...QVRVU19DT0RFCg=="
-            script_url=src_to_data_url(SIMPLE_PING_SRC),
-            env={
-                "GENERIC_ENDPOINT": template_args.endpoint,
-                "EXPECTED_STATUS_CODE": str(template_args.expected_status_code),
-            },
-            resource_attributes={
-                'user.id': userinfo['username'],
-            }
-        )
-    ]
+class SimplePingArguments(BaseModel):
+    endpoint: str = Field(json_schema_extra={"format": "textarea"})
+    expected_status_code: int = Field(ge=100, lt=600, default=200)
 
 
-SimplePing = cronjob_template(
+SimplePing = simple_runner_template(
     template_id="simple_ping",
     argument_type=SimplePingArguments,
     label="Simple ping template",
     description="Simple template with preset script for pinging single endpoint.",
-    # annotations = simple_ping_annotations,
-    containers=simple_ping_containers,
-    # volumes = simple_ping_volumes
+    script_url=src_to_data_url(SIMPLE_PING_SRC),
+    runner_env=lambda template_args, userinfo: {
+        "GENERIC_ENDPOINT": template_args.endpoint,
+        "EXPECTED_STATUS_CODE": str(template_args.expected_status_code),
+    },
+    user_id=lambda template_args, userinfo: userinfo["username"],
+    otlp_tls_secret="resource-health-healthchecks-certificate",
 )
