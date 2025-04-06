@@ -1,5 +1,5 @@
 import json
-from typing import Annotated
+from typing import Annotated, Any, Callable
 import pathlib
 import os
 from fastapi import (
@@ -11,9 +11,12 @@ from fastapi import (
     status,
     Depends,
 )
+from fastapi.security.base import SecurityBase
 from fastapi.middleware.cors import CORSMiddleware
 from os import environ
 import pathlib
+from check_hooks import load_hooks
+import inspect
 
 from api_interface import (
     GET_CHECK_PATH,
@@ -65,13 +68,7 @@ from api_utils.json_api_types import (
     Resource,
 )
 
-from eoepca_security import OIDCProxyScheme, Tokens
-
 BASE_URL = get_env_var_or_throw("RH_CHECK_API_BASE_URL")
-
-
-# Use CheckBackend type so mypy warns is any specifics of MockBackend are used
-check_backend: CheckBackend = MockBackend(template_id_prefix="remote_")
 
 app = FastAPI()
 app.add_middleware(
@@ -86,20 +83,40 @@ app.add_middleware(
 )
 add_exception_handlers(app)
 
+loaded_hooks = load_hooks()
+
+
+# Use CheckBackend type so mypy warns is any specifics of MockBackend are used
+check_backend: CheckBackend = MockBackend(template_id_prefix="remote_", hooks=loaded_hooks)
+
+GET_FASTAPI_SECURITY_HOOK_NAME = os.environ.get("GET_FASTAPI_SECURITY_HOOK_NAME") or "get_fastapi_security"
+ON_AUTH_HOOK_NAME = os.environ.get("RH_CHECK_ON_AUTH_HOOK_NAME") or "on_auth"
+ON_TEMPLATE_ACCESS_HOOK_NAME = os.environ.get("RH_CHECK_ON_TEMPLATE_ACCESS_HOOK_NAME") or "on_template_access"
+ON_CHECK_ACCESS_HOOK_NAME = os.environ.get("RH_CHECK_ON_CHECK_ACCESS_HOOK_NAME") or "on_check_access"
+ON_CHECK_CREATE_HOOK_NAME = os.environ.get("RH_CHECK_ON_CHECK_CREATE_HOOK_NAME") or "on_check_create"
+ON_CHECK_REMOVE_HOOK_NAME = os.environ.get("RH_CHECK_ON_CHECK_REMOVE_HOOK_NAME") or "on_check_remove"
+ON_CHECK_RUN_HOOK_NAME = os.environ.get("RH_CHECK_ON_CHECK_RUN_HOOK_NAME") or "on_check_run"
+
 ## TODO: Make this configurable/optional
-security_scheme = OIDCProxyScheme(
-    openIdConnectUrl=get_env_var_or_throw('OPEN_ID_CONNECT_URL'),
-    audience=get_env_var_or_throw('OPEN_ID_CONNECT_AUDIENCE'),
-    id_token_header="x-id-token",
-    refresh_token_header="x-refresh-token",
-    auth_token_header="Authorization",
-    auth_token_in_authorization=True,
-    auto_error=True, ## Set False to allow unauthenticated access!
-    scheme_name="OIDC behind auth proxy",
-)
+
+
+from eoepca_security import Tokens
+
+# type: ignore
+async def wait_if_async(x):
+    if inspect.isawaitable(x):
+        return await x
+    
+    return x
+
+
+if GET_FASTAPI_SECURITY_HOOK_NAME in loaded_hooks:
+    security_scheme : Callable = loaded_hooks[GET_FASTAPI_SECURITY_HOOK_NAME]()
+else:
+    def security_scheme():
+        return None
 
 router = get_api_router_with_defaults()
-
 
 # app. instead of router. because don't want to indicate that could return HTTP error 422
 @app.get(
@@ -108,7 +125,12 @@ router = get_api_router_with_defaults()
     response_model_exclude_unset=True,
     response_class=JSONAPIResponse,
 )
-async def root(tokens: Annotated[Tokens, Depends(security_scheme)]) -> APIOKResponseList[None, None]:
+async def root(auth_info: Annotated[Any, Depends(security_scheme)]) -> APIOKResponseList[None, None]:
+    if ON_AUTH_HOOK_NAME in loaded_hooks:
+        auth_info = await wait_if_async(loaded_hooks[ON_AUTH_HOOK_NAME](auth_info))
+
+    ## NOTE: Maybe add on_root hook?
+
     return APIOKResponseList[None, None](
         data=[
             Resource[None](
@@ -165,7 +187,7 @@ def check_template_to_resource(
     response_model_exclude_unset=True,
 )
 async def get_check_templates(
-    tokens: Annotated[Tokens, Depends(security_scheme)],
+    auth_info: Annotated[Any, Depends(security_scheme)],
     request: Request,
     response: Response,
     ids: Annotated[
@@ -173,11 +195,18 @@ async def get_check_templates(
         Query(description="restrict IDs to include"),
     ] = None,
 ) -> APIOKResponseList[CheckTemplateAttributes, None]:
+    if ON_AUTH_HOOK_NAME in loaded_hooks:
+        auth_info = await wait_if_async(loaded_hooks[ON_AUTH_HOOK_NAME](auth_info))
+    
     response.headers["Allow"] = "GET"
     return APIOKResponseList[CheckTemplateAttributes, None](
         data=[
             check_template_to_resource(template)
-            async for template in check_backend.get_check_templates(tokens, ids)
+            async for template in check_backend.get_check_templates(auth_info, ids)
+            if (
+                ON_TEMPLATE_ACCESS_HOOK_NAME not in loaded_hooks or
+                await wait_if_async(loaded_hooks[ON_TEMPLATE_ACCESS_HOOK_NAME](auth_info, template)) != False ## None as True
+            )
         ],
         links=Links(
             self=get_request_url_str(BASE_URL, request),
@@ -187,35 +216,26 @@ async def get_check_templates(
     )
 
 
-@router.get(
-    GET_CHECK_TEMPLATE_PATH,
-    status_code=status.HTTP_200_OK,
-    response_model_exclude_unset=True,
-)
-async def get_check_template(
-    tokens: Annotated[Tokens, Depends(security_scheme)],
-    request: Request,
-    response: Response,
+async def _get_specific_check_template(
+    auth_info: Any,
     check_template_id: CheckTemplateId
-) -> APIOKResponse[CheckTemplateAttributes]:
+) -> CheckTemplate:
     check_templates = [
         check_template
         async for check_template in check_backend.get_check_templates(
+            auth_info,
             ids=[check_template_id]
+        )
+        if (
+            ON_TEMPLATE_ACCESS_HOOK_NAME not in loaded_hooks or
+            wait_if_async(loaded_hooks[ON_TEMPLATE_ACCESS_HOOK_NAME](auth_info, check_template)) != False # Treat None as True
         )
     ]
     match check_templates:
         case []:
             raise CheckTemplateIdError.create(check_template_id)
         case [check_template]:
-            response.headers["Allow"] = "GET"
-            return APIOKResponse[CheckTemplateAttributes](
-                data=check_template_to_resource(check_template),
-                links=Links(
-                    self=get_request_url_str(BASE_URL, request),
-                    root=BASE_URL,
-                ),
-            )
+            return check_template
         case _:
             raise APIException(
                 Error(
@@ -226,6 +246,30 @@ async def get_check_template(
                 )
             )
 
+@router.get(
+    GET_CHECK_TEMPLATE_PATH,
+    status_code=status.HTTP_200_OK,
+    response_model_exclude_unset=True,
+)
+async def get_check_template(
+    auth_info: Annotated[Any, Depends(security_scheme)],
+    request: Request,
+    response: Response,
+    check_template_id: CheckTemplateId
+) -> APIOKResponse[CheckTemplateAttributes]:
+    if ON_AUTH_HOOK_NAME in loaded_hooks:
+        auth_info = await wait_if_async(loaded_hooks[ON_AUTH_HOOK_NAME](auth_info))
+    
+    check_template = await _get_specific_check_template(auth_info, check_template_id)
+
+    response.headers["Allow"] = "GET"
+    return APIOKResponse[CheckTemplateAttributes](
+        data=check_template_to_resource(check_template),
+        links=Links(
+            self=get_request_url_str(BASE_URL, request),
+            root=BASE_URL,
+        ),
+    )
 
 def check_url(check_id: CheckId) -> str:
     return get_url_str(BASE_URL, GET_CHECK_PATH, path_params={"check_id": check_id})
@@ -251,7 +295,7 @@ def check_to_resource(check: OutCheck) -> Resource[OutCheckAttributes]:
     response_model_exclude_unset=True,
 )
 async def get_checks(
-    tokens: Annotated[Tokens, Depends(security_scheme)],
+    auth_info: Annotated[Any, Depends(security_scheme)],
     request: Request,
     response: Response,
     ids: Annotated[
@@ -259,11 +303,18 @@ async def get_checks(
         Query(description="restrict IDs to include"),
     ] = None,
 ) -> APIOKResponseList[OutCheckAttributes, None]:
+    if ON_AUTH_HOOK_NAME in loaded_hooks:
+        auth_info = await wait_if_async(loaded_hooks[ON_AUTH_HOOK_NAME](auth_info))
+    
     response.headers["Allow"] = "GET,POST"
     return APIOKResponseList[OutCheckAttributes, None](
         data=[
             check_to_resource(check)
-            async for check in check_backend.get_checks(tokens, ids)
+            async for check in check_backend.get_checks(auth_info, ids)
+            if (
+                ON_CHECK_ACCESS_HOOK_NAME not in loaded_hooks or
+                await wait_if_async(loaded_hooks[ON_CHECK_ACCESS_HOOK_NAME](auth_info, check)) != False # Treat None as True
+            )
         ],
         links=Links(self=get_request_url_str(BASE_URL, request), root=BASE_URL),
         meta=None,
@@ -276,15 +327,60 @@ async def get_checks(
     response_model_exclude_unset=True,
 )
 async def create_check(
-    tokens: Annotated[Tokens, Depends(security_scheme)],
+    auth_info: Annotated[Any, Depends(security_scheme)],
     request: Request,
     response: Response,
     in_check: InCheck,
 ) -> APIOKResponse[OutCheckAttributes]:
+    if ON_AUTH_HOOK_NAME in loaded_hooks:
+        auth_info = await wait_if_async(loaded_hooks[ON_AUTH_HOOK_NAME](auth_info))
+    
     if hasattr(in_check.data, "id"):
         raise NewCheckClientSpecifiedId.create()
     assert in_check.data.type == "check"
-    check = await check_backend.create_check(tokens, in_check.data.attributes)
+    
+    if ON_TEMPLATE_ACCESS_HOOK_NAME in loaded_hooks:
+        check_template = await _get_specific_check_template(auth_info, in_check.data.attributes.metadata.template_id)
+        
+        if await wait_if_async(loaded_hooks[ON_TEMPLATE_ACCESS_HOOK_NAME](auth_info, check_template)) == False:
+            raise APIException(
+                Error(
+                    status="404",
+                    code="CheckTemplateNotFound",
+                    title="Check template not found",
+                    detail=f"Check template with id {in_check.data.attributes.metadata.template_id} not found",
+                )
+            )
+
+    if (
+        ON_CHECK_CREATE_HOOK_NAME in loaded_hooks and
+        await wait_if_async(loaded_hooks[ON_CHECK_CREATE_HOOK_NAME](auth_info, in_check.data.attributes)) == False # Treat None as True
+    ):
+        raise APIException(
+            Error(
+                status="403",
+                code="CreateCheckForbidden",
+                title="Check creation disallowed",
+                detail="You are not authorized to create this check",
+            )
+        )
+
+        
+    check = await check_backend.create_check(auth_info, in_check.data.attributes)
+    
+    if (
+        ON_CHECK_ACCESS_HOOK_NAME in loaded_hooks and
+        await wait_if_async(loaded_hooks[ON_CHECK_ACCESS_HOOK_NAME](auth_info, check)) == False # Treat None as True
+    ):
+        raise APIException(
+            Error(
+                status="403",
+                code="CheckAccessForbidden",
+                title="Check created but access denied",
+                detail="The check was created, but access to the resulting check was denied",
+            )
+        )
+
     response.headers["Allow"] = "GET,POST"
     response.headers["Location"] = check_url(check.id)
     return APIOKResponse[OutCheckAttributes](
@@ -293,34 +389,50 @@ async def create_check(
     )
 
 
+async def get_check_from_backend(
+    auth_info: Any,
+    check_id: CheckId
+) -> OutCheck:
+    checks = [
+        check async for check in check_backend.get_checks(auth_info, ids=[check_id])
+    ]
+    match checks:
+        case []:
+            raise CheckIdError.create(check_id)
+        case [check]:
+            if (
+                ON_CHECK_ACCESS_HOOK_NAME in loaded_hooks and
+                await wait_if_async(loaded_hooks[ON_CHECK_ACCESS_HOOK_NAME](auth_info, check)) == False # Treat None as True
+            ):
+                raise CheckIdError.create(check_id)
+            return check
+        case _:
+            raise CheckIdNonUniqueError.create(check_id)
+
 @router.get(
     GET_CHECK_PATH,
     status_code=status.HTTP_200_OK,
     response_model_exclude_unset=True,
 )
 async def get_check(
-    tokens: Annotated[Tokens, Depends(security_scheme)],
+    auth_info: Annotated[Any, Depends(security_scheme)],
     request: Request,
     response: Response,
     check_id: CheckId
 ) -> APIOKResponse[OutCheckAttributes]:
-    checks = [
-        check async for check in check_backend.get_checks(tokens, ids=[check_id])
-    ]
-    match checks:
-        case []:
-            raise CheckIdError.create(check_id)
-        case [check]:
-            response.headers["Allow"] = "GET,DELETE"
-            return APIOKResponse[OutCheckAttributes](
-                data=check_to_resource(check),
-                links=Links(
-                    self=get_request_url_str(BASE_URL, request),
-                    root=BASE_URL,
-                ),
-            )
-        case _:
-            raise CheckIdNonUniqueError.create(check_id)
+    if ON_AUTH_HOOK_NAME in loaded_hooks:
+        auth_info = await wait_if_async(loaded_hooks[ON_AUTH_HOOK_NAME](auth_info))
+    
+    check = await get_check_from_backend(auth_info, check_id)
+
+    response.headers["Allow"] = "GET,DELETE"
+    return APIOKResponse[OutCheckAttributes](
+        data=check_to_resource(check),
+        links=Links(
+            self=get_request_url_str(BASE_URL, request),
+            root=BASE_URL,
+        ),
+    )
 
 
 # @router.patch(UPDATE_CHECK_PATH, status_code=status.HTTP_200_OK,
@@ -342,12 +454,30 @@ async def get_check(
     response_model_exclude_unset=True,
 )
 async def remove_check(
-    tokens: Annotated[Tokens, Depends(security_scheme)],
+    auth_info: Annotated[Any, Depends(security_scheme)],
     response: Response,
     check_id: Annotated[CheckId, Path()]
 ) -> None:
+    if ON_AUTH_HOOK_NAME in loaded_hooks:
+        auth_info = await wait_if_async(loaded_hooks[ON_AUTH_HOOK_NAME](auth_info))
+    
+    check = await get_check_from_backend(auth_info, check_id)
+
+    if (
+        ON_CHECK_REMOVE_HOOK_NAME in loaded_hooks and
+        await wait_if_async(loaded_hooks[ON_CHECK_REMOVE_HOOK_NAME](auth_info, check)) == False ## Treat None as True
+    ):
+        raise APIException(
+            Error(
+                status="403",
+                code="CheckRemoveForbidden",
+                title="Unauthorized check remove",
+                detail=f"You are not authorized to remove check with id {check_id}",
+            )
+        )
+
     response.headers["Allow"] = "GET,DELETE"
-    return await check_backend.remove_check(tokens, check_id)
+    return await check_backend.remove_check(auth_info, check_id)
 
 
 @router.post(
@@ -356,12 +486,30 @@ async def remove_check(
     response_model_exclude_unset=True,
 )
 async def run_check(
-    tokens: Annotated[Tokens, Depends(security_scheme)],
+    auth_info: Annotated[Any, Depends(security_scheme)],
     response: Response,
     check_id: Annotated[CheckId, Path()]
 ) -> None:
+    if ON_AUTH_HOOK_NAME in loaded_hooks:
+        auth_info = await wait_if_async(loaded_hooks[ON_AUTH_HOOK_NAME])(auth_info)
+    
+    check = await get_check_from_backend(auth_info, check_id)
+
+    if (
+        ON_CHECK_RUN_HOOK_NAME in loaded_hooks and
+        await wait_if_async(loaded_hooks[ON_CHECK_RUN_HOOK_NAME](auth_info, check)) == False ## Treat None as True
+    ):
+        raise APIException(
+            Error(
+                status="403",
+                code="CheckRunForbidden",
+                title="Unauthorized run check",
+                detail=f"You are not authorized to run check with id {check_id}",
+            )
+        )
+
     response.headers["Allow"] = "POST"
-    return await check_backend.run_check(tokens, check_id)
+    return await check_backend.run_check(auth_info, check_id)
 
 
 app.include_router(router)
@@ -404,20 +552,20 @@ def unicorn_dummy_prod() -> None:
 
 def uvicorn_k8s() -> None:
     from check_backends.k8s_backend import K8sBackend
-    from security import Settings, load_authentication
 
-    import check_backends.k8s_backend.template_examples as ex
+    import check_backends.k8s_backend.default_templates as default_templates
     templates_path : str = (
         os.environ.get("RH_CHECK_K8S_TEMPLATE_PATH") or
-        str(pathlib.Path(ex.__file__).resolve().parent)
+        str(pathlib.Path(default_templates.__file__).resolve().parent)
     )
 
     global check_backend
 
-    check_backend = K8sBackend[AuthenticationObject](
-        [templates_path],
+    check_backend = K8sBackend[Any](
+        template_dirs=[templates_path],
+        hooks=loaded_hooks,
         # load_authentication(Settings().auth_hooks),
-        load_authentication(pathlib.Path("hooks/hooks.py")),
+        # load_authentication(pathlib.Path("hooks/hooks.py")),
     )
 
     import uvicorn

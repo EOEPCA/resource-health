@@ -8,10 +8,16 @@ class DefaultK8sArguments(BaseModel):
 
 def default_k8s_template_containers(
     template_args: DefaultK8sArguments,
+    userinfo: Any,
 ) -> list[Container]:
+    assert isinstance(userinfo, dict)
+
     return [
         runner_container(
-            script_url=template_args.script, requirements_url=template_args.requirements
+            script_url=template_args.script, requirements_url=template_args.requirements,
+            resource_attributes={
+                'user.id': userinfo['username'],
+            }
         )
     ]
 
@@ -23,4 +29,5 @@ DefaultK8sTemplate = cronjob_template(
     description="Default template for checks in the Kubernetes backend.",
     # annotations = simple_ping_annotations,
     containers=default_k8s_template_containers,
+    # volumes = simple_ping_volumes,
 )

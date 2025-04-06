@@ -12,6 +12,7 @@ from kubernetes_asyncio.client.models.v1_pod_spec import V1PodSpec
 from kubernetes_asyncio.client.models.v1_job_template_spec import V1JobTemplateSpec
 from kubernetes_asyncio.client.models.v1_pod_template_spec import V1PodTemplateSpec
 from kubernetes_asyncio.client.models.v1_object_meta import V1ObjectMeta
+from kubernetes_asyncio.client.models.v1_volume_mount import V1VolumeMount
 
 import pydantic
 from ..templates import CronExpression, CronjobTemplate
@@ -91,6 +92,7 @@ def container(
     args: list[str] | None = None,
     command: list[str] | None = None,
     image_pull_policy: str | None = "IfNotPresent",
+    volume_mounts: dict[str,str] | None = None,
 ) -> V1Container:
     return V1Container(
         name=name,
@@ -108,6 +110,10 @@ def container(
             for name, (secret_name, secret_key) in (secret_env or {}).items()
         ],
         image_pull_policy=image_pull_policy,
+        volume_mounts=[
+            V1VolumeMount(name=key, mount_path=value)
+            for key,value in (volume_mounts or {}).items()
+        ]
     )
 
 
@@ -122,6 +128,8 @@ def runner_container(
     args: list[str] | None = None,
     command: list[str] | None = None,
     image_pull_policy: str | None = "IfNotPresent",
+    resource_attributes: dict[str,str] | None = None,
+    volume_mounts: dict[str,str] | None = None,
 ) -> V1Container:
     if env is None:
         env = {}
@@ -132,6 +140,12 @@ def runner_container(
     if requirements_url is not None:
         env["RESOURCE_HEALTH_RUNNER_REQUIREMENTS"] = requirements_url
 
+    if resource_attributes is not None:
+        env["OTEL_RESOURCE_ATTRIBUTES"] = ",".join(
+            f"{key}={value}"
+            for key,value in resource_attributes.items()
+        )
+
     return container(
         image=image,
         name=name,
@@ -140,6 +154,7 @@ def runner_container(
         args=args,
         command=command,
         image_pull_policy=image_pull_policy,
+        volume_mounts=volume_mounts,
     )
 
 
@@ -147,8 +162,8 @@ def oidc_mitmproxy_container(
     remote_domain: str,
     *,
     openid_connect_url: str,
-    openid_client_id: tuple[str, str],
-    openid_client_secret: tuple[str, str],
+    openid_client_id_secret: tuple[str, str],
+    openid_client_secret_secret: tuple[str, str],
     openid_audience: str = "account",
     refresh_token_secret: tuple[str, str],
     tls_verify: bool = False,
@@ -159,6 +174,7 @@ def oidc_mitmproxy_container(
     args: list[str] | None = None,
     command: list[str] | None = None,
     image_pull_policy: str | None = "IfNotPresent",
+    volume_mounts: dict[str,str] | None = None,
 ) -> V1Container:
     if env is None:
         env = {}
@@ -178,8 +194,8 @@ def oidc_mitmproxy_container(
         env["TLS_NO_VERIFY"] = "true"
 
     secret_env["OPEN_ID_REFRESH_TOKEN"] = refresh_token_secret
-    secret_env["OPEN_ID_CONNECT_CLIENT_ID"] = openid_client_id
-    secret_env["OPEN_ID_CONNECT_CLIENT_SECRET"] = openid_client_secret
+    secret_env["OPEN_ID_CONNECT_CLIENT_ID"] = openid_client_id_secret
+    secret_env["OPEN_ID_CONNECT_CLIENT_SECRET"] = openid_client_secret_secret
 
     return container(
         image=image,
@@ -189,6 +205,7 @@ def oidc_mitmproxy_container(
         args=args,
         command=command,
         image_pull_policy=image_pull_policy,
+        volume_mounts=volume_mounts,
     )
 
 
@@ -202,10 +219,11 @@ def cronjob_template[ArgumentType](
     label: str | None = None,
     description: str | None = None,
     template_metadata: dict[str, str] | None = None,
-    annotations: Callable[[ArgumentType], dict[str, str]]
+    annotations: Callable[[ArgumentType, Any], dict[str, str]]
     | dict[str, str]
     | None = None,
-    containers: Callable[[ArgumentType], list[V1Container]],
+    containers: Callable[[ArgumentType, Any], list[V1Container]],
+    volumes: Callable[[ArgumentType, Any], list[V1Volume]] | list[V1Volume] | None = None,
 ) -> type[CronjobTemplate]:
     class SimpleCronjobTemplate(CronjobTemplate):
         @override
@@ -236,6 +254,7 @@ def cronjob_template[ArgumentType](
             self,
             template_args: Json,
             schedule: CronExpression,
+            userinfo: Any
         ) -> V1CronJob:
             validated_args: ArgumentType = argument_type.model_validate(template_args)  # type: ignore
 
@@ -249,7 +268,14 @@ def cronjob_template[ArgumentType](
             elif isinstance(annotations, dict):
                 these_annotations.update(annotations)
             else:
-                these_annotations.update(annotations(validated_args))
+                these_annotations.update(annotations(validated_args, userinfo))
+
+            if volumes is None:
+                these_volumes : list[V1Volume] = []
+            elif isinstance(volumes, list):
+                these_volumes = volumes
+            else:
+                these_volumes = volumes(validated_args, userinfo)
 
             cronjob = V1CronJob(
                 api_version="batch/v1",
@@ -263,8 +289,9 @@ def cronjob_template[ArgumentType](
                         spec=V1JobSpec(
                             template=V1PodTemplateSpec(
                                 spec=V1PodSpec(
-                                    containers=containers(validated_args),
+                                    containers=containers(validated_args, userinfo),
                                     restart_policy="OnFailure",
+                                    volumes=these_volumes
                                 ),
                             ),
                         ),

@@ -2,6 +2,8 @@ import logging
 import re
 from typing import AsyncIterable, Callable, Self, override
 import uuid
+import os
+import inspect
 
 from jsonschema import validate
 import aiohttp
@@ -78,17 +80,30 @@ def job_from(cronjob: V1CronJob):
         )
     )
 
+GET_K8S_CONFIG_HOOK_NAME = os.environ.get("RH_CHECK_GET_K8S_CONFIG_HOOK_NAME") or "get_k8s_config"
+GET_K8S_NAMESPACE_HOOK_NAME = os.environ.get("RH_CHECK_GET_K8S_NAMESPACE_HOOK_NAME") or "get_k8s_namespace"
+ON_K8S_CRONJOB_ACCESS_HOOK_NAME = os.environ.get("RH_CHECK_ON_K8S_CRONJOB_ACCESS_HOOK_NAME") or "on_k8s_cronjob_access"
+ON_K8S_CRONJOB_CREATE_HOOK_NAME = os.environ.get("RH_CHECK_ON_K8S_CRONJOB_CREATE_HOOK_NAME") or "on_k8s_cronjob_create"
+ON_K8S_CRONJOB_REMOVE_HOOK_NAME = os.environ.get("RH_CHECK_ON_K8S_CRONJOB_REMOVE_HOOK_NAME") or "on_k8s_cronjob_remove"
+ON_K8S_CRONJOB_RUN_HOOK_NAME = os.environ.get("RH_CHECK_ON_K8S_CRONJOB_RUN_HOOK_NAME") or "on_k8s_cronjob_run"
+
+# type: ignore
+async def wait_if_async(x):
+    if inspect.isawaitable(x):
+        return await x
+    
+    return x
 
 class K8sBackend(CheckBackend[AuthenticationObject]):
     def __init__(
         self: Self,
         template_dirs: list[str],
-        authentication: dict[str, Callable],
+        hooks: dict[str, Callable],
     ) -> None:
         self._templates: dict[str, CronjobMaker] = load_templates(
             template_dirs
         )
-        self._authentication = authentication
+        self._hooks = hooks
 
     @override
     async def aclose(self: Self) -> None:
@@ -100,20 +115,16 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
         auth_obj: AuthenticationObject,
         ids: list[CheckTemplateId] | None = None,
     ) -> AsyncIterable[CheckTemplate]:
-        auth = self._authentication["on_auth"](auth_obj)
-        if auth is None:
-            raise Exception("Invalid credentials")
-        template_ids = list(self._templates.keys())
-        template_access = self._authentication["template_access"]
+        if ids is None:
+            ids = [CheckTemplateId(x) for x in self._templates.keys()]
 
-        for id in template_ids:
-            if (
-                template_access(auth, id) and
-                (ids is None or id in ids)
-            ):
-                cronjob_template = self._templates.get(id)
-                if cronjob_template is not None:
-                    yield cronjob_template.get_check_template()
+        for template_id in ids:
+            cronjob_template = self._templates.get(template_id)
+
+            if cronjob_template is None:
+                raise KeyError(f"missing template id {template_id}")
+
+            yield cronjob_template.get_check_template()
 
     @override
     async def create_check(
@@ -121,22 +132,19 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
         auth_obj: AuthenticationObject,
         attributes: InCheckAttributes,
     ) -> OutCheck:
-        auth = self._authentication["on_auth"](auth_obj)
-        if auth is None:
-            raise Exception("Invalid credentials")
-        configuration = await self._authentication["create_check_configuration"](auth)
-        namespace = self._authentication["get_namespace"](auth)
-        userinfo = await self._authentication["get_userinfo"](auth, configuration)
-        template_access = self._authentication["template_access"]
-        tag_cronjob = self._authentication["tag_cronjob"]
+        if GET_K8S_CONFIG_HOOK_NAME not in self._hooks:
+            raise ValueError(f"Must set hook {GET_K8S_CONFIG_HOOK_NAME} ($RH_CHECK_GET_K8S_CONFIG) when using the k8s backend")
+        
+        if GET_K8S_NAMESPACE_HOOK_NAME not in self._hooks:
+            raise ValueError(f"Must set hook {GET_K8S_NAMESPACE_HOOK_NAME} ($RH_CHECK_GET_K8S_NAMESPACE_HOOK_NAME) when using the k8s backend")
+        
+        configuration = await wait_if_async(self._hooks[GET_K8S_CONFIG_HOOK_NAME](auth_obj))
+        namespace = await wait_if_async(self._hooks[GET_K8S_NAMESPACE_HOOK_NAME](auth_obj))
 
         template_id = attributes.metadata.template_id
-        template_denied = not template_access(
-            auth, template_id
-        )
         template = self._templates.get(template_id)
 
-        if template_denied or template is None:
+        if template is None:
             raise CheckTemplateIdError.create(template_id)
 
         check_template = template.get_check_template()
@@ -145,16 +153,23 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
             check_template.attributes.arguments,
         )
         validate_kubernetes_cron(attributes.schedule)
-        cronjob = tag_cronjob(
-            auth,
-            template.make_cronjob(
-                metadata=attributes.metadata,
-                schedule=attributes.schedule,
-                userinfo=userinfo,
-            ),
-        )
 
         async with ApiClient(configuration) as api_client:
+            cronjob = template.make_cronjob(
+                metadata=attributes.metadata,
+                schedule=attributes.schedule,
+                userinfo=auth_obj,
+            )
+
+            if ON_K8S_CRONJOB_CREATE_HOOK_NAME in self._hooks:
+                if (
+                    await wait_if_async(self._hooks[ON_K8S_CRONJOB_CREATE_HOOK_NAME](auth_obj, api_client, cronjob)) == False
+                ):
+                    raise ApiException(
+                        status="403",
+                        reason="Permission denied to create health check cronjob"
+                    )
+            
             api_instance = client.BatchV1Api(api_client)
             try:
                 api_response = await api_instance.create_namespaced_cron_job(
@@ -226,12 +241,14 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
         auth_obj: AuthenticationObject,
         check_id: CheckId,
     ) -> None:
-        auth = self._authentication["on_auth"](auth_obj)
-        if auth is None:
-            raise Exception("Invalid!")
-        configuration = await self._authentication["remove_check_configuration"](auth)
-        namespace = self._authentication["get_namespace"](auth)
-        cronjob_access = self._authentication["cronjob_access"]
+        if GET_K8S_CONFIG_HOOK_NAME not in self._hooks:
+            raise ValueError(f"Must set hook {GET_K8S_CONFIG_HOOK_NAME} ($RH_CHECK_GET_K8S_CONFIG) when using the k8s backend")
+        
+        if GET_K8S_NAMESPACE_HOOK_NAME not in self._hooks:
+            raise ValueError(f"Must set hook {GET_K8S_NAMESPACE_HOOK_NAME} ($RH_CHECK_GET_K8S_NAMESPACE_HOOK_NAME) when using the k8s backend")
+
+        configuration = await wait_if_async(self._hooks[GET_K8S_CONFIG_HOOK_NAME](auth_obj))
+        namespace = await wait_if_async(self._hooks[GET_K8S_NAMESPACE_HOOK_NAME](auth_obj))
 
         async with ApiClient(configuration) as api_client:
             api_instance = client.BatchV1Api(api_client)
@@ -240,8 +257,21 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
                     name=check_id,
                     namespace=namespace,
                 )
-                if not cronjob_access(auth, cronjob):
-                    raise CheckIdError.create(check_id)
+                
+                if ON_K8S_CRONJOB_ACCESS_HOOK_NAME in self._hooks:
+                    if (
+                        await wait_if_async(self._hooks[ON_K8S_CRONJOB_ACCESS_HOOK_NAME](auth_obj, api_client, cronjob)) == False
+                    ):
+                        raise CheckIdError.create(check_id)
+
+                if ON_K8S_CRONJOB_REMOVE_HOOK_NAME in self._hooks:
+                    if (
+                        await wait_if_async(self._hooks[ON_K8S_CRONJOB_REMOVE_HOOK_NAME](auth_obj, api_client, cronjob)) == False
+                    ):
+                        raise ApiException(
+                            status="403",
+                            reason="Permission denied to remove health check cronjob"
+                        )
 
                 api_response = await api_instance.delete_namespaced_cron_job(
                     name=check_id,
@@ -265,12 +295,14 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
         auth_obj: AuthenticationObject,
         ids: list[CheckId] | None = None,
     ) -> AsyncIterable[OutCheck]:
-        auth = self._authentication["on_auth"](auth_obj)
-        if auth is None:
-            raise Exception("Invalid!")
-        configuration = await self._authentication["get_checks_configuration"](auth)
-        namespace = self._authentication["get_namespace"](auth)
-        cronjob_access = self._authentication["cronjob_access"]
+        if GET_K8S_CONFIG_HOOK_NAME not in self._hooks:
+            raise ValueError(f"Must set hook {GET_K8S_CONFIG_HOOK_NAME} ($RH_CHECK_GET_K8S_CONFIG) when using the k8s backend")
+        
+        if GET_K8S_NAMESPACE_HOOK_NAME not in self._hooks:
+            raise ValueError(f"Must set hook {GET_K8S_NAMESPACE_HOOK_NAME} ($RH_CHECK_GET_K8S_NAMESPACE_HOOK_NAME) when using the k8s backend")
+        
+        configuration = await wait_if_async(self._hooks[GET_K8S_CONFIG_HOOK_NAME](auth_obj))
+        namespace = await wait_if_async(self._hooks[GET_K8S_NAMESPACE_HOOK_NAME](auth_obj))
 
         async with ApiClient(configuration) as api_client:
             api_instance = client.BatchV1Api(api_client)
@@ -288,8 +320,11 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
 
             for cronjob in cronjobs.items:
                 if (
-                    cronjob_access(auth, cronjob) and
-                    (ids is None or cronjob.metadata.name in ids)
+                    (ids is None or cronjob.metadata.name in ids) and
+                    (
+                        ON_K8S_CRONJOB_ACCESS_HOOK_NAME not in self._hooks or
+                        await wait_if_async(self._hooks[ON_K8S_CRONJOB_ACCESS_HOOK_NAME](auth_obj, api_client, cronjob)) != False
+                    )
                 ):
                     template_id = None
                     if cronjob.metadata and cronjob.metadata.annotations:
@@ -306,12 +341,14 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
         auth_obj: AuthenticationObject,
         check_id: CheckId,
     ) -> None:
-        auth = self._authentication["on_auth"](auth_obj)
-        if auth is None:
-            raise Exception("Invalid!")
-        configuration = await self._authentication["run_check_configuration"](auth)
-        namespace = self._authentication["get_namespace"](auth)
-        cronjob_access = self._authentication["cronjob_access"]
+        if GET_K8S_CONFIG_HOOK_NAME not in self._hooks:
+            raise ValueError(f"Must set hook {GET_K8S_CONFIG_HOOK_NAME} ($RH_CHECK_GET_K8S_CONFIG) when using the k8s backend")
+        
+        if GET_K8S_NAMESPACE_HOOK_NAME not in self._hooks:
+            raise ValueError(f"Must set hook {GET_K8S_NAMESPACE_HOOK_NAME} ($RH_CHECK_GET_K8S_NAMESPACE_HOOK_NAME) when using the k8s backend")
+        
+        configuration = await wait_if_async(self._hooks[GET_K8S_CONFIG_HOOK_NAME](auth_obj))
+        namespace = await wait_if_async(self._hooks[GET_K8S_NAMESPACE_HOOK_NAME](auth_obj))
 
         async with ApiClient(configuration) as api_client:
             api_instance = client.BatchV1Api(api_client)
@@ -320,8 +357,21 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
                     name=check_id,
                     namespace=namespace,
                 )
-                if not cronjob_access(auth, cronjob):
-                    raise CheckIdError.create(check_id)
+                
+                if ON_K8S_CRONJOB_ACCESS_HOOK_NAME in self._hooks:
+                    if (
+                        await wait_if_async(self._hooks[ON_K8S_CRONJOB_ACCESS_HOOK_NAME](auth_obj, api_client, cronjob)) == False
+                    ):
+                        raise CheckIdError.create(check_id)
+
+                if ON_K8S_CRONJOB_RUN_HOOK_NAME in self._hooks:
+                    if (
+                        await wait_if_async(self._hooks[ON_K8S_CRONJOB_RUN_HOOK_NAME](auth_obj, api_client, cronjob)) == False
+                    ):
+                        raise ApiException(
+                            status="403",
+                            reason="Permission denied to run health check cronjob"
+                        )
 
                 api_response = await api_instance.create_namespaced_job(
                     namespace=namespace,

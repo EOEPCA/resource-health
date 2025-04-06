@@ -1,4 +1,5 @@
 from check_backends.k8s_backend.template_utils import *
+from typing import TypedDict
 
 
 class SimplePingArguments(BaseModel):
@@ -24,7 +25,11 @@ def test_ping() -> None:
 """
 
 
-def simple_ping_containers(template_args: SimplePingArguments) -> list[Container]:
+def simple_ping_containers(
+    template_args: SimplePingArguments, userinfo: Any
+) -> list[Container]:
+    assert isinstance(userinfo, dict)
+
     return [
         runner_container(
             # "data:text/plain;base64,ZnJvbS...QVRVU19DT0RFCg=="
@@ -33,6 +38,9 @@ def simple_ping_containers(template_args: SimplePingArguments) -> list[Container
                 "GENERIC_ENDPOINT": template_args.endpoint,
                 "EXPECTED_STATUS_CODE": str(template_args.expected_status_code),
             },
+            resource_attributes={
+                'user.id': userinfo['username'],
+            }
         )
     ]
 
@@ -44,4 +52,5 @@ SimplePing = cronjob_template(
     description="Simple template with preset script for pinging single endpoint.",
     # annotations = simple_ping_annotations,
     containers=simple_ping_containers,
+    # volumes = simple_ping_volumes
 )

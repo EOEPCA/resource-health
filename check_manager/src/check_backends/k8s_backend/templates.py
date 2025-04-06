@@ -43,7 +43,7 @@ class CronjobTemplateProtocol(Protocol):
         self,
         template_args: Json,
         schedule: CronExpression,
-        userinfo: dict[str, Any],
+        userinfo: Any,
     ) -> V1CronJob:
         pass
 
@@ -62,7 +62,7 @@ class CronjobTemplate(ABC):
         self,
         template_args: Json,
         schedule: CronExpression,
-        userinfo: dict[str, Any],
+        userinfo: Any,
     ) -> V1CronJob:
         """Returns a cronjob from the arguments and schedule."""
 
@@ -82,27 +82,30 @@ def _add_metadata(cronjob: V1CronJob, metadata: InCheckMetadata) -> None:
 
 def _add_otel_resource_attributes(
     cronjob: V1CronJob,
-    userinfo: dict[str, Any],
+    userinfo: Any,
 ) -> None:
     check_id = cronjob.metadata.name
-    username = userinfo.get("username", "Unkown user")
-    name = cronjob.metadata.annotations["name"]
+    
+    for container in cronjob.spec.job_template.spec.template.spec.containers:
+        existing_var = None
+        for var in (container.env or []):
+            if var.name == "OTEL_RESOURCE_ATTRIBUTES":
+                existing_var = var
+                break
+        
+        if existing_var is None:
+            existing_var = V1EnvVar(
+                name="OTEL_RESOURCE_ATTRIBUTES",
+                value=""
+            )
+            container.env.append(existing_var)
+        
+        extra_attrs = f"health_check.name={cronjob.metadata.annotations["name"]},k8s.cronjob.name={check_id}"
 
-    env = cronjob.spec.job_template.spec.template.spec.containers[0].env or []
-    OTEL_RESOURCE_ATTRIBUTES = (
-        f"k8s.cronjob.name={check_id},"
-        f"user.id={username},"
-        f"health_check.name={name}"
-    )
-
-    env.append(
-        V1EnvVar(
-            name="OTEL_RESOURCE_ATTRIBUTES",
-            value=OTEL_RESOURCE_ATTRIBUTES,
-        )
-    )
-    cronjob.spec.job_template.spec.template.spec.containers[0].env = env
-
+        if existing_var.value.strip() == "":
+            existing_var.value = extra_attrs
+        else:
+            existing_var.value = existing_var.value + "," + extra_attrs
 
 def _add_otel_exporter_variables(cronjob: V1CronJob) -> None:
     env = cronjob.spec.job_template.spec.template.spec.containers[0].env or []
@@ -144,7 +147,7 @@ def _add_otel_exporter_variables(cronjob: V1CronJob) -> None:
 def _tag_cronjob(
     cronjob: V1CronJob,
     metadata: InCheckMetadata,
-    userinfo: dict[str, Any],
+    userinfo: Any,
 ) -> V1CronJob:
     _add_metadata(cronjob, metadata)
 
@@ -221,7 +224,7 @@ class CronjobMaker:
         self,
         metadata: InCheckMetadata,
         schedule: CronExpression,
-        userinfo: dict[str, Any],
+        userinfo: Any,
     ) -> V1CronJob:
         cronjob = self.cronjob_template.make_cronjob(
             metadata.template_args,

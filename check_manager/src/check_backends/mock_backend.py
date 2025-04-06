@@ -4,8 +4,12 @@ from typing import (
     NewType,
     Self,
     override,
+    TypeVar,
+    Callable
 )
 import uuid
+import inspect
+import os
 from jsonschema import ValidationError, validate
 
 from check_backends.check_backend import (
@@ -26,11 +30,27 @@ from check_backends.check_backend import (
 )
 from exceptions import JsonValidationError
 
-AuthenticationObject = NewType("AuthenticationObject", str)
+AuthenticationObject = TypeVar("AuthenticationObject")
 
+MOCK_USERNAME = os.environ.get("RH_CHECK_MOCK_USERNAME") or "eric"
+GET_MOCK_USERNAME_HOOK_NAME = os.environ.get("RH_CHECK_GET_MOCK_USERNAME_HOOK_NAME") or "get_mock_username"
+
+# type: ignore
+async def wait_if_async(x):
+    if inspect.isawaitable(x):
+        return await x
+    
+    return x
 
 class MockBackend(CheckBackend[AuthenticationObject]):
-    def __init__(self: Self, template_id_prefix: str = "") -> None:
+    def __init__(
+        self: Self,
+        template_id_prefix: str = "",
+        *,
+        hooks: dict[str, Callable],
+    ) -> None:
+        self._hooks = hooks
+
         check_templates = [
             (
                 CheckTemplateId(template_id_prefix + "check_template1"),
@@ -78,9 +98,9 @@ class MockBackend(CheckBackend[AuthenticationObject]):
             )
         ]
         self._auth_to_check_id_to_attributes: defaultdict[
-            AuthenticationObject, dict[CheckId, OutCheckAttributes]
+            str, dict[CheckId, OutCheckAttributes]
         ] = defaultdict(dict)
-        self._auth_to_check_id_to_attributes[AuthenticationObject("user1")] = dict(
+        self._auth_to_check_id_to_attributes[MOCK_USERNAME] = dict(
             checks
         )
 
@@ -96,12 +116,17 @@ class MockBackend(CheckBackend[AuthenticationObject]):
             return None
         return self._check_template_id_to_attributes[template_id]
 
-    def _get_check_attributes(
+    async def _get_check_attributes(
         self: Self,
         auth_obj: AuthenticationObject,
         check_id: CheckId,
     ) -> OutCheckAttributes | None:
-        check_id_to_attributes = self._auth_to_check_id_to_attributes[auth_obj]
+        if GET_MOCK_USERNAME_HOOK_NAME not in self._hooks:
+            raise ValueError(f"Must set hook {GET_MOCK_USERNAME_HOOK_NAME} ($GET_MOCK_USERNAME_HOOK_NAME) when using the k8s backend")
+        
+        username = await wait_if_async(self._hooks[GET_MOCK_USERNAME_HOOK_NAME](auth_obj))
+
+        check_id_to_attributes = self._auth_to_check_id_to_attributes[username]
         if check_id not in check_id_to_attributes:
             return None
         return check_id_to_attributes[check_id]
@@ -128,6 +153,11 @@ class MockBackend(CheckBackend[AuthenticationObject]):
     async def create_check(
         self: Self, auth_obj: AuthenticationObject, attributes: InCheckAttributes
     ) -> OutCheck:
+        if GET_MOCK_USERNAME_HOOK_NAME not in self._hooks:
+            raise ValueError(f"Must set hook {GET_MOCK_USERNAME_HOOK_NAME} ($GET_MOCK_USERNAME_HOOK_NAME) when using the k8s backend")
+        
+        username = await wait_if_async(self._hooks[GET_MOCK_USERNAME_HOOK_NAME](auth_obj))
+
         check_template_attributes = self._get_check_template_attributes(
             attributes.metadata.template_id
         )
@@ -158,7 +188,7 @@ class MockBackend(CheckBackend[AuthenticationObject]):
                 }
             ),
         )
-        self._auth_to_check_id_to_attributes[auth_obj][check_id] = out_attributes
+        self._auth_to_check_id_to_attributes[username][check_id] = out_attributes
         return OutCheck(id=check_id, attributes=out_attributes)
 
     # @override
@@ -195,14 +225,19 @@ class MockBackend(CheckBackend[AuthenticationObject]):
         auth_obj: AuthenticationObject,
         ids: list[CheckId] | None = None,
     ) -> AsyncIterable[OutCheck]:
+        if GET_MOCK_USERNAME_HOOK_NAME not in self._hooks:
+            raise ValueError(f"Must set hook {GET_MOCK_USERNAME_HOOK_NAME} ($GET_MOCK_USERNAME_HOOK_NAME) when using the k8s backend")
+        
+        username = await wait_if_async(self._hooks[GET_MOCK_USERNAME_HOOK_NAME](auth_obj))
+
         if ids is None:
             for check_id, attributes in self._auth_to_check_id_to_attributes[
-                auth_obj
+                username
             ].items():
                 yield OutCheck(id=check_id, attributes=attributes)
         else:
             for id in ids:
-                check_attributes = self._get_check_attributes(auth_obj, id)
+                check_attributes = await self._get_check_attributes(auth_obj, id)
                 if check_attributes is not None:
                     yield OutCheck(id=id, attributes=check_attributes)
 
@@ -210,6 +245,11 @@ class MockBackend(CheckBackend[AuthenticationObject]):
     async def run_check(
         self: Self, auth_obj: AuthenticationObject, check_id: CheckId
     ) -> None:
-        id_to_check = self._auth_to_check_id_to_attributes[auth_obj]
+        if GET_MOCK_USERNAME_HOOK_NAME not in self._hooks:
+            raise ValueError(f"Must set hook {GET_MOCK_USERNAME_HOOK_NAME} ($GET_MOCK_USERNAME_HOOK_NAME) when using the k8s backend")
+        
+        username = await wait_if_async(self._hooks[GET_MOCK_USERNAME_HOOK_NAME](auth_obj))
+
+        id_to_check = self._auth_to_check_id_to_attributes[username]
         if check_id not in id_to_check:
             raise CheckIdError.create(check_id)
