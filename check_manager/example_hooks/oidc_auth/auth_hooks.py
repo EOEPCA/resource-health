@@ -1,4 +1,4 @@
-# from check_api.hook_utils import *
+# from check_hooks.hook_utils import *
 from check_hooks.hook_utils import (
     K8sClient,
     OutCheck,
@@ -151,9 +151,19 @@ async def on_k8s_cronjob_create(
 ) -> bool:
     print("on_k8s_cronjob_create")
 
+    ## Ensure cronjob is tagged with correct owner
+
+    if (
+        "owner" in cronjob.metadata.annotations
+        and cronjob.metadata.annotations["owner"] != userinfo["username"]
+    ):
+        return False
+
+    cronjob.metadata.annotations["owner"] = userinfo["username"]
+
     ## Ensure the user has an offline token set
     ## Note: Would be more robust to check on every access but use a cache
-    secret_name = f"resource-health-{userinfo['username']}-offline-secrett"
+    secret_name = f"resource-health-{userinfo['username']}-offline-secret"
     secret_namespace = get_k8s_namespace(userinfo)
 
     offline_secret = await lookup_k8s_secret(
