@@ -33,6 +33,11 @@ spec:
           secret:
             ## TODO: Implement more restricted privileges
             secretName: opensearch-admin-certificate
+        {{- if .Values.telemetry_api.use_hook_configmap }}
+        - name: telemetry-api-hooks
+          configMap:
+            name: {{ include "resource-health.fullname" . }}-telemetry-api-hooks-configmap
+        {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
@@ -47,9 +52,15 @@ spec:
           - name: client-tls
             readOnly: true
             mountPath: "/certs"
+          {{- if .Values.telemetry_api.use_hook_configmap }}
+          - name: telemetry-api-hooks
+            mountPath: /app/hooks/
+          {{- end }}
           env:
             - name: RH_TELEMETRY_API_BASE_URL
               value: {{ toYaml .Values.global.defaultTelemetryAPIBaseURL }}
+            - name: RH_TELEMETRY_HOOK_DIR_PATH
+              value: "/app/hooks/"
           {{- range .Values.telemetry_api.environmentSecrets }}
             - name: {{ toYaml .name | trim }}
               valueFrom:
