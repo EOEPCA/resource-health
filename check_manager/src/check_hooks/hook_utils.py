@@ -7,9 +7,13 @@ from check_backends.check_backend import (
     OutCheck,
 )
 import os as _os
+from kubernetes_asyncio.client.models.v1_cron_job import V1CronJob as K8sCronJob
 from kubernetes_asyncio.client.api_client import ApiClient as K8sClient
-from kubernetes_asyncio.client.models.v1_cron_job import V1CronJob as CronJob
+from kubernetes_asyncio.client.models.v1_secret import V1Secret as K8sSecret
 from kubernetes_asyncio.client.configuration import Configuration as K8sConfiguration
+from kubernetes_asyncio.client.rest import ApiException as K8sApiException
+from kubernetes_asyncio.client import CoreV1Api as _CoreV1API
+from kubernetes_asyncio.client.models.v1_object_meta import V1ObjectMeta as _V1ObjectMeta
 from kubernetes_asyncio.config import (
     load_kube_config as _load_kube_config,
     load_incluster_config as _load_incluster_config,
@@ -146,3 +150,43 @@ async def k8s_config_from_cluster(
     )
 
     return cfg
+
+async def lookup_k8s_secret(
+    client : K8sClient,
+    namespace : str,
+    name : str,
+) -> K8sSecret|None:
+    api_instance = _CoreV1API(client)
+    try:
+        api_response = await api_instance.read_namespaced_secret(
+            namespace=namespace,
+            name=name,
+        )
+    except K8sApiException as e:
+        if e.status == 404:
+            return None
+        else:
+            raise e
+    except Exception as e:
+        raise e
+
+    assert isinstance(api_response, K8sSecret)
+    return api_response
+
+async def create_k8s_secret(
+    client : K8sClient,
+    name : str,
+    namespace : str,
+    string_data : dict[str,str],
+) -> K8sSecret:
+    api_instance = _CoreV1API(client)
+
+    api_response = await api_instance.create_namespaced_secret(
+        namespace=namespace,
+        body=K8sSecret(
+            metadata=_V1ObjectMeta(name=name),
+            string_data=string_data,
+        ),
+    )
+
+    assert isinstance(api_response, K8sSecret)

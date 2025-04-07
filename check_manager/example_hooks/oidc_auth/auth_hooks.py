@@ -1,5 +1,5 @@
 # from check_api.hook_utils import *
-from check_api.hook_utils import (
+from check_hooks.hook_utils import (
     K8sClient,
     OutCheck,
     InCheckAttributes,
@@ -7,8 +7,10 @@ from check_api.hook_utils import (
     APIException,
     Error,
     K8sConfiguration,
-    CronJob,
-    k8s_config_from_file
+    K8sCronJob,
+    k8s_config_from_file,
+    lookup_k8s_secret,
+    create_k8s_secret
 )
 
 from eoepca_security import OIDCProxyScheme, Tokens
@@ -136,34 +138,51 @@ def get_k8s_namespace(userinfo: UserInfo) -> str:
     return "resource-health"
 
 
-def on_k8s_cronjob_access(
-    userinfo: UserInfo, client: K8sClient, cronjob: CronJob
+async def on_k8s_cronjob_access(
+    userinfo: UserInfo, client: K8sClient, cronjob: K8sCronJob
 ) -> bool:
     print("on_k8s_cronjob_access")
 
     return cronjob.metadata.annotations.get("owner") == userinfo["username"]
 
 
-def on_k8s_cronjob_create(
-    userinfo: UserInfo, client: K8sClient, cronjob: CronJob
+async def on_k8s_cronjob_create(
+    userinfo: UserInfo, client: K8sClient, cronjob: K8sCronJob
 ) -> bool:
     print("on_k8s_cronjob_create")
 
-    ## Ensure cronjob is tagged with correct owner
+    ## Ensure the user has an offline token set
+    ## Note: Would be more robust to check on every access but use a cache
+    secret_name = f"resource-health-{userinfo['username']}-offline-secrett"
+    secret_namespace = get_k8s_namespace(userinfo)
 
-    if (
-        "owner" in cronjob.metadata.annotations
-        and cronjob.metadata.annotations["owner"] != userinfo["username"]
-    ):
-        return False
+    offline_secret = await lookup_k8s_secret(
+        client=client,
+        namespace=secret_namespace,
+        name=secret_name
+    )
 
-    cronjob.metadata.annotations["owner"] = userinfo["username"]
+    if offline_secret is None:
+        if userinfo['refresh_token'] is None:
+            raise APIException(Error(
+                status="404",
+                code="MissingOfflineToken",
+                title="Missing offline token, please create at least one check using the website",
+            ))
+        await create_k8s_secret(
+            client=client,
+            name=secret_name,
+            namespace=secret_namespace,
+            string_data={
+                "offline_token": userinfo['refresh_token']
+            }
+        )
 
     return True
 
 
 def on_k8s_cronjob_remove(
-    userinfo: UserInfo, client: K8sClient, cronjob: CronJob
+    userinfo: UserInfo, client: K8sClient, cronjob: K8sCronJob
 ) -> bool:
     print("on_k8s_cronjob_remove")
 
@@ -172,7 +191,7 @@ def on_k8s_cronjob_remove(
     return True
 
 
-def on_k8s_cronjob_run(userinfo: UserInfo, client: K8sClient, cronjob: CronJob) -> bool:
+def on_k8s_cronjob_run(userinfo: UserInfo, client: K8sClient, cronjob: K8sCronJob) -> bool:
     print("on_k8s_cronjob_run")
 
     ## Access already checked as part of on_k8s_cronjob_access

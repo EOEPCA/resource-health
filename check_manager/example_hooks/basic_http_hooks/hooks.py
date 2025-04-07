@@ -1,4 +1,4 @@
-from check_api.hook_utils import *
+from check_hooks.hook_utils import *
 
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from typing import TypedDict
