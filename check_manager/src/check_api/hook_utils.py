@@ -141,7 +141,7 @@ async def k8s_config_from_cluster(
     if cert_filename is not None:
         args["cert_filename"] = cert_filename
 
-    await _load_incluster_config(
+    _load_incluster_config(
         **args
     )
 
