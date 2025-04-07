@@ -1,4 +1,15 @@
-from check_api.hook_utils import *
+# from check_api.hook_utils import *
+from check_api.hook_utils import (
+    K8sClient,
+    OutCheck,
+    InCheckAttributes,
+    CheckTemplate,
+    APIException,
+    Error,
+    K8sConfiguration,
+    CronJob,
+    k8s_config_from_file
+)
 
 from eoepca_security import OIDCProxyScheme, Tokens
 from typing import TypedDict
@@ -111,11 +122,14 @@ def on_check_run(userinfo: UserInfo, check: OutCheck) -> bool:
 
 
 async def get_k8s_config(userinfo: UserInfo) -> K8sConfiguration:
-    return await load_k8s_config(
-        config_file="~/.kube/config",
-        context="eoepca-develop",
-        # client_configuration=Configuration()
+    ## Using kube[ctl] config
+    print("get_k8s_config: Using local kube config file")
+    return await k8s_config_from_file(
+        # config_file="~/.kube/config",
+        context=os.environ.get("RH_CHECK_KUBE_CONTEXT"),
     )
+    ## Using cluster mounted credentials
+    # return await k8s_config_from_cluster()
 
 
 def get_k8s_namespace(userinfo: UserInfo) -> str:
