@@ -40,19 +40,17 @@ resource-health:
   #     #   name: null ## INSTRUCTION: Set to name of certificate issuer for the internal cluster domain
 
   # healthchecks:
-  #   templates: []
-  #   #  ping_template.py: |
-  #   #    from check_backends.k8s_backend.template_examples import SimplePing as SimplePing
-  #   #
-  #   #  script_template.py: |
-  #   #    from check_backends.k8s_backend.template_examples import SimpleScript as SimpleScript
+  #   use_template_configmap: False
+  #   templates:
+  #     nothing.py: |
+  #       ## Put some files containing templates here!
   #
   #   checks: []
   #   # - name: hourly-mock-api-check
   #   #   # image:
   #   #   #   repository: docker.io/eoepca/healthcheck_runner
   #   #   #   pullPolicy: IfNotPresent
-  #   #   #   tag: "v0.1.0-demo"
+  #   #   #   tag: "2.0.0-rc1"
   #   #   schedule: "@hourly"
   #   #   # This is an empty requirements file
   #   #   requirements: "https://gist.githubusercontent.com/tilowiklundSensmetry/a9fefe2873b731b483f554607a82deaa/raw/1136a82ca3c8f28b1ad4d895871514185927dd1c/requirements.txt"
@@ -79,11 +77,17 @@ resource-health:
   #   image:
   #     repository: docker.io/eoepca/resourcehealth_check_api
   #     pullPolicy: IfNotPresent
-  #     tag: "2.0.0-beta2.03"
+  #     tag: "2.0.0-rc1"
   #   serviceType: ClusterIP
   #   containerPort: 8000
   #   servicePort: 8000
   #   replicaCount: 2
+  #
+  # use_hook_configmap: False
+  # hooks:
+  #   nothing.py: |
+  #     ## Put some files containing hooks here!
+  #
   #   environmentFixed: []
   #   # - name: ...
   #   #   secret: ...
@@ -96,11 +100,17 @@ resource-health:
   #   image:
   #     repository: docker.io/eoepca/resourcehealth_telemetry_api
   #     pullPolicy: IfNotPresent
-  #     tag: "2.0.0-beta2.03"
+  #     tag: "2.0.0-rc1"
   #   serviceType: ClusterIP
   #   containerPort: 8080
   #   servicePort: 8080
   #   replicaCount: 2
+  #
+  #   use_hook_configmap: False
+  #   hooks:
+  #     nothing.py: |
+  #       ## Put some files containing hooks here!
+  # 
   #   environmentFixed: []
   #   # - name: ...
   #   #   secret: ...
@@ -113,7 +123,7 @@ resource-health:
   #   image:
   #     repository: docker.io/eoepca/resourcehealth_web
   #     pullPolicy: IfNotPresent
-  #     tag: "2.0.0-beta2"
+  #     tag: "2.0.0-rc1"
   #   serviceType: ClusterIP
   #   containerPort: 3000
   #   servicePort: 80
