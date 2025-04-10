@@ -1,5 +1,12 @@
 # Check manager
 
+Python library and APIs (REST and CLI) to manage health checks, more specifically allowing to:
+* Get check templates
+* Get checks
+* Create check
+* Run check
+* Remove check
+
 ## Setup
 
 1. [Install uv](https://docs.astral.sh/uv/getting-started/installation/)
@@ -60,12 +67,6 @@ Run the image with (to use the default k8s backend)
 
 ```bash
 docker run -p 8000:8000 -it --env RH_CHECK_API_BASE_URL=http://127.0.0.1:8000 check_manager
-```
-
-Run the following to use the dummy backend
-
-```bash
-docker run -p 8000:8000 -it --env RH_CHECK_API_BASE_URL=http://127.0.0.1:8000 check_manager check-api-server-dummy-prod
 ```
 
 ## Creating cronjob templates
