@@ -71,6 +71,14 @@ docker run -p 8000:8000 -it --env RH_CHECK_API_BASE_URL=http://127.0.0.1:8000 ch
 
 ## Creating cronjob templates
 
+### Simplified version
+
+See examples in [check_manager/example_k8s_templates](check_manager/example_k8s_templates) for how to define the templates. The functionality shown there should be enough to specify check templates for most cases.
+
+### Full generality version
+
+Only use this in case the simplified version is insufficient to express your needs.
+
 To create your own cronjob template simply make a class with two methods named `get_check_template` and `make_cronjob` in a `.py` file (not named `__init__.py`) and put it in the appropriate directory (`templates` by default). Optionally you can import the abstract base class `CronjobTemplate` from `check_backends.k8s_backend.templates` to inherit from. The benefit to doing this is that you can out the `@override` decorator before the methods and use a type checking tool like `mypy` to check that your methods have the correct names and signatures. Also if the `K8sBackend` finds any partially implemented classes inheriting from `CronjobTemplate` while loading templates it will log warnings indicating there might be spelling mistakes in the method names.
 ```python
 class MyTemplate(CronjobTemplate):
