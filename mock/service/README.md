@@ -13,15 +13,17 @@ to run *with* instrumentation use
 ```
 opentelemetry-instrument --traces_exporter otlp --logs_exporter otlp flask --app app.py run --host 0.0.0.0
 ```
-either of which will start a server listening on `0.0.0.0:5000`.
+either of which will start a server listening on http://0.0.0.0:5000/.
 
-The ontainer image can be built the usual way, e.g.
+On MacOS that port is most likely already in use, so you could append argument `--port 5001` to start a server listening on port 5001 instead.
+
+The container image can be built the usual way, e.g.
 ```
-docker build -t tmp_mock_service:v0.0.1 .
+docker build -t mock_service .
 ```
 so that you can run a server on the host network with something like
 ```
-docker run --rm -it --net host tmp_mock_service:v0.0.1
+docker run -p 5000:5000 -it mock_service
 ```
 
-The image is currently published as `docker.io/tilowiklundsensmetry/mock_service`.
+The image is currently published as `docker.io/eoepca/mock_service:2.0.0-rc1`.
