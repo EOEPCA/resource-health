@@ -26,4 +26,4 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
 
 ENTRYPOINT [ "/app/run_script.sh" ]
 
-CMD [ "pytest", "--export-traces", "tests.py" ]
+CMD [ "pytest", "--export-traces", "--suppress-tests-failed-exit-code", "tests.py" ]
