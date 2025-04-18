@@ -4,7 +4,7 @@ import DefaultLayout from "@/layouts/DefaultLayout";
 import { Text } from "@chakra-ui/react";
 import { useState } from "react";
 import { GetAllSpans, SpanResult } from "@/lib/backend-wrapper";
-import { CheckError } from "@/components/CheckError";
+import { useError } from "@/components/CheckError";
 import {
   GetRelLink,
   LOADING_STRING,
@@ -37,13 +37,10 @@ function HealthCheckRunPageDetails({
 }: {
   traceId: string;
 }): JSX.Element {
-  const [error, setError] = useState<Error | null>(null);
   const [allSpans, setAllSpans] = useState<SpanResult | null>(null);
-  if (error !== null) {
-    return <CheckError {...error} />;
-  }
   const spanFilterParams = { traceId: traceId };
   const filterParamsDql = SpanFilterParamsToDql(spanFilterParams);
+  const [errorDiv, setError] = useError();
   if (allSpans === null) {
     GetAllSpans(spanFilterParams).then(setAllSpans).catch(setError);
   }
@@ -52,6 +49,7 @@ function HealthCheckRunPageDetails({
   }
   return (
     <>
+      {errorDiv}
       <ButtonWithCheckmark
         onClick={() => navigator.clipboard.writeText(filterParamsDql)}
       >

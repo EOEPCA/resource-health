@@ -39,7 +39,7 @@ import {
   LOADING_STRING,
   SpansSummary,
 } from "@/lib/helpers";
-import { CheckError } from "@/components/CheckError";
+import { useError } from "@/components/CheckError";
 import { TELEMETRY_DURATION } from "@/lib/config";
 import DefaultLayout from "@/layouts/DefaultLayout";
 import CustomLink from "@/components/CustomLink";
@@ -64,14 +64,11 @@ export default function Home(): JSX.Element {
 }
 
 function HomeDetails(): JSX.Element {
-  const [error, setError] = useState<Error | null>(null);
   const [checkTemplates, setCheckTemplates] = useState<CheckTemplate[] | null>(
     null
   );
   const [checks, setChecks] = useState<Check[] | null>(null);
-  if (error !== null) {
-    return <CheckError {...error} />;
-  }
+  const [errorDiv, setError] = useError();
   if (checkTemplates === null) {
     GetCheckTemplates().then(setCheckTemplates).catch(setError);
   }
@@ -82,13 +79,16 @@ function HomeDetails(): JSX.Element {
     return <Text>{LOADING_STRING}</Text>;
   }
   return (
-    <ChecksDiv
-      checks={checks}
-      telemetryDuration={TELEMETRY_DURATION}
-      templates={checkTemplates}
-      onCreateCheck={(check) => setChecks([check, ...checks])}
-      setError={setError}
-    />
+    <>
+      {errorDiv}
+      <ChecksDiv
+        checks={checks}
+        telemetryDuration={TELEMETRY_DURATION}
+        templates={checkTemplates}
+        onCreateCheck={(check) => setChecks([check, ...checks])}
+        setError={setError}
+      />
+    </>
   );
 }
 
@@ -276,12 +276,6 @@ function CreateCheckDiv({
             validator={validator}
             onChange={log("changed")}
             onSubmit={(data) => {
-              setName("");
-              setSchedule("");
-              setDescription("");
-              // A hacky way to force clearing of form data
-              setKey(1 - key);
-              setTemplateId(templates[0].id);
               CreateCheck({
                 data: {
                   type: "check",
@@ -296,7 +290,15 @@ function CreateCheckDiv({
                   },
                 },
               })
-                .then(onCreateCheck)
+                .then((check) => {
+                  setName("");
+                  setSchedule("");
+                  setDescription("");
+                  // A hacky way to force clearing of form data
+                  setKey(1 - key);
+                  setTemplateId(templates[0].id);
+                  onCreateCheck(check);
+                })
                 .catch(setError);
             }}
             onError={log("errors")}

@@ -53,7 +53,7 @@ import {
   SpanFilterParamsToDql,
   StringifyPretty,
 } from "@/lib/helpers";
-import { CheckError } from "@/components/CheckError";
+import { useError } from "@/components/CheckError";
 import { TELEMETRY_DURATION } from "@/lib/config";
 import { useRouter } from "next/navigation";
 import DefaultLayout from "@/layouts/DefaultLayout";
@@ -77,16 +77,13 @@ export default function HealthCheckPage({
 
 function HealthCheckDetails({ checkId }: { checkId: string }): JSX.Element {
   const router = useRouter();
-  const [error, setError] = useState<Error | null>(null);
   const [checkTemplates, setCheckTemplates] = useState<CheckTemplate[] | null>(
     null
   );
   const [check, setCheck] = useState<Check | null>(null);
   const [now, setNow] = useState(new Date());
   const [allSpans, setAllSpans] = useState<SpanResult | null>(null);
-  if (error !== null) {
-    return <CheckError {...error} />;
-  }
+  const [errordiv, setError] = useError();
   if (checkTemplates === null) {
     GetCheckTemplates().then(setCheckTemplates).catch(setError);
   }
@@ -102,22 +99,25 @@ function HealthCheckDetails({ checkId }: { checkId: string }): JSX.Element {
   }
 
   return (
-    <CheckDiv
-      check={check}
-      telemetryDuration={TELEMETRY_DURATION}
-      templates={checkTemplates}
-      setNow={setNow}
-      filterParamsDql={SpanFilterParamsToDql(spanFilterParams)}
-      allSpans={allSpans}
-      setAllSpans={setAllSpans}
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      onCheckUpdate={(_check) => {
-        throw new Error("Update is not yet implemented");
-      }}
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      onCheckRemove={(_checkId) => router.push("/")}
-      setError={setError}
-    />
+    <>
+      {errordiv}
+      <CheckDiv
+        check={check}
+        telemetryDuration={TELEMETRY_DURATION}
+        templates={checkTemplates}
+        setNow={setNow}
+        filterParamsDql={SpanFilterParamsToDql(spanFilterParams)}
+        allSpans={allSpans}
+        setAllSpans={setAllSpans}
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        onCheckUpdate={(_check) => {
+          throw new Error("Update is not yet implemented");
+        }}
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        onCheckRemove={(_checkId) => router.push("/")}
+        setError={setError}
+      />
+    </>
   );
 }
 

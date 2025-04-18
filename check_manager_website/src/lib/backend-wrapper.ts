@@ -56,7 +56,7 @@ type ErrorSource =
   | ErrorSourceParameter
   | ErrorSourceHeader;
 
-type Error = {
+export type APIError = {
   status: string;
   code: string;
   title: string;
@@ -77,8 +77,8 @@ type APIOKResponseList<T, U> = {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-type APIErrorResponse = {
-  errors: Error[];
+export type APIErrorResponse = {
+  errors: APIError[];
 };
 
 export type CheckTemplateMetadata = object & {
