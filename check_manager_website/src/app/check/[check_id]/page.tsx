@@ -55,7 +55,11 @@ import {
   StringifyPretty,
   useFetchState,
 } from "@/lib/helpers";
-import { SetErrorPropsType, useError } from "@/components/CheckError";
+import {
+  CheckErrorPopup,
+  SetErrorPropsType,
+  useError,
+} from "@/components/CheckError";
 import { TELEMETRY_DURATION } from "@/lib/config";
 import { useRouter } from "next/navigation";
 import DefaultLayout from "@/layouts/DefaultLayout";
@@ -69,17 +73,28 @@ type HealthCheckPageProps = {
 export default function HealthCheckPage({
   params: { check_id },
 }: HealthCheckPageProps): JSX.Element {
+  const { errorProps, setErrorProps, isErrorOpen, onErrorClose } = useError();
   return (
     <DefaultLayout>
+      <CheckErrorPopup
+        errorProps={errorProps}
+        isOpen={isErrorOpen}
+        onClose={onErrorClose}
+      />
       <CustomLink href={GetRelLink({})}>Home</CustomLink>
-      <HealthCheckDetails checkId={check_id} />
+      <HealthCheckDetails checkId={check_id} setErrorProps={setErrorProps} />
     </DefaultLayout>
   );
 }
 
-function HealthCheckDetails({ checkId }: { checkId: string }): JSX.Element {
+function HealthCheckDetails({
+  checkId,
+  setErrorProps,
+}: {
+  checkId: string;
+  setErrorProps: SetErrorPropsType;
+}): JSX.Element {
   const router = useRouter();
-  const [errordiv, setErrorProps] = useError();
   const [checkTemplates] = useFetchState(GetCheckTemplates, setErrorProps, []);
   const [check] = useFetchState(() => GetCheck(checkId), setErrorProps, [
     checkId,
@@ -113,25 +128,22 @@ function HealthCheckDetails({ checkId }: { checkId: string }): JSX.Element {
   }
 
   return (
-    <>
-      {errordiv}
-      <CheckDiv
-        check={check}
-        telemetryDuration={TELEMETRY_DURATION}
-        templates={checkTemplates}
-        setNow={setNow}
-        filterParamsDql={SpanFilterParamsToDql(GetSpanFilterParams(check, now))}
-        allSpans={allSpans}
-        setAllSpans={setAllSpans}
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        onCheckUpdate={(_check) => {
-          throw new Error("Update is not yet implemented");
-        }}
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        onCheckRemove={(_checkId) => router.push("/")}
-        setErrorProps={setErrorProps}
-      />
-    </>
+    <CheckDiv
+      check={check}
+      telemetryDuration={TELEMETRY_DURATION}
+      templates={checkTemplates}
+      setNow={setNow}
+      filterParamsDql={SpanFilterParamsToDql(GetSpanFilterParams(check, now))}
+      allSpans={allSpans}
+      setAllSpans={setAllSpans}
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      onCheckUpdate={(_check) => {
+        throw new Error("Update is not yet implemented");
+      }}
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      onCheckRemove={(_checkId) => router.push("/")}
+      setErrorProps={setErrorProps}
+    />
   );
 }
 

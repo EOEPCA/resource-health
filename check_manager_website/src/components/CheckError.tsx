@@ -37,7 +37,12 @@ export function DefaultErrorHandler(
   };
 }
 
-export function useError(): [JSX.Element, SetErrorPropsType] {
+export function useError(): {
+  errorProps: ErrorProps | null;
+  setErrorProps: SetErrorPropsType;
+  isErrorOpen: boolean;
+  onErrorClose: () => void;
+} {
   const [errorProps, setErrorPropsSlim] = useState<ErrorProps | null>(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
   function setErrorProps(errorProps: ErrorProps | null) {
@@ -46,14 +51,12 @@ export function useError(): [JSX.Element, SetErrorPropsType] {
       onOpen();
     }
   }
-  return [
-    CheckErrorPopup({
+  return {
       errorProps: errorProps,
-      isOpen: isOpen,
-      onClose: onClose,
-    }),
-    setErrorProps,
-  ] as const;
+    setErrorProps: setErrorProps,
+    isErrorOpen: isOpen,
+    onErrorClose: onClose,
+  };
 }
 
 type CheckErrorProps = {
@@ -62,7 +65,7 @@ type CheckErrorProps = {
   onClose: () => void;
 };
 
-function CheckErrorPopup({
+export function CheckErrorPopup({
   errorProps,
   isOpen,
   onClose,

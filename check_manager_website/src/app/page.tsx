@@ -41,7 +41,11 @@ import {
   SpansSummary,
   useFetchState,
 } from "@/lib/helpers";
-import { SetErrorPropsType, useError } from "@/components/CheckError";
+import {
+  CheckErrorPopup,
+  SetErrorPropsType,
+  useError,
+} from "@/components/CheckError";
 import { TELEMETRY_DURATION } from "@/lib/config";
 import DefaultLayout from "@/layouts/DefaultLayout";
 import CustomLink from "@/components/CustomLink";
@@ -50,31 +54,37 @@ import ButtonWithCheckmark from "@/components/ButtonWithCheckmark";
 const log = (type: string) => console.log.bind(console, type);
 
 export default function Home(): JSX.Element {
+  const { errorProps, setErrorProps, isErrorOpen, onErrorClose } = useError();
   return (
     <DefaultLayout>
-      <HomeDetails />
+      <CheckErrorPopup
+        errorProps={errorProps}
+        isOpen={isErrorOpen}
+        onClose={onErrorClose}
+      />
+      <HomeDetails setErrorProps={setErrorProps} />
     </DefaultLayout>
   );
 }
 
-function HomeDetails(): JSX.Element {
-  const [errorDiv, setErrorProps] = useError();
+function HomeDetails({
+  setErrorProps,
+}: {
+  setErrorProps: SetErrorPropsType;
+}): JSX.Element {
   const [checkTemplates] = useFetchState(GetCheckTemplates, setErrorProps, []);
   const [checks, setChecks] = useFetchState(GetChecks, setErrorProps, []);
   if (checkTemplates === null || checks === null) {
     return <Text>{LOADING_STRING}</Text>;
   }
   return (
-    <>
-      {errorDiv}
-      <ChecksDiv
-        checks={checks}
-        telemetryDuration={TELEMETRY_DURATION}
-        templates={checkTemplates}
-        onCreateCheck={(check) => setChecks([check, ...checks])}
-        setErrorProps={setErrorProps}
-      />
-    </>
+    <ChecksDiv
+      checks={checks}
+      telemetryDuration={TELEMETRY_DURATION}
+      templates={checkTemplates}
+      onCreateCheck={(check) => setChecks([check, ...checks])}
+      setErrorProps={setErrorProps}
+    />
   );
 }
 

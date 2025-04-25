@@ -2,10 +2,13 @@
 
 import DefaultLayout from "@/layouts/DefaultLayout";
 import { Text } from "@chakra-ui/react";
-import { GetAllSpans, SpanResult } from "@/lib/backend-wrapper";
-import { SetErrorPropsType, useError } from "@/components/CheckError";
+import { GetAllSpans } from "@/lib/backend-wrapper";
 import {
-  CallBackend,
+  CheckErrorPopup,
+  SetErrorPropsType,
+  useError,
+} from "@/components/CheckError";
+import {
   GetRelLink,
   LOADING_STRING,
   SpanFilterParamsToDql,
@@ -14,7 +17,6 @@ import {
 } from "@/lib/helpers";
 import CustomLink from "@/components/CustomLink";
 import ButtonWithCheckmark from "@/components/ButtonWithCheckmark";
-import { useEffect, useState } from "react";
 
 type HealthCheckRunPageProps = {
   params: { check_id: string; trace_id: string };
@@ -24,10 +26,14 @@ export default function HealthCheckRunPage({
   params: { check_id, trace_id },
 }: HealthCheckRunPageProps): JSX.Element {
   // It is defined here so that the error popup appears no matter what
-  const [errorDiv, setErrorProps] = useError();
+  const { errorProps, setErrorProps, isErrorOpen, onErrorClose } = useError();
   return (
     <DefaultLayout>
-      {errorDiv}
+      <CheckErrorPopup
+        errorProps={errorProps}
+        isOpen={isErrorOpen}
+        onClose={onErrorClose}
+      />
       <CustomLink href={GetRelLink({})}>Home</CustomLink>
       <CustomLink href={GetRelLink({ checkId: check_id })}>
         Health Check
