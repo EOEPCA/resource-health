@@ -21,7 +21,7 @@ import { sub as subDuration } from "date-fns";
 import { TELEMETRY_DURATION } from "./config";
 import {
   DefaultErrorHandler,
-  SetErrorPropsType,
+  SetErrorsPropsType,
 } from "@/components/CheckError";
 
 export const LOADING_STRING = "Loading ...";
@@ -34,28 +34,28 @@ export function GetReLoginURL(): string {
 export function CallBackend<T>(
   func: () => Promise<T>,
   then: (value: T) => void,
-  setErrorProps: SetErrorPropsType
+  setErrorsProps: SetErrorsPropsType
 ): void {
   func()
     .then(then)
     .catch(
-      DefaultErrorHandler(setErrorProps, () =>
-        CallBackend<T>(func, then, setErrorProps)
+      DefaultErrorHandler(setErrorsProps, () =>
+        CallBackend<T>(func, then, setErrorsProps)
       )
     );
 }
 
 export function useFetchState<T>(
   fetch: () => Promise<T>,
-  setErrorProps: SetErrorPropsType,
+  setErrorsProps: SetErrorsPropsType,
   deps: DependencyList
 ): [T | null, (value: T | null) => void] {
-  // deps ??= [];
   const [value, setValue] = useState<T | null>(null);
   useEffect(() => {
-  if (value === null) {
-    CallBackend(fetch, setValue, setErrorProps);
-  }
+    if (value === null) {
+      CallBackend(fetch, setValue, setErrorsProps);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, ...deps]);
   return [value, setValue] as const;
 }

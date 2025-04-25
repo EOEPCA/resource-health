@@ -13,7 +13,7 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { AxiosError } from "axios";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export type ErrorProps = {
   error: APIErrors | AxiosError | Error;
@@ -21,101 +21,116 @@ export type ErrorProps = {
   onRetry?: () => void;
 };
 
-export type SetErrorPropsType = (errorProps: ErrorProps | null) => void;
+export type SetErrorsPropsType = (
+  errorsProps: (es: ErrorProps[]) => ErrorProps[]
+) => void;
 
 export function DefaultErrorHandler(
-  setErrorProps: SetErrorPropsType,
+  setErrorsProps: SetErrorsPropsType,
   onRetry: () => void
 ): (error: APIErrors | AxiosError | Error) => void {
   return (error: APIErrors | AxiosError | Error) => {
     const reLogin = error instanceof AxiosError;
-    setErrorProps({
-      error: error,
-      reLogin: error instanceof AxiosError,
-      onRetry: reLogin ? onRetry : undefined,
-    });
+    setErrorsProps((errorsProps: ErrorProps[]) => [
+      ...errorsProps,
+      {
+        error: error,
+        reLogin: error instanceof AxiosError,
+        onRetry: reLogin ? onRetry : undefined,
+      },
+    ]);
   };
 }
 
 export function useError(): {
-  errorProps: ErrorProps | null;
-  setErrorProps: SetErrorPropsType;
+  errorsProps: ErrorProps[];
+  setErrorsProps: SetErrorsPropsType;
   isErrorOpen: boolean;
 } {
-  const [errorProps, setErrorPropsSlim] = useState<ErrorProps | null>(null);
+  const [errorsProps, setErrorsProps] = useState<ErrorProps[]>([]);
   const { isOpen, onOpen, onClose } = useDisclosure();
-  function setErrorProps(errorProps: ErrorProps | null) {
-    setErrorPropsSlim(errorProps);
-    if (errorProps !== null) {
-      console.log("Open error popup");
+  useEffect(() => {
+    if (errorsProps.length > 0) {
       onOpen();
     } else {
-      console.log("Error is reset");
       onClose();
     }
-  }
+  }, [errorsProps, onOpen, onClose]);
   return {
-    errorProps: errorProps,
-    setErrorProps: setErrorProps,
+    errorsProps: errorsProps,
+    setErrorsProps: setErrorsProps,
     isErrorOpen: isOpen,
   };
 }
 
 type CheckErrorProps = {
-  errorProps: ErrorProps | null;
-  setErrorProps: SetErrorPropsType;
+  errorsProps: ErrorProps[];
+  setErrorsProps: SetErrorsPropsType;
   isOpen: boolean;
 };
 
 export function CheckErrorPopup({
-  errorProps,
-  setErrorProps,
+  errorsProps,
+  setErrorsProps,
   isOpen,
 }: CheckErrorProps): JSX.Element {
   const reLoginURL = GetReLoginURL();
+  const reLogin = errorsProps.some((errorProps) => errorProps.reLogin);
+  const retry = errorsProps.some(
+    (errorProps) => errorProps.onRetry !== undefined
+  );
   return (
     <>
-      <Modal onClose={() => setErrorProps(null)} isOpen={isOpen} isCentered>
+      <Modal
+        onClose={() => setErrorsProps(() => [])}
+        isOpen={isOpen}
+        isCentered
+      >
         <ModalOverlay />
         <ModalContent>
           <ModalHeader>Error occurred</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            <ErrorDetails error={errorProps ? errorProps.error : null} />
+            <ErrorDetails
+              errors={errorsProps.map((errorProps) => errorProps.error)}
+            />
+            {reLogin && (
+              <Text>
+                Relogging in is likely to fix the issue. Return to this page
+                after to retry.
+              </Text>
+            )}
           </ModalBody>
-          {errorProps !== null && (
-            <ModalFooter>
-              {errorProps.reLogin && (
-                <Button
-                  mr={3}
-                  onClick={() => window.open(reLoginURL, "_blank")}
-                >
-                  Re Login
-                </Button>
-              )}
-              {errorProps.onRetry && (
-                <Button
-                  onClick={() => {
-                    setErrorProps(null);
-                    errorProps.onRetry!();
-                  }}
-                >
-                  Retry
-                </Button>
-              )}
-            </ModalFooter>
-          )}
+          <ModalFooter>
+            {reLogin && (
+              <Button mr={3} onClick={() => window.open(reLoginURL, "_blank")}>
+                Re Login
+              </Button>
+            )}
+            {retry && (
+              <Button
+                onClick={() => {
+                  setErrorsProps(() => []);
+                  errorsProps.forEach((errorProps) => errorProps.onRetry?.());
+                }}
+              >
+                Retry
+              </Button>
+            )}
+          </ModalFooter>
         </ModalContent>
       </Modal>
     </>
   );
 }
 
-function ErrorDetails({ error }: { error: Error | null }): JSX.Element {
+function ErrorDetails({ errors }: { errors: Error[] }): JSX.Element {
   // The element in this state should never be rendered
-  if (error === null) {
+  if (errors.length === 0) {
     return <Text>Forgot to set error details</Text>;
   }
+  // Render just the first error, at least for now
+  const error = errors[0];
   if (error instanceof APIErrors) {
     return (
       <>
@@ -134,10 +149,6 @@ function ErrorDetails({ error }: { error: Error | null }): JSX.Element {
         <Text>
           {error.name}
           {statusStr}: {error.message}
-        </Text>
-        <Text>
-          Relogging in is likely to fix the issue. Return to this page after to
-          retry.
         </Text>
       </>
     );

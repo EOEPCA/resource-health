@@ -43,7 +43,7 @@ import {
 } from "@/lib/helpers";
 import {
   CheckErrorPopup,
-  SetErrorPropsType,
+  SetErrorsPropsType,
   useError,
 } from "@/components/CheckError";
 import { TELEMETRY_DURATION } from "@/lib/config";
@@ -54,26 +54,26 @@ import ButtonWithCheckmark from "@/components/ButtonWithCheckmark";
 const log = (type: string) => console.log.bind(console, type);
 
 export default function Home(): JSX.Element {
-  const { errorProps, setErrorProps, isErrorOpen } = useError();
+  const { errorsProps, setErrorsProps, isErrorOpen } = useError();
   return (
     <DefaultLayout>
       <CheckErrorPopup
-        errorProps={errorProps}
-        setErrorProps={setErrorProps}
+        errorsProps={errorsProps}
+        setErrorsProps={setErrorsProps}
         isOpen={isErrorOpen}
       />
-      <HomeDetails setErrorProps={setErrorProps} />
+      <HomeDetails setErrorsProps={setErrorsProps} />
     </DefaultLayout>
   );
 }
 
 function HomeDetails({
-  setErrorProps,
+  setErrorsProps,
 }: {
-  setErrorProps: SetErrorPropsType;
+  setErrorsProps: SetErrorsPropsType;
 }): JSX.Element {
-  const [checkTemplates] = useFetchState(GetCheckTemplates, setErrorProps, []);
-  const [checks, setChecks] = useFetchState(GetChecks, setErrorProps, []);
+  const [checkTemplates] = useFetchState(GetCheckTemplates, setErrorsProps, []);
+  const [checks, setChecks] = useFetchState(GetChecks, setErrorsProps, []);
   if (checkTemplates === null || checks === null) {
     return <Text>{LOADING_STRING}</Text>;
   }
@@ -83,14 +83,14 @@ function HomeDetails({
       telemetryDuration={TELEMETRY_DURATION}
       templates={checkTemplates}
       onCreateCheck={(check) => setChecks([check, ...checks])}
-      setErrorProps={setErrorProps}
+      setErrorsProps={setErrorsProps}
     />
   );
 }
 
 type CheckDivCommonProps = {
   telemetryDuration: Duration;
-  setErrorProps: SetErrorPropsType;
+  setErrorsProps: SetErrorsPropsType;
 };
 
 function ChecksDiv({
@@ -200,11 +200,11 @@ function ChecksDiv({
 function CreateCheckDiv({
   templates,
   onCreateCheck,
-  setErrorProps,
+  setErrorsProps,
 }: {
   templates: CheckTemplate[];
   onCreateCheck: (check: Check) => void;
-  setErrorProps: SetErrorPropsType;
+  setErrorsProps: SetErrorsPropsType;
 }): JSX.Element {
   const [templateId, setTemplateId] = useState(templates[0].id);
   // Only used as a hacky way to force clearing of form data
@@ -297,7 +297,7 @@ function CreateCheckDiv({
                   setTemplateId(templates[0].id);
                   onCreateCheck(check);
                 },
-                setErrorProps
+                setErrorsProps
               )
             }
             onError={log("errors")}
@@ -312,7 +312,7 @@ function CheckSummaryDiv({
   check,
   setCheckSpansSummary,
   telemetryDuration,
-  setErrorProps,
+  setErrorsProps,
 }: {
   check: Check;
   setCheckSpansSummary: (
@@ -334,7 +334,7 @@ function CheckSummaryDiv({
         scopeAttributes: check.attributes.outcome_filter.scope_attributes,
         spanAttributes: check.attributes.outcome_filter.span_attributes,
       }),
-    setErrorProps,
+    setErrorsProps,
     [now, telemetryDuration, check]
   );
   const check_label =
@@ -364,7 +364,7 @@ function CheckSummaryDiv({
             CallBackend(
               () => RunCheck(check.id),
               () => {},
-              setErrorProps
+              setErrorsProps
             )
           }
         >

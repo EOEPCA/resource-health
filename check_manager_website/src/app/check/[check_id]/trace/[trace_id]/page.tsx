@@ -5,7 +5,7 @@ import { Text } from "@chakra-ui/react";
 import { GetAllSpans } from "@/lib/backend-wrapper";
 import {
   CheckErrorPopup,
-  SetErrorPropsType,
+  SetErrorsPropsType,
   useError,
 } from "@/components/CheckError";
 import {
@@ -26,12 +26,12 @@ export default function HealthCheckRunPage({
   params: { check_id, trace_id },
 }: HealthCheckRunPageProps): JSX.Element {
   // It is defined here so that the error popup appears no matter what
-  const { errorProps, setErrorProps, isErrorOpen } = useError();
+  const { errorsProps, setErrorsProps, isErrorOpen } = useError();
   return (
     <DefaultLayout>
       <CheckErrorPopup
-        errorProps={errorProps}
-        setErrorProps={setErrorProps}
+        errorsProps={errorsProps}
+        setErrorsProps={setErrorsProps}
         isOpen={isErrorOpen}
       />
       <CustomLink href={GetRelLink({})}>Home</CustomLink>
@@ -40,7 +40,7 @@ export default function HealthCheckRunPage({
       </CustomLink>
       <HealthCheckRunPageDetails
         traceId={trace_id}
-        setErrorProps={setErrorProps}
+        setErrorsProps={setErrorsProps}
       />
     </DefaultLayout>
   );
@@ -48,15 +48,15 @@ export default function HealthCheckRunPage({
 
 function HealthCheckRunPageDetails({
   traceId,
-  setErrorProps,
+  setErrorsProps,
 }: {
   traceId: string;
-  setErrorProps: SetErrorPropsType;
+  setErrorsProps: SetErrorsPropsType;
 }): JSX.Element {
   const spanFilterParams = { traceId: traceId };
   const [allSpans] = useFetchState(
     () => GetAllSpans(spanFilterParams),
-    setErrorProps,
+    setErrorsProps,
     [traceId]
   );
   const filterParamsDql = SpanFilterParamsToDql(spanFilterParams);

@@ -57,7 +57,7 @@ import {
 } from "@/lib/helpers";
 import {
   CheckErrorPopup,
-  SetErrorPropsType,
+  SetErrorsPropsType,
   useError,
 } from "@/components/CheckError";
 import { TELEMETRY_DURATION } from "@/lib/config";
@@ -73,30 +73,30 @@ type HealthCheckPageProps = {
 export default function HealthCheckPage({
   params: { check_id },
 }: HealthCheckPageProps): JSX.Element {
-  const { errorProps, setErrorProps, isErrorOpen } = useError();
+  const { errorsProps, setErrorsProps, isErrorOpen } = useError();
   return (
     <DefaultLayout>
       <CheckErrorPopup
-        errorProps={errorProps}
-        setErrorProps={setErrorProps}
+        errorsProps={errorsProps}
+        setErrorsProps={setErrorsProps}
         isOpen={isErrorOpen}
       />
       <CustomLink href={GetRelLink({})}>Home</CustomLink>
-      <HealthCheckDetails checkId={check_id} setErrorProps={setErrorProps} />
+      <HealthCheckDetails checkId={check_id} setErrorsProps={setErrorsProps} />
     </DefaultLayout>
   );
 }
 
 function HealthCheckDetails({
   checkId,
-  setErrorProps,
+  setErrorsProps,
 }: {
   checkId: string;
-  setErrorProps: SetErrorPropsType;
+  setErrorsProps: SetErrorsPropsType;
 }): JSX.Element {
   const router = useRouter();
-  const [checkTemplates] = useFetchState(GetCheckTemplates, setErrorProps, []);
-  const [check] = useFetchState(() => GetCheck(checkId), setErrorProps, [
+  const [checkTemplates] = useFetchState(GetCheckTemplates, setErrorsProps, []);
+  const [check] = useFetchState(() => GetCheck(checkId), setErrorsProps, [
     checkId,
   ]);
   const [now, setNow] = useState(new Date());
@@ -107,9 +107,10 @@ function HealthCheckDetails({
       CallBackend(
         () => GetAllSpans(GetSpanFilterParams(check, now)),
         setAllSpans,
-        setErrorProps
+        setErrorsProps
       );
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [check, now]);
   if (checkTemplates === null || check === null) {
     return <Text>{LOADING_STRING}</Text>;
@@ -130,7 +131,7 @@ function HealthCheckDetails({
       }}
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       onCheckRemove={(_checkId) => router.push("/")}
-      setErrorProps={setErrorProps}
+      setErrorsProps={setErrorsProps}
     />
   );
 }
@@ -145,7 +146,7 @@ export type CheckDivProps = {
   setAllSpans: (allSpans: SpanResult | null) => void;
   onCheckUpdate: (check: Check) => void;
   onCheckRemove: (checkId: CheckId) => void;
-  setErrorProps: SetErrorPropsType;
+  setErrorsProps: SetErrorsPropsType;
 };
 
 function CheckDiv({
@@ -158,7 +159,7 @@ function CheckDiv({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onCheckUpdate,
   onCheckRemove,
-  setErrorProps,
+  setErrorsProps,
 }: CheckDivProps): JSX.Element {
   const [templateId, setTemplateId] = useState(
     check.attributes.metadata.template_id
@@ -343,7 +344,7 @@ function CheckDiv({
               CallBackend(
                 () => RunCheck(check.id),
                 () => {},
-                setErrorProps
+                setErrorsProps
               )
             }
           >
@@ -354,7 +355,7 @@ function CheckDiv({
               CallBackend(
                 () => RemoveCheck(check.id),
                 () => onCheckRemove(check.id),
-                setErrorProps
+                setErrorsProps
               )
             }
           />
