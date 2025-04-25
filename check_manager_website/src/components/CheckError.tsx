@@ -1,9 +1,12 @@
-import { APIError, APIErrorResponse } from "@/lib/backend-wrapper";
+import { APIErrors } from "@/lib/backend-wrapper";
+import { GetReLoginURL } from "@/lib/helpers";
 import {
+  Button,
   Modal,
   ModalBody,
   ModalCloseButton,
   ModalContent,
+  ModalFooter,
   ModalHeader,
   ModalOverlay,
   Text,
@@ -12,33 +15,59 @@ import {
 import { AxiosError } from "axios";
 import { useState } from "react";
 
-export function useError(): [JSX.Element, (error: Error) => void] {
-  const [error, setErrorSlim] = useState<Error | null>(null);
+export type ErrorProps = {
+  error: APIErrors | AxiosError | Error;
+  reLogin: boolean;
+  onRetry?: () => void;
+};
+
+export type SetErrorPropsType = (errorProps: ErrorProps | null) => void;
+
+export function DefaultErrorHandler(
+  setErrorProps: SetErrorPropsType,
+  onRetry: () => void
+): (error: APIErrors | AxiosError | Error) => void {
+  return (error: APIErrors | AxiosError | Error) => {
+    const reLogin = error instanceof AxiosError;
+    setErrorProps({
+      error: error,
+      reLogin: error instanceof AxiosError,
+      onRetry: reLogin ? onRetry : undefined,
+    });
+  };
+}
+
+export function useError(): [JSX.Element, SetErrorPropsType] {
+  const [errorProps, setErrorPropsSlim] = useState<ErrorProps | null>(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
-  function setError(error: Error | null) {
-    setErrorSlim(error);
-    if (error !== null) {
+  function setErrorProps(errorProps: ErrorProps | null) {
+    setErrorPropsSlim(errorProps);
+    if (errorProps !== null) {
       onOpen();
     }
   }
   return [
-    // eslint-disable-next-line react/jsx-key
-    <CheckErrorPopup error={error} isOpen={isOpen} onClose={onClose} />,
-    setError,
+    CheckErrorPopup({
+      errorProps: errorProps,
+      isOpen: isOpen,
+      onClose: onClose,
+    }),
+    setErrorProps,
   ] as const;
 }
 
 type CheckErrorProps = {
-  error: Error | AxiosError | null;
+  errorProps: ErrorProps | null;
   isOpen: boolean;
   onClose: () => void;
 };
 
 function CheckErrorPopup({
-  error,
+  errorProps,
   isOpen,
   onClose,
 }: CheckErrorProps): JSX.Element {
+  const reLoginURL = GetReLoginURL();
   return (
     <>
       <Modal onClose={onClose} isOpen={isOpen} isCentered>
@@ -47,51 +76,64 @@ function CheckErrorPopup({
           <ModalHeader>Error occurred</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            <ErrorDetails error={error} />
+            <ErrorDetails error={errorProps ? errorProps.error : null} />
           </ModalBody>
+          {errorProps !== null && (
+            <ModalFooter>
+              {errorProps.reLogin && (
+                <Button
+                  mr={3}
+                  onClick={() => window.open(reLoginURL, "_blank")}
+                >
+                  Re Login
+                </Button>
+              )}
+              {errorProps.onRetry && (
+                <Button
+                  onClick={() => {
+                    onClose();
+                    console.error(`Retrying ${errorProps.onRetry}`);
+                    errorProps.onRetry!();
+                  }}
+                >
+                  Retry
+                </Button>
+              )}
+            </ModalFooter>
+          )}
         </ModalContent>
       </Modal>
     </>
   );
 }
 
-function ErrorDetails({
-  error,
-}: {
-  error: Error | AxiosError<APIErrorResponse> | null;
-}): JSX.Element {
+function ErrorDetails({ error }: { error: Error | null }): JSX.Element {
   // The element in this state should never be rendered
   if (error === null) {
     return <Text>Forgot to set error details</Text>;
   }
-  if (error.name == "AxiosError") {
-    const axiosError = error as AxiosError;
-    if (
-      axiosError.response &&
-      axiosError.response.data instanceof Object &&
-      "errors" in axiosError.response.data
-    ) {
-      const errors = axiosError.response.data.errors as APIError[];
-      return (
-        <>
-          {errors.map((error, ind) => (
-            <Text key={ind} className="whitespace-pre">
-              {error.title} (code {error.status}): {error.detail}
-            </Text>
-          ))}
-        </>
-      );
-    }
-    const statusStr = axiosError.status ? ` (code ${axiosError.status})` : "";
+  if (error instanceof APIErrors) {
+    return (
+      <>
+        {error.errors.map((error, ind) => (
+          <Text key={ind} className="whitespace-pre">
+            {error.title} (code {error.status}): {error.detail}
+          </Text>
+        ))}
+      </>
+    );
+  }
+  if (error instanceof AxiosError) {
+    const statusStr = error.status ? ` (code ${error.status})` : "";
     return (
       <>
         <Text>
-          {axiosError.name}
-          {statusStr}: {axiosError.message}
+          {error.name}
+          {statusStr}: {error.message}
         </Text>
         <Text>
-          Relogging in is likely to fix the issue. You can do so by refreshing
-          this page, but any data you have might entered will be lost.
+          Relogging in is likely to fix the issue. Return to this page after to
+          retry.
         </Text>
       </>
     );

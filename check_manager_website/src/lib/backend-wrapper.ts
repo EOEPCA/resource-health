@@ -2,7 +2,7 @@
 "use client";
 
 import { StrictRJSFSchema } from "@rjsf/utils";
-import axios, { AxiosResponse } from "axios";
+import axios, { AxiosError, AxiosResponse } from "axios";
 import { env } from "next-runtime-env";
 
 export type CheckTemplateId = string;
@@ -81,6 +81,15 @@ export type APIErrorResponse = {
   errors: APIError[];
 };
 
+export class APIErrors extends Error {
+  errors: APIError[];
+  constructor(errors: APIError[]) {
+    super(errors[0].detail);
+    this.name = "APIErrors";
+    this.errors = errors;
+  }
+}
+
 export type CheckTemplateMetadata = object & {
   label?: string;
   description?: string;
@@ -147,25 +156,22 @@ type InCheck = {
   data: InCheckData;
 };
 
-function GetCheckManagerURL(): string {
-  const url = env("NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT");
+export function GetEnvVarOrThrow(envVar: string): string {
+  const url = env(envVar);
   if (!url) {
-    throw new Error(
-      `environment variable NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT must be set`
-    );
+    throw new Error(`environment variable ${envVar} must be set`);
   }
   return url;
 }
 
+function GetCheckManagerURL(): string {
+  // MUST include /v1 (or some other version) at the end
+  return GetEnvVarOrThrow("NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT");
+}
+
 function GetTelemetryURL(): string {
   // MUST include /v1 (or some other version) at the end
-  const url = env("NEXT_PUBLIC_TELEMETRY_ENDPOINT");
-  if (!url) {
-    throw new Error(
-      `environment variable NEXT_PUBLIC_TELEMETRY_ENDPOINT must be set`
-    );
-  }
-  return url;
+  return GetEnvVarOrThrow("NEXT_PUBLIC_TELEMETRY_ENDPOINT");
 }
 
 type MakeRequestParams = {
@@ -194,20 +200,33 @@ async function MakeRequest<T>({
   if (!path.endsWith("/") && pathParamsConcat) {
     pathParamsConcat = "/" + pathParamsConcat;
   }
-  return await axios.request<unknown, AxiosResponse<T, unknown>, unknown>({
-    url: path + pathParamsConcat,
-    method: method,
-    baseURL: baseURL,
-    params: queryParameters,
-    data: body,
-    headers: { "content-type": "application/vnd.api+json" },
-    withCredentials: true,
-    paramsSerializer: {
-      // Omit brackets when serialize array into the URL.
-      // Based on https://stackoverflow.com/a/76517213
-      indexes: null,
-    },
-  });
+  try {
+    return await axios.request<unknown, AxiosResponse<T, unknown>, unknown>({
+      url: path + pathParamsConcat,
+      method: method,
+      baseURL: baseURL,
+      params: queryParameters,
+      data: body,
+      headers: { "content-type": "application/vnd.api+json" },
+      withCredentials: true,
+      paramsSerializer: {
+        // Omit brackets when serialize array into the URL.
+        // Based on https://stackoverflow.com/a/76517213
+        indexes: null,
+      },
+    });
+  } catch (error) {
+    if (
+      error instanceof AxiosError &&
+      error.response &&
+      error.response.data instanceof Object &&
+      "errors" in error.response.data
+    ) {
+      throw new APIErrors(error.response.data.errors as APIError[]);
+    }
+    console.error(error);
+    throw error;
+  }
 }
 
 export async function GetCheckTemplates(

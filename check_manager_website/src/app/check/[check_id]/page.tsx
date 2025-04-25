@@ -44,6 +44,7 @@ import {
 import { IoReload as Reload } from "react-icons/io5";
 import { Duration, formatDuration } from "date-fns";
 import {
+  CallBackend,
   FindCheckTemplate,
   GetRelLink,
   GetSpanFilterParams,
@@ -52,8 +53,10 @@ import {
   LOADING_STRING,
   SpanFilterParamsToDql,
   StringifyPretty,
+  useFetchState,
+  useFetchStateDelayed,
 } from "@/lib/helpers";
-import { useError } from "@/components/CheckError";
+import { SetErrorPropsType, useError } from "@/components/CheckError";
 import { TELEMETRY_DURATION } from "@/lib/config";
 import { useRouter } from "next/navigation";
 import DefaultLayout from "@/layouts/DefaultLayout";
@@ -77,26 +80,19 @@ export default function HealthCheckPage({
 
 function HealthCheckDetails({ checkId }: { checkId: string }): JSX.Element {
   const router = useRouter();
-  const [checkTemplates, setCheckTemplates] = useState<CheckTemplate[] | null>(
-    null
-  );
-  const [check, setCheck] = useState<Check | null>(null);
+  const [errordiv, setErrorProps] = useError();
+  const [checkTemplates] = useFetchState(GetCheckTemplates, setErrorProps);
+  const [check] = useFetchState(() => GetCheck(checkId), setErrorProps);
   const [now, setNow] = useState(new Date());
-  const [allSpans, setAllSpans] = useState<SpanResult | null>(null);
-  const [errordiv, setError] = useError();
-  if (checkTemplates === null) {
-    GetCheckTemplates().then(setCheckTemplates).catch(setError);
-  }
-  if (check === null) {
-    GetCheck(checkId).then(setCheck).catch(setError);
-  }
+  const [allSpans, setAllSpans, fetchAllSpans] =
+    useFetchStateDelayed<SpanResult>(setErrorProps);
+
   if (checkTemplates === null || check === null) {
     return <Text>{LOADING_STRING}</Text>;
   }
+
   const spanFilterParams = GetSpanFilterParams(check, now);
-  if (allSpans === null) {
-    GetAllSpans(spanFilterParams).then(setAllSpans).catch(setError);
-  }
+  fetchAllSpans(() => GetAllSpans(spanFilterParams));
 
   return (
     <>
@@ -115,7 +111,7 @@ function HealthCheckDetails({ checkId }: { checkId: string }): JSX.Element {
         }}
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         onCheckRemove={(_checkId) => router.push("/")}
-        setError={setError}
+        setErrorProps={setErrorProps}
       />
     </>
   );
@@ -131,7 +127,7 @@ export type CheckDivProps = {
   setAllSpans: (allSpans: SpanResult | null) => void;
   onCheckUpdate: (check: Check) => void;
   onCheckRemove: (checkId: CheckId) => void;
-  setError: (error: Error) => void;
+  setErrorProps: SetErrorPropsType;
 };
 
 function CheckDiv({
@@ -144,7 +140,7 @@ function CheckDiv({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onCheckUpdate,
   onCheckRemove,
-  setError,
+  setErrorProps,
 }: CheckDivProps): JSX.Element {
   const [templateId, setTemplateId] = useState(
     check.attributes.metadata.template_id
@@ -325,16 +321,24 @@ function CheckDiv({
             Copy filter parameters in DQL
           </ButtonWithCheckmark>
           <ButtonWithCheckmark
-            onClick={() => RunCheck(check.id).catch(setError)}
+            onClick={() =>
+              CallBackend(
+                () => RunCheck(check.id),
+                () => {},
+                setErrorProps
+              )
+            }
           >
             Run Check
           </ButtonWithCheckmark>
           <RemoveCheckButton
-            onClick={() => {
-              RemoveCheck(check.id)
-                .then(() => onCheckRemove(check.id))
-                .catch(setError);
-            }}
+            onClick={() =>
+              CallBackend(
+                () => RemoveCheck(check.id),
+                () => onCheckRemove(check.id),
+                setErrorProps
+              )
+            }
           />
         </div>
         <Text>

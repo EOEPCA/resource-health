@@ -32,14 +32,16 @@ import {
 import { IoReload as Reload } from "react-icons/io5";
 import { Duration, formatDuration, sub as subDuration } from "date-fns";
 import {
+  CallBackend,
   ComputeSpansSummary,
   FindCheckTemplate,
   GetAverageDuration,
   GetRelLink,
   LOADING_STRING,
   SpansSummary,
+  useFetchState,
 } from "@/lib/helpers";
-import { useError } from "@/components/CheckError";
+import { SetErrorPropsType, useError } from "@/components/CheckError";
 import { TELEMETRY_DURATION } from "@/lib/config";
 import DefaultLayout from "@/layouts/DefaultLayout";
 import CustomLink from "@/components/CustomLink";
@@ -53,28 +55,12 @@ export default function Home(): JSX.Element {
       <HomeDetails />
     </DefaultLayout>
   );
-  // return (
-  //   <ThemeProvider theme={theme}>
-  //     <CSSReset />
-  //     <main className="flex min-h-screen flex-col items-start p-24">
-  //       <HomeDetails />
-  //     </main>
-  //   </ThemeProvider>
-  // )
 }
 
 function HomeDetails(): JSX.Element {
-  const [checkTemplates, setCheckTemplates] = useState<CheckTemplate[] | null>(
-    null
-  );
-  const [checks, setChecks] = useState<Check[] | null>(null);
-  const [errorDiv, setError] = useError();
-  if (checkTemplates === null) {
-    GetCheckTemplates().then(setCheckTemplates).catch(setError);
-  }
-  if (checks === null) {
-    GetChecks().then(setChecks).catch(setError);
-  }
+  const [errorDiv, setErrorProps] = useError();
+  const [checkTemplates] = useFetchState(GetCheckTemplates, setErrorProps);
+  const [checks, setChecks] = useFetchState(GetChecks, setErrorProps);
   if (checkTemplates === null || checks === null) {
     return <Text>{LOADING_STRING}</Text>;
   }
@@ -86,7 +72,7 @@ function HomeDetails(): JSX.Element {
         telemetryDuration={TELEMETRY_DURATION}
         templates={checkTemplates}
         onCreateCheck={(check) => setChecks([check, ...checks])}
-        setError={setError}
+        setErrorProps={setErrorProps}
       />
     </>
   );
@@ -94,7 +80,7 @@ function HomeDetails(): JSX.Element {
 
 type CheckDivCommonProps = {
   telemetryDuration: Duration;
-  setError: (error: Error) => void;
+  setErrorProps: SetErrorPropsType;
 };
 
 function ChecksDiv({
@@ -204,11 +190,11 @@ function ChecksDiv({
 function CreateCheckDiv({
   templates,
   onCreateCheck,
-  setError,
+  setErrorProps,
 }: {
   templates: CheckTemplate[];
   onCreateCheck: (check: Check) => void;
-  setError: (error: Error) => void;
+  setErrorProps: SetErrorPropsType;
 }): JSX.Element {
   const [templateId, setTemplateId] = useState(templates[0].id);
   // Only used as a hacky way to force clearing of form data
@@ -275,22 +261,25 @@ function CreateCheckDiv({
             schema={template.attributes.arguments}
             validator={validator}
             onChange={log("changed")}
-            onSubmit={(data) => {
-              CreateCheck({
-                data: {
-                  type: "check",
-                  attributes: {
-                    metadata: {
-                      name: name,
-                      description: description,
-                      template_id: templateId,
-                      template_args: data.formData,
+            onSubmit={(data) =>
+              CallBackend(
+                () =>
+                  CreateCheck({
+                    data: {
+                      type: "check",
+                      attributes: {
+                        metadata: {
+                          name: name,
+                          description: description,
+                          template_id: templateId,
+                          template_args: data.formData,
+                        },
+                        schedule: schedule,
+                      },
                     },
-                    schedule: schedule,
-                  },
-                },
-              })
-                .then((check) => {
+                  }),
+                (check: Check) => {
+                  console.error("Hello there");
                   setName("");
                   setSchedule("");
                   setDescription("");
@@ -298,9 +287,10 @@ function CreateCheckDiv({
                   setKey(1 - key);
                   setTemplateId(templates[0].id);
                   onCreateCheck(check);
-                })
-                .catch(setError);
-            }}
+                },
+                setErrorProps
+              )
+            }
             onError={log("errors")}
           />
         </details>
@@ -313,7 +303,7 @@ function CheckSummaryDiv({
   check,
   setCheckSpansSummary,
   telemetryDuration,
-  setError,
+  setErrorProps,
 }: {
   check: Check;
   setCheckSpansSummary: (
@@ -326,21 +316,17 @@ function CheckSummaryDiv({
     check.attributes.metadata.description
   );
   const [now, setNow] = useState(new Date());
-  const [spansSummary, setSpansSummary] = useState<SpansSummary | null>(null);
-  if (spansSummary === null) {
-    ComputeSpansSummary({
-      fromTime: subDuration(now, telemetryDuration),
-      toTime: now,
-      resourceAttributes: check.attributes.outcome_filter.resource_attributes,
-      scopeAttributes: check.attributes.outcome_filter.scope_attributes,
-      spanAttributes: check.attributes.outcome_filter.span_attributes,
-    })
-      .then((spansSummary) => {
-        setSpansSummary(spansSummary);
-        setCheckSpansSummary(check.id, spansSummary);
-      })
-      .catch(setError);
-  }
+  const [spansSummary, setSpansSummary] = useFetchState(
+    () =>
+      ComputeSpansSummary({
+        fromTime: subDuration(now, telemetryDuration),
+        toTime: now,
+        resourceAttributes: check.attributes.outcome_filter.resource_attributes,
+        scopeAttributes: check.attributes.outcome_filter.scope_attributes,
+        spanAttributes: check.attributes.outcome_filter.span_attributes,
+      }),
+    setErrorProps
+  );
   const check_label =
     check.attributes.metadata.template_args === undefined
       ? check.id
@@ -363,7 +349,9 @@ function CheckSummaryDiv({
         >
           <Reload />
         </IconButton>
-        <ButtonWithCheckmark onClick={() => RunCheck(check.id).catch(setError)}>
+        <ButtonWithCheckmark
+          onClick={() => RunCheck(check.id).catch(setErrorProps)}
+        >
           Run Check
         </ButtonWithCheckmark>
       </Td>

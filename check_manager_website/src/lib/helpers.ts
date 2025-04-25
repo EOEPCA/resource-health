@@ -2,6 +2,7 @@ import {
   Check,
   CheckTemplate,
   CheckTemplateId,
+  GetEnvVarOrThrow,
   GetSpansQueryParams,
   ReduceSpans,
   Span,
@@ -12,8 +13,57 @@ import {
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
 import { sub as subDuration } from "date-fns";
 import { TELEMETRY_DURATION } from "./config";
+import {
+  DefaultErrorHandler,
+  SetErrorPropsType,
+} from "@/components/CheckError";
 
 export const LOADING_STRING = "Loading ...";
+
+export function GetReLoginURL(): string {
+  return GetEnvVarOrThrow("NEXT_PUBLIC_RELOGIN_URL");
+}
+
+export function useFetchStateDelayed<T>(
+  setErrorProps: SetErrorPropsType
+): [T | null, (value: T | null) => void, (fetch: () => Promise<T>) => void] {
+  const [value, setValue] = useState<T | null>(null);
+  function FetchValue(fetch: () => Promise<T>): void {
+    function FetchValueInternal() {
+      fetch()
+        .then(setValue)
+        .catch(DefaultErrorHandler(setErrorProps, FetchValueInternal));
+    }
+    FetchValueInternal();
+  }
+  return [value, setValue, FetchValue] as const;
+}
+
+export function useFetchState<T>(
+  fetch: () => Promise<T>,
+  setErrorProps: SetErrorPropsType
+): [T | null, (value: T | null) => void] {
+  const [value, setValue, fetchValue] = useFetchStateDelayed<T>(setErrorProps);
+  if (value === null) {
+    fetchValue(fetch);
+  }
+  return [value, setValue] as const;
+}
+
+// The difference from func().then(...).catch(...) is that it handles errors and retries with setErrorProps
+export function CallBackend<T>(
+  func: () => Promise<T>,
+  then: (value: T) => void,
+  setErrorProps: SetErrorPropsType
+): void {
+  func()
+    .then(then)
+    .catch(
+      DefaultErrorHandler(setErrorProps, () =>
+        CallBackend<T>(func, then, setErrorProps)
+      )
+    );
+}
 
 export function GetRelLink({
   checkId,

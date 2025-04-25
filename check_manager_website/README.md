@@ -4,13 +4,12 @@ First install yarn by following https://yarnpkg.com/getting-started/install step
 That's right, just call `corepack enable` and it should work if you have a modern node js installed.
 If you have trouble here, see https://yarnpkg.com/corepack
 
-
 Run the check api first. For how to do that, see `check_manager/README.md`
 
 Then, run the development server:
 
 ```bash
-NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT=http://localhost:8000/v1 NEXT_PUBLIC_TELEMETRY_ENDPOINT=http://localhost:12345/v1 yarn dev
+NEXT_PUBLIC_RELOGIN_URL=https://example.com NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT=http://localhost:8000/v1 NEXT_PUBLIC_TELEMETRY_ENDPOINT=http://localhost:12345/v1 yarn dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
@@ -19,10 +18,15 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 ## Production
 
-Make sure you set the environment variable `NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT`, and then run
+Run
+
+```
+yarn build
+```
+
+Then make sure you set the environment variables `NEXT_PUBLIC_RELOGIN_URL`, `NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT`, and `NEXT_PUBLIC_TELEMETRY_ENDPOINT`, and then run
 
 ```bash
-yarn build
 yarn start
 ```
 
@@ -34,10 +38,8 @@ From the current directory build the image with
 docker build -t check_manager_website -f Dockerfile .
 ```
 
-Run the image with
+Run the image with (and replace https://example.com with a sensible URL)
 
 ```bash
-docker run -e NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT=http://localhost:8000/v1 -e NEXT_PUBLIC_TELEMETRY_ENDPOINT=http://localhost:12345/v1 -p 3000:3000 -it check_manager_website
+docker run -e NEXT_PUBLIC_RELOGIN_URL=https://example.com -e NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT=http://localhost:8000/v1 -e NEXT_PUBLIC_TELEMETRY_ENDPOINT=http://localhost:12345/v1 -p 3000:3000 -it check_manager_website
 ```
-
-Where `NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT` points to the REST API endpoint.

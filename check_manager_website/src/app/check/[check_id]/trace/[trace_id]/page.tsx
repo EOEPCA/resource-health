@@ -2,14 +2,14 @@
 
 import DefaultLayout from "@/layouts/DefaultLayout";
 import { Text } from "@chakra-ui/react";
-import { useState } from "react";
-import { GetAllSpans, SpanResult } from "@/lib/backend-wrapper";
+import { GetAllSpans } from "@/lib/backend-wrapper";
 import { useError } from "@/components/CheckError";
 import {
   GetRelLink,
   LOADING_STRING,
   SpanFilterParamsToDql,
   StringifyPretty,
+  useFetchState,
 } from "@/lib/helpers";
 import CustomLink from "@/components/CustomLink";
 import ButtonWithCheckmark from "@/components/ButtonWithCheckmark";
@@ -37,13 +37,13 @@ function HealthCheckRunPageDetails({
 }: {
   traceId: string;
 }): JSX.Element {
-  const [allSpans, setAllSpans] = useState<SpanResult | null>(null);
+  const [errorDiv, setErrorProps] = useError();
   const spanFilterParams = { traceId: traceId };
+  const [allSpans] = useFetchState(
+    () => GetAllSpans(spanFilterParams),
+    setErrorProps
+  );
   const filterParamsDql = SpanFilterParamsToDql(spanFilterParams);
-  const [errorDiv, setError] = useError();
-  if (allSpans === null) {
-    GetAllSpans(spanFilterParams).then(setAllSpans).catch(setError);
-  }
   if (allSpans === null) {
     return <Text>{LOADING_STRING}</Text>;
   }
