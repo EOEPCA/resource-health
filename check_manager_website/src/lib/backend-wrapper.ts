@@ -224,7 +224,6 @@ async function MakeRequest<T>({
     ) {
       throw new APIErrors(error.response.data.errors as APIError[]);
     }
-    console.error(error);
     throw error;
   }
 }

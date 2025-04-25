@@ -24,32 +24,6 @@ export function GetReLoginURL(): string {
   return GetEnvVarOrThrow("NEXT_PUBLIC_RELOGIN_URL");
 }
 
-export function useFetchStateDelayed<T>(
-  setErrorProps: SetErrorPropsType
-): [T | null, (value: T | null) => void, (fetch: () => Promise<T>) => void] {
-  const [value, setValue] = useState<T | null>(null);
-  function FetchValue(fetch: () => Promise<T>): void {
-    function FetchValueInternal() {
-      fetch()
-        .then(setValue)
-        .catch(DefaultErrorHandler(setErrorProps, FetchValueInternal));
-    }
-    FetchValueInternal();
-  }
-  return [value, setValue, FetchValue] as const;
-}
-
-export function useFetchState<T>(
-  fetch: () => Promise<T>,
-  setErrorProps: SetErrorPropsType
-): [T | null, (value: T | null) => void] {
-  const [value, setValue, fetchValue] = useFetchStateDelayed<T>(setErrorProps);
-  if (value === null) {
-    fetchValue(fetch);
-  }
-  return [value, setValue] as const;
-}
-
 // The difference from func().then(...).catch(...) is that it handles errors and retries with setErrorProps
 export function CallBackend<T>(
   func: () => Promise<T>,
@@ -63,6 +37,17 @@ export function CallBackend<T>(
         CallBackend<T>(func, then, setErrorProps)
       )
     );
+}
+
+export function useFetchState<T>(
+  fetch: () => Promise<T>,
+  setErrorProps: SetErrorPropsType
+): [T | null, (value: T | null) => void] {
+  const [value, setValue] = useState<T | null>(null);
+  if (value === null) {
+    CallBackend(fetch, setValue, setErrorProps);
+  }
+  return [value, setValue] as const;
 }
 
 export function GetRelLink({

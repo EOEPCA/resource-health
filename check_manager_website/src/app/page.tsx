@@ -279,7 +279,6 @@ function CreateCheckDiv({
                     },
                   }),
                 (check: Check) => {
-                  console.error("Hello there");
                   setName("");
                   setSchedule("");
                   setDescription("");

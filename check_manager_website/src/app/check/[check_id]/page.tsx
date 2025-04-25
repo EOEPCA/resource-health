@@ -54,7 +54,6 @@ import {
   SpanFilterParamsToDql,
   StringifyPretty,
   useFetchState,
-  useFetchStateDelayed,
 } from "@/lib/helpers";
 import { SetErrorPropsType, useError } from "@/components/CheckError";
 import { TELEMETRY_DURATION } from "@/lib/config";
@@ -84,15 +83,18 @@ function HealthCheckDetails({ checkId }: { checkId: string }): JSX.Element {
   const [checkTemplates] = useFetchState(GetCheckTemplates, setErrorProps);
   const [check] = useFetchState(() => GetCheck(checkId), setErrorProps);
   const [now, setNow] = useState(new Date());
-  const [allSpans, setAllSpans, fetchAllSpans] =
-    useFetchStateDelayed<SpanResult>(setErrorProps);
+  const [allSpans, setAllSpans] = useState<SpanResult | null>(null);
 
   if (checkTemplates === null || check === null) {
     return <Text>{LOADING_STRING}</Text>;
   }
 
   const spanFilterParams = GetSpanFilterParams(check, now);
-  fetchAllSpans(() => GetAllSpans(spanFilterParams));
+  CallBackend(
+    () => GetAllSpans(spanFilterParams),
+    (spans) => setAllSpans(spans),
+    setErrorProps
+  );
 
   return (
     <>

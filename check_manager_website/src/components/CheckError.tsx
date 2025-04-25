@@ -92,7 +92,6 @@ function CheckErrorPopup({
                 <Button
                   onClick={() => {
                     onClose();
-                    console.error(`Retrying ${errorProps.onRetry}`);
                     errorProps.onRetry!();
                   }}
                 >
