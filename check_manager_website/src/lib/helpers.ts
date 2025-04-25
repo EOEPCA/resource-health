@@ -10,7 +10,13 @@ import {
   SpanStatus,
   TelemetryAttributes,
 } from "./backend-wrapper";
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import {
+  DependencyList,
+  Dispatch,
+  SetStateAction,
+  useEffect,
+  useState,
+} from "react";
 import { sub as subDuration } from "date-fns";
 import { TELEMETRY_DURATION } from "./config";
 import {
@@ -41,12 +47,16 @@ export function CallBackend<T>(
 
 export function useFetchState<T>(
   fetch: () => Promise<T>,
-  setErrorProps: SetErrorPropsType
+  setErrorProps: SetErrorPropsType,
+  deps: DependencyList
 ): [T | null, (value: T | null) => void] {
+  // deps ??= [];
   const [value, setValue] = useState<T | null>(null);
+  useEffect(() => {
   if (value === null) {
     CallBackend(fetch, setValue, setErrorProps);
   }
+  }, [value, ...deps]);
   return [value, setValue] as const;
 }
 

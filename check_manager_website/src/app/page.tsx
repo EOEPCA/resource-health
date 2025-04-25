@@ -59,8 +59,8 @@ export default function Home(): JSX.Element {
 
 function HomeDetails(): JSX.Element {
   const [errorDiv, setErrorProps] = useError();
-  const [checkTemplates] = useFetchState(GetCheckTemplates, setErrorProps);
-  const [checks, setChecks] = useFetchState(GetChecks, setErrorProps);
+  const [checkTemplates] = useFetchState(GetCheckTemplates, setErrorProps, []);
+  const [checks, setChecks] = useFetchState(GetChecks, setErrorProps, []);
   if (checkTemplates === null || checks === null) {
     return <Text>{LOADING_STRING}</Text>;
   }
@@ -324,7 +324,8 @@ function CheckSummaryDiv({
         scopeAttributes: check.attributes.outcome_filter.scope_attributes,
         spanAttributes: check.attributes.outcome_filter.span_attributes,
       }),
-    setErrorProps
+    setErrorProps,
+    [now, telemetryDuration, check]
   );
   const check_label =
     check.attributes.metadata.template_args === undefined
@@ -349,7 +350,13 @@ function CheckSummaryDiv({
           <Reload />
         </IconButton>
         <ButtonWithCheckmark
-          onClick={() => RunCheck(check.id).catch(setErrorProps)}
+          onClick={() =>
+            CallBackend(
+              () => RunCheck(check.id),
+              () => {},
+              setErrorProps
+            )
+          }
         >
           Run Check
         </ButtonWithCheckmark>

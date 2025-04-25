@@ -1,6 +1,6 @@
 "use client";
 
-import { JSX, useState } from "react";
+import { JSX, useEffect, useState } from "react";
 import Form from "@rjsf/chakra-ui";
 import {
   RemoveCheck,
@@ -80,21 +80,37 @@ export default function HealthCheckPage({
 function HealthCheckDetails({ checkId }: { checkId: string }): JSX.Element {
   const router = useRouter();
   const [errordiv, setErrorProps] = useError();
-  const [checkTemplates] = useFetchState(GetCheckTemplates, setErrorProps);
-  const [check] = useFetchState(() => GetCheck(checkId), setErrorProps);
+  const [checkTemplates] = useFetchState(GetCheckTemplates, setErrorProps, []);
+  const [check] = useFetchState(() => GetCheck(checkId), setErrorProps, [
+    checkId,
+  ]);
   const [now, setNow] = useState(new Date());
-  const [allSpans, setAllSpans] = useState<SpanResult | null>(null);
 
+  // const [allSpans, setAllSpans] = useFetchState(
+  //   () => GetAllSpans(spanFilterParams),
+  //   setErrorProps,
+  //   []
+  // );
+  const [allSpans, setAllSpans] = useState<SpanResult | null>(null);
+  // useEffect(() => {
+  //   CallBackend(
+  //     () => GetAllSpans(spanFilterParams),
+  //     (spans) => setAllSpans(spans),
+  //     setErrorProps
+  //   );
+  // }, [check, now]);
+  useEffect(() => {
+    if (check !== null) {
+      CallBackend(
+        () => GetAllSpans(GetSpanFilterParams(check, now)),
+        setAllSpans,
+        setErrorProps
+      );
+    }
+  }, [check, now]);
   if (checkTemplates === null || check === null) {
     return <Text>{LOADING_STRING}</Text>;
   }
-
-  const spanFilterParams = GetSpanFilterParams(check, now);
-  CallBackend(
-    () => GetAllSpans(spanFilterParams),
-    (spans) => setAllSpans(spans),
-    setErrorProps
-  );
 
   return (
     <>
@@ -104,7 +120,7 @@ function HealthCheckDetails({ checkId }: { checkId: string }): JSX.Element {
         telemetryDuration={TELEMETRY_DURATION}
         templates={checkTemplates}
         setNow={setNow}
-        filterParamsDql={SpanFilterParamsToDql(spanFilterParams)}
+        filterParamsDql={SpanFilterParamsToDql(GetSpanFilterParams(check, now))}
         allSpans={allSpans}
         setAllSpans={setAllSpans}
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
