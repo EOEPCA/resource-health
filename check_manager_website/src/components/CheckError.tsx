@@ -41,39 +41,41 @@ export function useError(): {
   errorProps: ErrorProps | null;
   setErrorProps: SetErrorPropsType;
   isErrorOpen: boolean;
-  onErrorClose: () => void;
 } {
   const [errorProps, setErrorPropsSlim] = useState<ErrorProps | null>(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
   function setErrorProps(errorProps: ErrorProps | null) {
     setErrorPropsSlim(errorProps);
     if (errorProps !== null) {
+      console.log("Open error popup");
       onOpen();
+    } else {
+      console.log("Error is reset");
+      onClose();
     }
   }
   return {
-      errorProps: errorProps,
+    errorProps: errorProps,
     setErrorProps: setErrorProps,
     isErrorOpen: isOpen,
-    onErrorClose: onClose,
   };
 }
 
 type CheckErrorProps = {
   errorProps: ErrorProps | null;
+  setErrorProps: SetErrorPropsType;
   isOpen: boolean;
-  onClose: () => void;
 };
 
 export function CheckErrorPopup({
   errorProps,
+  setErrorProps,
   isOpen,
-  onClose,
 }: CheckErrorProps): JSX.Element {
   const reLoginURL = GetReLoginURL();
   return (
     <>
-      <Modal onClose={onClose} isOpen={isOpen} isCentered>
+      <Modal onClose={() => setErrorProps(null)} isOpen={isOpen} isCentered>
         <ModalOverlay />
         <ModalContent>
           <ModalHeader>Error occurred</ModalHeader>
@@ -94,7 +96,7 @@ export function CheckErrorPopup({
               {errorProps.onRetry && (
                 <Button
                   onClick={() => {
-                    onClose();
+                    setErrorProps(null);
                     errorProps.onRetry!();
                   }}
                 >

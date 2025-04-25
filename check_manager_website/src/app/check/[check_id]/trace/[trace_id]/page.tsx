@@ -26,13 +26,13 @@ export default function HealthCheckRunPage({
   params: { check_id, trace_id },
 }: HealthCheckRunPageProps): JSX.Element {
   // It is defined here so that the error popup appears no matter what
-  const { errorProps, setErrorProps, isErrorOpen, onErrorClose } = useError();
+  const { errorProps, setErrorProps, isErrorOpen } = useError();
   return (
     <DefaultLayout>
       <CheckErrorPopup
         errorProps={errorProps}
+        setErrorProps={setErrorProps}
         isOpen={isErrorOpen}
-        onClose={onErrorClose}
       />
       <CustomLink href={GetRelLink({})}>Home</CustomLink>
       <CustomLink href={GetRelLink({ checkId: check_id })}>

@@ -54,13 +54,13 @@ import ButtonWithCheckmark from "@/components/ButtonWithCheckmark";
 const log = (type: string) => console.log.bind(console, type);
 
 export default function Home(): JSX.Element {
-  const { errorProps, setErrorProps, isErrorOpen, onErrorClose } = useError();
+  const { errorProps, setErrorProps, isErrorOpen } = useError();
   return (
     <DefaultLayout>
       <CheckErrorPopup
         errorProps={errorProps}
+        setErrorProps={setErrorProps}
         isOpen={isErrorOpen}
-        onClose={onErrorClose}
       />
       <HomeDetails setErrorProps={setErrorProps} />
     </DefaultLayout>

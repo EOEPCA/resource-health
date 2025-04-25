@@ -73,13 +73,13 @@ type HealthCheckPageProps = {
 export default function HealthCheckPage({
   params: { check_id },
 }: HealthCheckPageProps): JSX.Element {
-  const { errorProps, setErrorProps, isErrorOpen, onErrorClose } = useError();
+  const { errorProps, setErrorProps, isErrorOpen } = useError();
   return (
     <DefaultLayout>
       <CheckErrorPopup
         errorProps={errorProps}
+        setErrorProps={setErrorProps}
         isOpen={isErrorOpen}
-        onClose={onErrorClose}
       />
       <CustomLink href={GetRelLink({})}>Home</CustomLink>
       <HealthCheckDetails checkId={check_id} setErrorProps={setErrorProps} />
@@ -101,19 +101,7 @@ function HealthCheckDetails({
   ]);
   const [now, setNow] = useState(new Date());
 
-  // const [allSpans, setAllSpans] = useFetchState(
-  //   () => GetAllSpans(spanFilterParams),
-  //   setErrorProps,
-  //   []
-  // );
   const [allSpans, setAllSpans] = useState<SpanResult | null>(null);
-  // useEffect(() => {
-  //   CallBackend(
-  //     () => GetAllSpans(spanFilterParams),
-  //     (spans) => setAllSpans(spans),
-  //     setErrorProps
-  //   );
-  // }, [check, now]);
   useEffect(() => {
     if (check !== null) {
       CallBackend(
