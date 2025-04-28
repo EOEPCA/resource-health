@@ -5,8 +5,8 @@
 - **UC68**: As a user, I want automated checks to verify the continued correct
 end-to-end functioning of my published workflows, so that I can
 receive notification when there is a problem
-  - **UC68_1**: As a user I want to be able to invoke a check upon issuing a request.
-  - **UC68_2**: As a user I want to be able to visualize the raster data with highlighted areas that were reproduced incorrectly as an evidence to the check outcome.
+    - **UC68_1**: As a user I want to be able to invoke a check upon issuing a request.
+    - **UC68_2**: As a user I want to be able to visualize the raster data with highlighted areas that were reproduced incorrectly as an evidence to the check outcome.
 - **UC69**: As a user, I want automated checks to verify the continued
 availability of my published datasets, so that I can receive
 notification when there is a problem. Availability of the dataset
@@ -38,8 +38,8 @@ workflows, ML models, Dashboards, etc.
 
 ## Target user categories
 
- - **Developer** - someone that understands how the underlying platform functionality was implemented and operates (BB developer, Application package specialist).
- - **End user** - someone that will want to exploit the functionality of the platform, but will not have in-depth understanding how it was implemented and operates (Platform user).
+- **Developer** - someone that understands how the underlying platform functionality was implemented and operates (BB developer, Application package specialist).
+- **End user** - someone that will want to exploit the functionality of the platform, but will not have in-depth understanding how it was implemented and operates (Platform user).
 
 ## Original requirements from Statement of Work (*BR*)
 **BR125**: The Resource Health BB shall provide a general purpose capability that allows users (of all
@@ -47,6 +47,7 @@ type) to specify and schedule checks that confirm the availability and function 
 specified resources.
 Checks shall include proactive (end-to-end) invocation of capabilities, including the
 following resource types:
+
 * A platform service, such as a building-block – the service is ‘up’ and responsive
 * A published dataset – discovery, access and visualisation
 * A published Processing Workflow – discovery, deployment and execution
@@ -57,6 +58,7 @@ following resource types:
 to receive notifications according to the outcome.
 
 **BR127**: The Resource Health BB shall support specification of checks via the following means:
+
 * REST API
 * Dashboard (web UI)
 * Git repository (Gitops-style)
@@ -84,48 +86,48 @@ into a portal.
 ## Derived requirements (*REQ*)
 
 - **REQ001**: The Resource Health BB shall provide a means for general end-users to manage the life cycle (definition, observation, termination, ...) of checks that they own/have access to.
-  - Derived from SoW BR125.
+    - Derived from SoW BR125.
 - **REQ002**: The Resource Health BB shall provide a means to ensure ownership/access restrictions of individual checks are respected (presumably utilising the Identity and Access Management BB).
-  - Derived from SoW BR125.
+    - Derived from SoW BR125.
 - **REQ003**: The Resource Health BB shall ensure that the outcomes of current (active) specified checks are determined in a timely manner (meaning the execution of the checking logic is executed when necessary and that the necessary data/information is available to the check when it is executed).
-  - Derived from SoW BR125.
+    - Derived from SoW BR125.
 - **REQ004**: The Resource Health BB shall allow specifying checks that determine the responsiveness of platform capabilities/services (such as determining ping/watchdog timer state/API timeouts/404 responses/...) sufficient for checking general availability of all/relevant other platform services/capabilities.
-  - Derived from SoW BR125.
+    - Derived from SoW BR125.
 - **REQ005**: The Resource Health BB shall allow specifying checks that determine that resources provided by the platform meet end-user expectations (such as appearing in certain queries/enumerations, have the right metadata, have the right shape, contains expected columns, produce certain outputs ...) sufficient for all/relevant other platform services/capabilities.
-  - Derived from SoW BR125.
+    - Derived from SoW BR125.
 - **REQ006**: The Resource Health BB shall allow specifying checks that determine the presence or absence of specified entries in resource logs (such as the absence of error 'event').
-  - Derived from SoW BR128.
+    - Derived from SoW BR128.
 - **REQ007**: The Resource Health BB shall provide some mechanism for the timely notification of end-users, of events related to (the determination of) check outcomes (for example through a generic mechanism like web hooks, or through a capability provided by other BBs such as the notification and automation BB).
-  - Derived from SoW BR126.
+    - Derived from SoW BR126.
 - **REQ008**: The Resource Health BB shall provide a mechanism by which end-users can specify which events to be notified of.
-  - Derived from SoW BR126.
+    - Derived from SoW BR126.
 - **REQ009**: The Resource Health BB shall provide a means to manage the life cycle (definition, termination, ...) of checks through a REST-style API.
-  - Derived from SoW BR127, BR130.
+    - Derived from SoW BR127, BR130.
 - **REQ010**: The Resource Health BB shall provide a means to manage the life cycle (definition, termination, ...) of checks in a textual file-based format (for use in e.g. git repositories).
-  - Derived from SoW BR127, BR131.
+    - Derived from SoW BR127, BR131.
 - **REQ011**: The Resource Health BB shall provide a means to manage the life cycle (definition, termination, ...) of checks through a graphical user interface accessible through standard web browsers.
-  - Derived from SoW BR127, BR131.
+    - Derived from SoW BR127, BR131.
 - **REQ012**: The Resource Health BB shall provide a means to maintain traceability to check "evidence" of an 'event' (such as location of a triggering lines in a log or timestamp of a threshold breach in a metric) when such "evidence" is available.
-  - Derived from SoW BR128.
+    - Derived from SoW BR128.
 - **REQ013**: The Resource Health BB shall rely on capabilities of the Notification & Automation BB to ensure the timely determination of check outcomes, unless the capabilities of the Notification & Automation BB are insufficient to determine the check outcome in a timely manner (such as fast enough for ephemeral data to not have been lost).
-  - Derived from SoW BR129.
+    - Derived from SoW BR129.
 - **REQ014**: The Resource Health BB shall rely on capabilities of the Notification & Automation BB to ensure the timely notification of check outcomes, unless the capabilities of the Notification & Automation BB are insufficient to determine the check outcome in a timely manner (such as in order to meet end-user expectations of notification latency).
-  - Derived from SoW BR129.
+    - Derived from SoW BR129.
 - **REQ015**: The Resource Health BB shall provide an end-users graphical user interface for accessing and summarising the history of check outcomes (of checks accessible to the end user).
-  - Derived from SoW BR130.
+    - Derived from SoW BR130.
 - **REQ016**: The Resource Health BB shall provide an API access to the history of check outcomes sufficient to reproduce the functionality exposed in the graphical user interface.
-  - Derived from SoW BR131.
+    - Derived from SoW BR131.
 - **REQ017**: The Resource Health BB shall provide an end-users graphical user interface for accessing and summarising execution performance statistics of check logic (such as number of times executed, time since last execution, execution time, ...) sufficient for end-user to assess the sufficient "health" of a check itself (such as meeting expectations of timeliness).
-  - Derived from SoW BR130.
+    - Derived from SoW BR130.
 - **REQ018**: The Resource Health BB shall provide an API access to execution performance statistics of check logic sufficient to reproduce the functionality exposed in the graphical user interface.
-  - Derived from SoW BR131.
+    - Derived from SoW BR131.
 - **REQ019**: The Resource Health BB shall allow specifying timeliness requirements of individual (active) checks as requiring (re)determination/execution at a specific sequence of potentially recurrent time points.
-  - Derived from SoW BR129.
+    - Derived from SoW BR129.
 - **REQ020**: The Resource Health BB shall allow specifying timeliness requirements of individual (active) checks as requiring (re)determination/execution on platform/component updates.
-  - Derived from SoW BR129.
+    - Derived from SoW BR129.
 - **REQ021**: The Resource Health BB shall allow specifying timeliness requirements of individual (active) checks as requiring (re)determination/execution on resource registration changes.
-  - Derived from SoW BR129.
+    - Derived from SoW BR129.
 - **REQ022**: The Resource Health BB shall provide a means for general end users to specify and schedule checks that confirm the availability and function of the following resource types: hosted algorithms, hosting environments, third party backends, published datasets, ML models, dashboards.
-  - Derived from SoW BR125.
+    - Derived from SoW BR125.
 - **REQ023**: The Resource Health BB shall allow the user to issue a check upon their request.
-  - Derived from SoW BR129.
+    - Derived from SoW BR129.

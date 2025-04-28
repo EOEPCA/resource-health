@@ -1,6 +1,6 @@
 # Quick Start
-
-Since the Resource Health BB is currently unauthenticated it does not deploy any public ingresses. Access to any services therefore has to be achieved through port forwarding.
+<!-- 
+Resource Health BB can be deployed with authentication. See [Current deployment in development cluster](#current-deployment-in-development-cluster)
 
 ## API endpoints
 
@@ -13,7 +13,7 @@ $ kubectl [--context=... --namespace=...] port-forward service/resource-health-c
 ```
 while the latter can be forwarded by
 ```
-$ kubectl --context=eoepca-develop --namespace=resource-health port-forward service/resource-health-telemetry-api 8080
+$ kubectl [--context=... --namespace=...] port-forward service/resource-health-telemetry-api 8080
 ```
 
 ## Skeleton web interface
@@ -25,10 +25,29 @@ $ kubectl [--context=... --namespace=...] port-forward service/resource-health-w
 
 To work, the web interface requires access to the API endpoints indicated above, which must also be forwarded. Furthermore both
 hostnames `resource-health-check-api` and `resource-health-telemetry-api` have to be aliased to `localhost`. This is a temporary
-workaround until API endpoints are securely exposed through an endpoint.
+workaround until API endpoints are securely exposed through an endpoint. -->
 
-## Define health checks
 
+## Current deployment in development cluster
+
+All the health checks (and their outcomes) are currently owned by example users, so you will need to use those credentials to see the list of checks and the check outcomes for those users.
+
+### API endpoints
+
+There are two API endpoints:
+
+- API for managing health checks [https://resource-health.apx.develop.eoepca.org/api/healthchecks/](https://resource-health.apx.develop.eoepca.org/api/healthchecks/)
+- API for accessing the (OpenTelemetry trace) outcomes of health check executions [https://resource-health.apx.develop.eoepca.org/api/telemetry/](https://resource-health.apx.develop.eoepca.org/api/telemetry/)
+
+### Web interface
+
+Available at [https://resource-health.apx.develop.eoepca.org/](https://resource-health.apx.develop.eoepca.org/).
+
+### Define health checks
+
+The easiest way to define health checks is using the web interface [https://resource-health.apx.develop.eoepca.org/](https://resource-health.apx.develop.eoepca.org/).
+
+<!-- 
 ### Using Helm values
 
 When using the Helm-chart a set of health checks can be defined using the (Helm) value `healthchecks.checks` (or `resource-health.healthchecks.checks` for the reference deployment chart). It is specified as a list, such as
@@ -45,6 +64,7 @@ healthchecks:
         value: http://resource-health-mockapi:5000
 ```
 The important fields to customise being:
+
 - `name`: A name to recognise the health check
 - `schedule`: A cron schedule for when to execute the check
 - `requirements`: A URL to fetch a file requirements.txt file with (additional) Python requirements needed for the health check script
@@ -57,13 +77,13 @@ See the [EOEPCA develop deployment for a current example](https://github.com/EOE
 
 ### Using the API
 
-Assuming the `resource-health-check-api` service has been forwarded to localhost new health checks can be created as follows.
+New health checks can be created as follows.
 
 First get a list of templates provided by the service
 ```
 $ curl -X 'GET' \
   'http://localhost:8000/check_templates/' \
-  -H 'accept: application/json'
+  -H 'accept: application/vnd.api+json'
 ```
 Which should produce JSON-output along the lines of
 ```json
@@ -118,7 +138,7 @@ as
 ```
 $ curl -X 'POST' \
   'http://localhost:8000/checks/' \
-  -H 'accept: application/json' \
+  -H 'accept: application/vnd.api+json' \
   -H 'Content-Type: application/json' \
   -d '{
      "template_id": ...,
@@ -131,7 +151,7 @@ The list of current checks can be accessed through the same endpoint
 ```
 $ curl -X 'GET' \
   'http://localhost:8000/checks/' \
-  -H 'accept: application/json'
+  -H 'accept: application/vnd.api+json'
 ```
 yielding an output like
 ```json
@@ -155,6 +175,7 @@ yielding an output like
 ]
 ```
 Where:
+
 - `id` represents an internal identifier (in the REST API) used for `DELETE`ing or `PATCH`ing the health check;
 - `metadata` contains information such as human readable labels/names as well as provenance (such as the template form which it was produced);
 - `schedule` is the CRON-style schedule according to which the health check is executed; and
@@ -171,4 +192,4 @@ The OpenSearch Dashboards (a.k.a. Kibana for OpenSearch) can be accessed through
 ```
 kubectl [--context=... --namespace=...] port-forward service/resource-health-opensearch-dashboards 5601
 ```
-NOTE that on the EOEPCA development cluster, OpenSearch dashboards are (currently) accessed over HTTP**S** with a self-signed certificate for the internal `svc.kubernetes.local` domain. You should therefore expect your browser to complain about invalid/untrusted/self-signed certificates.
+NOTE that on the EOEPCA development cluster, OpenSearch dashboards are (currently) accessed over HTTP**S** with a self-signed certificate for the internal `svc.kubernetes.local` domain. You should therefore expect your browser to complain about invalid/untrusted/self-signed certificates. -->
