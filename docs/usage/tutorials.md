@@ -64,26 +64,32 @@ In this tutorial we will learn:
 Follow along the following steps:
 
 1. Go to the Health Check website [https://resource-health.apx.develop.eoepca.org/](https://resource-health.apx.develop.eoepca.org/). Again, you should log in as one of the standard users.
-2. We will create a health check which will execute the Python script below using the [Pytest](TODO: add link) testing framework.
+2. We will create a health check which will execute the Python script below using the [Pytest](https://docs.pytest.org/en/stable/) testing framework.
    ```python
    import random
    import pytest
+
    ## Utility functions that will be moved into library
+
    from opentelemetry import trace
    from opentelemetry.util import types
    def report_custom(attributes: dict[str, types.AttributeValue]) -> None:
        cur_span = trace.get_current_span()
        cur_span.set_attributes(attributes)
+
    # USER DEFINED CODE START
+
    def test_that_generates_custom_telemetry1() -> None:
        ## Something returned by a service, or similar
        outcome = random.random()
        report_custom({"resourcehealth.example.random_outcome": outcome})
        assert outcome <= 1
+
    def test_that_generates_custom_telemetry2() -> None:
        ## Something returned by a service, or similar
        outcome1 = random.random()
        outcome2 = random.random()
+
        ## To simplify filtering when you have multiple
        ## values, include a "has_xyz"
        report_custom(
@@ -96,21 +102,27 @@ Follow along the following steps:
        assert abs(outcome1 - outcome2) <= 1
    ```
    See [Health Check Script](#health-check-script) for more details about health check scripts.  
-   Create new check just like before. This time you should use `generic script template`. Set `Name`, `Description`, and `Schedule` to whatever you like (see [Cron Schedule](#cron-schedule) for a refresher on scheduling). Then input [https://gist.githubusercontent.com/tilowiklundSensmetry/aa8a28ab9bc432b8a76635a238c9aa11/raw/9dc5847959a909ffbaeb1a9239bbf10ad442266f/test_producing_custom_data.py](https://gist.githubusercontent.com/tilowiklundSensmetry/aa8a28ab9bc432b8a76635a238c9aa11/raw/9dc5847959a909ffbaeb1a9239bbf10ad442266f/test_producing_custom_data.py) in the `Script` field (this is a link to the script above).  
+   Create new check just like before. This time you should use `generic script template`. Set `Name`, `Description`, and `Schedule` to whatever you like (see [Cron Schedule](#cron-schedule) for a refresher on scheduling). Then input [https://gist.githubusercontent.com/tilowiklundSensmetry/aa8a28ab9bc432b8a76635a238c9aa11/raw/9dc5847959a909ffbaeb1a9239bbf10ad442266f/test_producing_custom_data.py](https://gist.githubusercontent.com/tilowiklundSensmetry/aa8a28ab9bc432b8a76635a238c9aa11/raw/9dc5847959a909ffbaeb1a9239bbf10ad442266f/test_producing_custom_data.py) in the `Script` field (this is a link to the script above). Alternatively, you could put the script encoded as a Data URL in there, see [Data URL](TODO: add link to place explaining this)  
+   The check creation should look something like this
+   ![Create report check](./img/advanced-user-tutorial/01-Create-Report-Check.png)
    Click `Submit`
-   TODO: add a screenshot how the check definition could look (inputs to all the fields visible)
 3. Run the check once, just as before. The check should succeed. Now go to the check results table and click on the check ID (TODO: show screenshot). A page with the raw telemetry for that check run should open up - in here you see what information is stored about each check run in the database. See [Raw Health Check Telemetry](#raw-health-check-telemetry). In particular, you can search (with ctrl + F) for `resourcehealth.example.random_outcome` or `resourcehealth.example.random_outcome1` and see those results.
 4. We will now see one way to use the detailed health check telemetry. We will create a health check which looks into the telemetry generated from the above checks and verifies that the results from above overall are as expected. The check code is shown below
    ```python
    from datetime import timedelta
    from statistics import median
    import pytest
+
    ## Utility functions that will be moved into library
+
    from typing import Any
    from opensearchpy import AsyncOpenSearch
    import asyncio
+
    from python_opentelemetry_access.proxy import Proxy
    from python_opentelemetry_access.proxy.opensearch.ss4o import OpenSearchSS40Proxy
+
+
    def get_opensearch_proxy() -> Proxy:
        opensearch_params: dict[str, Any] = {}
        opensearch_params.update({"verify_certs": False, "ssl_show_warn": False})
@@ -121,6 +133,8 @@ Follow along the following steps:
            **opensearch_params,
        )
        return OpenSearchSS40Proxy(client)
+
+
    @pytest.fixture
    def telemetry_proxy() -> Proxy:
        proxy = get_opensearch_proxy()
@@ -128,7 +142,9 @@ Follow along the following steps:
        async def proxy_close():
            await proxy.aclose()
        asyncio.run(proxy_close())
+
    # USER DEFINED CODE START
+
    @pytest.mark.filterwarnings("ignore:enable_cleanup_closed.*:DeprecationWarning")
    def test_that_inspects_custom_telemetry1(telemetry_proxy: Proxy) -> None:
        previous_outcomes = [
@@ -141,9 +157,12 @@ Follow along the following steps:
                max_data_age=timedelta(weeks=4),
            )
        ]
+
        print(f"random_outcomes: {previous_outcomes[:10]}{'' if len(previous_outcomes) < 10 else '...'}")
+
        assert len(previous_outcomes) > 0
        assert median(previous_outcomes) < 0.8
+
    @pytest.mark.filterwarnings("ignore:enable_cleanup_closed.*:DeprecationWarning")
    def test_that_inspects_custom_telemetry2(telemetry_proxy: Proxy) -> None:
        previous_outcome_diffs = [
@@ -156,7 +175,9 @@ Follow along the following steps:
                max_data_age=timedelta(weeks=4),
            )
        ]
+
        print(f"random_diffs: {previous_outcome_diffs[:10]}{'' if len(previous_outcome_diffs) < 10 else '...'}")
+
        assert median(previous_outcome_diffs) - min(previous_outcome_diffs) < 1.8
        assert max(previous_outcome_diffs) - median(previous_outcome_diffs) < 1.8
    ```
