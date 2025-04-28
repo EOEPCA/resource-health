@@ -18,8 +18,8 @@ nav:
       - Data persistence: design/1-data-persistence.md
       - Management interface: design/2-management-interface.md
       - Automated scheduling: design/3-automated-scheduling.md
-    # - Usage:
-    #   - usage/tutorials.md
+    - Usage:
+      - usage/tutorials.md
     #   - usage/howtos.md
     # - Administration:
     #   - admin/configuration.md
