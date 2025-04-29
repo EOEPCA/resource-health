@@ -186,6 +186,89 @@ Follow along the following steps:
    Click `Submit`
 4. So that this check has more data to inspect, run the previous check a few times manually (you don't need to wait for one run to finish to run the check again). Then run the current check once. As the `random_outcome`, `random_outcome1`, `random_outcome2` are random, the aggregate check might or might not succeed, but the more times the original check runs, the more likely the aggregate check to succeed. That's it!
 
+## Basic tutorial for platform administrators
+
+The two most important configuration parts are defining hooks and check templates.
+
+### Health Check Templates
+
+Health check templates define what kinds of checks the user can create, what are the parameters user needs to supply to create the checks, and how the parameters are interpreted.
+
+The health checks generally are just [Pytest](TODO: add link) scripts which generate appropriately annotated OpenTelemetry traces. See [Health Check Script](#health-check-script) for more details about health check scripts.  
+Health check template definition is just a Python script. To be picked up as a check template script it's easiest to just include the code of the script [here](TODO: add link). (TODO: add a note what to do if want script in a file, and not inline here?) The Python script creates a class which specifies what check arguments exist, how to interpret them, and any additional setup necessary to execute the checks. At least for now, the health check template will get the user supplied check arguments, and will need to specify what Python script to execute, what additional dependencies the script needs, and what environment variables to set.  
+For example, below is a simple script template.
+```python
+from check_backends.k8s_backend.template_utils import *
+
+class ScriptTemplateArguments(BaseModel):
+    script: str = Field(json_schema_extra={"format": "textarea"})
+    requirements: str = Field(json_schema_extra={"format": "textarea"}, default="")
+
+
+    GenericScriptTemplate = simple_runner_template(
+        template_id="generic_script_template",
+        argument_type=ScriptTemplateArguments,
+        label="Generic script template",
+        description="Runs a user-provided pytest script from a specified remote or data url",
+        script_url=lambda template_args, userinfo: template_args.script,
+        requirements_url=lambda template_args, userinfo: template_args.requirements,
+        user_id=lambda template_args, userinfo: userinfo["username"],
+        otlp_tls_secret="resource-health-healthchecks-certificate",
+    )
+```
+It expects URLs to the script and requirements.txt files (though the latter can be omitted by the user if no additional dependencies are needed). (TODO: add a link to currently included dependencies) And it specifies to execute the given script with the given requirements.txt file, and doesn't set any environment variables.
+The `GenericScriptTemplate` variable stores a class which is what the K8s backend uses to create this check. **Do not forget to create a variable which stores the result of `simple_runner_template`**, otherwise the health check template will effectively be discarded upon creation.
+
+Let's look at another template example.
+```python
+from check_backends.k8s_backend.template_utils import *
+from typing import TypedDict
+
+SIMPLE_PING_SRC = """from os import environ
+import requests
+
+GENERIC_ENDPOINT: str = environ["GENERIC_ENDPOINT"]
+EXPECTED_STATUS_CODE: int = int(environ["EXPECTED_STATUS_CODE"])
+
+
+def test_ping() -> None:
+    response = requests.get(
+        GENERIC_ENDPOINT,
+    )
+    assert response.status_code == EXPECTED_STATUS_CODE
+"""
+
+
+class SimplePingArguments(BaseModel):
+    endpoint: str = Field(json_schema_extra={"format": "textarea"})
+    expected_status_code: int = Field(ge=100, lt=600, default=200)
+
+
+SimplePing = simple_runner_template(
+    template_id="simple_ping",
+    argument_type=SimplePingArguments,
+    label="Simple ping template",
+    description="Simple template with preset script for pinging single endpoint.",
+    script_url=src_to_data_url(SIMPLE_PING_SRC),
+    runner_env=lambda template_args, userinfo: {
+        "GENERIC_ENDPOINT": template_args.endpoint,
+        "EXPECTED_STATUS_CODE": str(template_args.expected_status_code),
+    },
+    user_id=lambda template_args, userinfo: userinfo["username"],
+    otlp_tls_secret="resource-health-healthchecks-certificate",
+)
+```
+It has a health check script (`SIMPLE_PING_SRC`) already defined, and expects the user to just supply the ping endpoint and the expected status code, which will be stored in an environment variable, and used when the script is being executed.  
+It is expected that most health check templates will be like this - some predefined script, and put the user-supplied check arguments to environment variables to be used by the script upon execution.
+
+TODO: add a section about the telemetry proxy stuff?
+
+### Hooks
+
+Hooks define health check backend configuration. The most important hooks part is defining various aspects of authentication. Just as health check templates, hooks are just Python scripts, which can be put inline [here](TODO: add link). (TODO: add a note what to do if want script in a file, and not inline here?). The script is supposed to define certain functions.
+
+TODO: continue here
+
 
 ## Appendix
 
