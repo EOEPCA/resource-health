@@ -44,6 +44,7 @@ You should follow along the following steps to get used to how things work.
    Below is how the website home page should look when the check run succeeds, and after that how the individual check page should look.
    ![Successful check summary](./img/basic-user-tutorial/07-Success-summary.png)
    ![Successful check details](./img/basic-user-tutorial/08-Success-details.png)
+TODO: add an OpenSearch dashboards visualization here?
 
 <!-- 
 - `id` represents an internal identifier (in the REST API) used for `DELETE`ing or `PATCH`ing the health check;
@@ -183,7 +184,7 @@ Follow along the following steps:
    ```
    Create a new check just like before, and put [https://gist.githubusercontent.com/tilowiklundSensmetry/47d5a9bb2a9aa66ca4cfc71ba70814ff/raw/72755d75c4e85dd9ea651e1c963502c4244119f7/test_consuming_custom_data.py](https://gist.githubusercontent.com/tilowiklundSensmetry/47d5a9bb2a9aa66ca4cfc71ba70814ff/raw/72755d75c4e85dd9ea651e1c963502c4244119f7/test_consuming_custom_data.py) in the `Script` field.  
    Click `Submit`
-4. So that this check has more data to inspect, run the previous check a few times manually (you don't need to wait for one run to finish to run the check again). Then run the current check once. TODO: CONTINUE HERE
+4. So that this check has more data to inspect, run the previous check a few times manually (you don't need to wait for one run to finish to run the check again). Then run the current check once. As the `random_outcome`, `random_outcome1`, `random_outcome2` are random, the aggregate check might or might not succeed, but the more times the original check runs, the more likely the aggregate check to succeed. That's it!
 
 
 ## Appendix
