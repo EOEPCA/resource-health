@@ -168,7 +168,7 @@ Follow along the following steps:
    def test_that_inspects_custom_telemetry2(telemetry_proxy: Proxy) -> None:
        previous_outcome_diffs = [
            span.attributes["resourcehealth.example.random_outcome1"]
-           - span.attributes["resourcehealth.example.random_outcome1"]
+           - span.attributes["resourcehealth.example.random_outcome2"]
            for span in telemetry_proxy.load_span_data_sync(
                span_attributes={
                    "resourcehealth.example.has_outcome": [True],
@@ -182,17 +182,24 @@ Follow along the following steps:
        assert median(previous_outcome_diffs) - min(previous_outcome_diffs) < 1.8
        assert max(previous_outcome_diffs) - median(previous_outcome_diffs) < 1.8
    ```
-   Create a new check just like before, and put [https://gist.githubusercontent.com/tilowiklundSensmetry/47d5a9bb2a9aa66ca4cfc71ba70814ff/raw/72755d75c4e85dd9ea651e1c963502c4244119f7/test_consuming_custom_data.py](https://gist.githubusercontent.com/tilowiklundSensmetry/47d5a9bb2a9aa66ca4cfc71ba70814ff/raw/72755d75c4e85dd9ea651e1c963502c4244119f7/test_consuming_custom_data.py) in the `Script` field.  
+   Create a new check just like before, and put [https://gist.githubusercontent.com/tilowiklundSensmetry/47d5a9bb2a9aa66ca4cfc71ba70814ff/raw/43f04c63aae58838b0de5211b35ca339328b3678/test_consuming_custom_data.py](https://gist.githubusercontent.com/tilowiklundSensmetry/47d5a9bb2a9aa66ca4cfc71ba70814ff/raw/43f04c63aae58838b0de5211b35ca339328b3678/test_consuming_custom_data.py) in the `Script` field.  
    Click `Submit`
 4. So that this check has more data to inspect, run the previous check a few times manually (you don't need to wait for one run to finish to run the check again). Then run the current check once. As the `random_outcome`, `random_outcome1`, `random_outcome2` are random, the aggregate check might or might not succeed, but the more times the original check runs, the more likely the aggregate check to succeed. That's it!
 
-## Basic tutorial for platform administrators
+## Tutorial for platform administrators
 
 The two most important configuration parts are defining hooks and check templates.
 
 ### Health Check Templates
 
+In this tutorial we will learn:
+
+* How to configure what kinds of health checks the users can create
+
+
 Health check templates define what kinds of checks the user can create, what are the parameters user needs to supply to create the checks, and how the parameters are interpreted.
+
+You can see example check templates at [https://github.com/EOEPCA/resource-health/tree/main/check_manager/example_k8s_templates](https://github.com/EOEPCA/resource-health/tree/main/check_manager/example_k8s_templates).
 
 The health checks generally are just [Pytest](TODO: add link) scripts which generate appropriately annotated OpenTelemetry traces. See [Health Check Script](#health-check-script) for more details about health check scripts.  
 Health check template definition is just a Python script. To be picked up as a check template script it's easiest to just include the code of the script [here](TODO: add link). (TODO: add a note what to do if want script in a file, and not inline here?) The Python script creates a class which specifies what check arguments exist, how to interpret them, and any additional setup necessary to execute the checks. At least for now, the health check template will get the user supplied check arguments, and will need to specify what Python script to execute, what additional dependencies the script needs, and what environment variables to set.  
@@ -265,9 +272,97 @@ TODO: add a section about the telemetry proxy stuff?
 
 ### Hooks
 
-Hooks define health check backend configuration. The most important hooks part is defining various aspects of authentication. Just as health check templates, hooks are just Python scripts, which can be put inline [here](TODO: add link). (TODO: add a note what to do if want script in a file, and not inline here?). The script is supposed to define certain functions.
+In this tutorial we will learn:
 
-TODO: continue here
+* How to configure health check manager Kubernetes configuration using hooks
+* How to configure health check manager authentication using hooks
+
+Hooks define health check backend and authentication configuration. Just as health check templates, hooks are just Python scripts, which can be put inline [here](TODO: add link). (TODO: add a note what to do if want script in a file, and not inline here?). The script is supposed to define certain functions.
+
+
+You can see example hooks at [https://github.com/EOEPCA/resource-health/tree/main/check_manager/example_hooks](https://github.com/EOEPCA/resource-health/tree/main/check_manager/example_hooks).
+
+In particular, [https://github.com/EOEPCA/resource-health/blob/main/check_manager/example_hooks/oidc_auth/auth_hooks.py](https://github.com/EOEPCA/resource-health/blob/main/check_manager/example_hooks/oidc_auth/auth_hooks.py) is an example hooks implementation for authentication with OpenID Connect protocol, among other things.
+
+Hooks script consists of the following parts:
+TODO: Remove a lot of the function signature definitions from here? API documentation is a better place for that, this is user guide.
+
+1. Imports. `from check_hooks.hook_utils import *` should be included every time - it contains K8s config and secret helper functions. In addition import authentication stuff from `eoepca_security`. The rest is the standard Python imports.
+2. You should then define a `UserInfo` type. You will produce a value of this type upon inspecting the user authentication data, and you will use it later on to make authentication decisions such as "Bob gets to use this check template but Alice does not".  
+   Note that Python is dynamically typed, so you don't have to do this, but it shows your tooling what you expect, and thus the tooling (such as mypy) can point to your mistakes before executing the code. TODO: add a note of how to set up stuff to get type checking of hooks code
+3. The hooks themselves, which are just python functions with certain names and signatures. You should name them like you see in the examples (TODO: add a not about setting other names in environment varaibles). The hooks are of the following categories:
+    1. Backend-agnostic authorization hooks:
+        1. `get_fastapi_security`. Returns a function, which takes a request and returns authentication data from it. In the example below, the authentication data is of type `Tokens | None`. You must provide implement this hook if you want the other authorization hooks to be able to make authorization decisions.
+        2. `on_auth`. Takes the authentication data produced by calling the function returned from the previous hook. Decides if user is authorised to use the API, creates a dictionary which stores the relevant user authentication information, such as username, access token, etc. This function must also be implemented.
+        3. The remaining backend-agnostic authorization hooks give you an opportunity to forbid certain API functions for certain users. Such authorization decisions can also take the data to be accessed/created/modified/deleted into account. Each of these functions is optional, and not implementing it wouldn't impact any other hooks. See example below
+        ```python
+        def on_template_access(userinfo: UserInfo, template: CheckTemplate) -> bool:
+            print("ON TEMPLATE_ACCESS")
+
+            ## Only bob can use/access unsafe templates
+            if userinfo["username"] != "bob" and template.id != "simple_ping":
+                return False
+
+            ## Only bob, alice, and eric can access the templates
+            if userinfo["username"] not in ["bob", "alice", "eric"]:
+                return False
+
+            return True
+        ```
+        Important to note that the access/usage is denied *only* if the hook returns `False`. If the hook doesn't exist, or returns other falsey values like `None`, the access/usage is allowed. TODO: write about multiple hooks here, I think such is possible
+    2. Kubernetes configuration and authorization hooks:
+        1. `get_k8s_config`. Takes `UserInfo` and returns `K8sConfiguration`. `check_hooks.hook_utils` has a few helper functions to help with this. You must implement this function to use the K8s backend (TODO: explain what a backend is in a couple of sentences somehwere, and K8s backend more specifically)
+        2. `get_k8s_namespace`. Takes `UserInfo` and returns the namespace name. Must be implemented to use the K8s backend.
+        3. `on_k8s_cronjob_create`. Takes `UserInfo`, `K8sClient`, and `K8sCronJob` parameters, and returns if the specified user is allowed to create the cronjob.
+        **Important** This hook is also often used to ensure that when the cronjob does execute, it has the user credentials available to authenticate against the OpenTelemetry collector and the telemetry database (TODO: as Tilo if this is correct). In particular, you can see that the example below stores an offline token in a K8s secret
+        ```python
+        async def on_k8s_cronjob_create(
+            userinfo: UserInfo, client: K8sClient, cronjob: K8sCronJob
+        ) -> bool:
+            print("on_k8s_cronjob_create")
+
+            ## Ensure cronjob is tagged with correct owner
+
+            if (
+                "owner" in cronjob.metadata.annotations
+                and cronjob.metadata.annotations["owner"] != userinfo["username"]
+            ):
+                return False
+
+            cronjob.metadata.annotations["owner"] = userinfo["username"]
+
+            ## Ensure the user has an offline token set
+            ## Note: Would be more robust to check on every access but use a cache
+            secret_name = f"resource-health-{userinfo['username']}-offline-secret"
+            secret_namespace = get_k8s_namespace(userinfo)
+
+            offline_secret = await lookup_k8s_secret(
+                client=client,
+                namespace=secret_namespace,
+                name=secret_name
+            )
+
+            if offline_secret is None:
+                if userinfo['refresh_token'] is None:
+                    raise APIException(Error(
+                        status="404",
+                        code="MissingOfflineToken",
+                        title="Missing offline token, please create at least one check using the website",
+                    ))
+                await create_k8s_secret(
+                    client=client,
+                    name=secret_name,
+                    namespace=secret_namespace,
+                    string_data={
+                        "offline_token": userinfo['refresh_token']
+                    }
+                )
+        ```
+        4. The remaining K8s backend hooks give you a chance to forbid certain K8s operations for certain users. Such authorization decisions can also take the `K8sClient` and `K8sCronJob` into account when making such decisions.
+
+Keep in mind, that as hooks are just Python functions, you're free to do any other actions in them than what's described above. You could log user access instances, or emit notifications upon check creation and removal, for example. You could even modify the arguments provided to those functions.
+
+TODO: add stuff about telemetry hooks
 
 
 ## Appendix
