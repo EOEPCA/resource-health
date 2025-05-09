@@ -227,11 +227,11 @@ GenericScriptTemplate = simple_runner_template(
     otlp_tls_secret="resource-health-healthchecks-certificate",
 )
 ```
-It expects URLs to the script and requirements.txt files. [Data URLs](#data-url) can also be used. The dependencies listed [here](https://github.com/EOEPCA/resource-health/blob/58087ff26eca34e6aeaf58216fd87b18b745e36b/pytest-health/runner-image/base_requirements.txt) are always included, and requirements.txt can be omitted if no additional dependencies are needed.
+It expects URLs to the script and requirements.txt files. Those files encoded as [Data URLs](#data-url) can also be used. The dependencies listed [here](https://github.com/EOEPCA/resource-health/blob/58087ff26eca34e6aeaf58216fd87b18b745e36b/pytest-health/runner-image/base_requirements.txt) are always included, and requirements.txt can be omitted if no additional dependencies are needed.
 !!! note
     The base requirements link shows requirements as they were when the commit `58087ff26eca34e6aeaf58216fd87b18b745e36b` was made. The current base dependencies might be slightly different, look for this file in the current main branch.
 And it specifies to execute the given script with the given requirements.txt file, and doesn't set any environment variables.
-The `GenericScriptTemplate` variable stores a class which is what the K8s backend uses to create this check.  
+The `GenericScriptTemplate` variable stores a class which is what the K8s backend uses to create this check. See [Health Check API Backend](#health-check-api-backend) for more info about backends.
 !!! warning
     Do not forget to create a variable which stores the result of `simple_runner_template`, otherwise the health check template will effectively be discarded upon creation.
 
@@ -286,7 +286,7 @@ In this tutorial we will learn:
 * How to configure Health Check API and Telemetry API backends using hooks
 * How to configure Health Check API and Telemetry API authentication using hooks
 
-Hooks are Python functions which define API backend and authentication configuration. The following hook parts are common for both Health Check API and Telemetry API hooks:
+Hooks are Python functions which define API backend and authentication configuration. For more about API backends, see [Health Check API Backend](#health-check-api-backend) and [Telemetry API Backend/Proxy](#telemetry-api-backendproxy). The following hook parts are common for both Health Check API and Telemetry API hooks:
 
 1. `UserInfo` type definition. You will produce a value of this type upon inspecting the user authentication data, and you will use it later on to make authentication decisions such as "Bob gets to use this check template and Alice does not".  
     Note that Python is dynamically typed, so you don't have to do this, but it shows your tooling what you expect, and thus the tooling (such as mypy) can point to your mistakes before executing the code.
@@ -376,12 +376,12 @@ Hooks script parts specific to Health Check API:
         <!-- TODO: write about multiple hooks here, I think such is possible. -->
 
 3. Kubernetes configuration and authorization hooks:
-    1. `get_k8s_config`. Takes `UserInfo` and returns `K8sConfiguration`. `check_hooks.hook_utils` has a few helper functions to help with this. You must implement this function to use the K8s backend (TODO: explain what a backend is in a couple of sentences somehwere, and K8s backend more specifically)
+    1. `get_k8s_config`. Takes `UserInfo` and returns `K8sConfiguration`. `check_hooks.hook_utils` has a few helper functions to help with this. You must implement this function to use the K8s backend.
     2. `get_k8s_namespace`. Takes `UserInfo` and returns the namespace name. Must be implemented to use the K8s backend.
     3. `on_k8s_cronjob_create`. Takes `UserInfo`, `K8sClient`, and `K8sCronJob` parameters, and returns if the specified user is allowed to create the cronjob.
 
         !!! info
-            `on_k8s_cronjob_create` hook is also often used to ensure that when the cronjob does execute, it has the user credentials available to authenticate against the OpenTelemetry collector and the telemetry database (TODO: make sure this is correct).
+            `on_k8s_cronjob_create` hook is also often used to ensure that when the cronjob does execute, it has the user credentials available to authenticate against the telemetry database (in case the health check uses previous telemetry).
         The example below stores an offline token in a K8s secret, see info above for why that's necessary
         ```python
         async def on_k8s_cronjob_create(
@@ -632,6 +632,18 @@ Note that the data URLs are also supported in browsers, so you can inspect a dat
 
 See [Data URL](https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Schemes/data) for more.
 
+#### Health Check API backend
+
+Health Check API by itself doesn't know how to fulfill any of its functions, like listing checks, creating checks, running checks, etc. That's where backends come in - they tell the API how to perform all those actions. Currently the following backends are implemented:
+* K8s backend. It is the main backend, and the only backend which knows how to actually execute the health checks. In [Health Check Templates section](#health-check-templates) you learn how to specify check templates for K8s backend specifically.
+* REST backend. It takes an already running Health Check API endpoint and uses it to execute all the API actions. Mostly used by the command line interface, as the CLI often runs on a machine which doesn't have direct access to a K8s cluster.
+* Mock backend. As the name suggests, mostly used for testing.
+
+#### Telemetry API backend/proxy
+
+Just like Health Check API, the Telemetry API by itself doesn't know how to fulfill any of its functions, like like listing spans and applying filtering. The backends/proxies tell the API how to do perform those functions. Currently the following backends/proxies are implemented:
+* Opensearch SS4O. It is the main backend. Takes telemetry data from an OpenSearch database.
+* Mock Proxy. Takes telemetry from file. Mostly used for testing, but could also be used to make data available from a no-longer-used database by putting that data into a file first
 
 #### Raw Health Check Telemetry
 
