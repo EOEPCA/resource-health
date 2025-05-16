@@ -7,7 +7,7 @@ global:
   defaultHealthCheckImage:
     repository: docker.io/eoepca/healthcheck_runner
     pullPolicy: IfNotPresent
-    tag: "2.0.0-rc1"
+    tag: "v0.3.0-internal7-ccd84f1"
 
   ## TODO: Remove this default and make sure it is set or unused
   defaultOTLPEndpoint: https://resource-health-opentelemetry-collector:4317

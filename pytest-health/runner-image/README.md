@@ -24,15 +24,21 @@ To test out a basic (non-instrumented) check run either serve the image locally 
 or use [this published test_arxiv_api.py](https://raw.githubusercontent.com/EOEPCA/resource-health/a04ea5211fc60340656a20f45dcc0e9fa40eeee9/pytest-health/lib/other-examples/test_arxiv_api/test_arxiv_api.py) and [requirements.txt file](https://raw.githubusercontent.com/EOEPCA/resource-health/a04ea5211fc60340656a20f45dcc0e9fa40eeee9/pytest-health/lib/other-examples/test_arxiv_api/requirements.txt).
 
 ```
-docker run --rm --env RESOURCE_HEALTH_RUNNER_REQUIREMENTS="https://raw.githubusercontent.com/EOEPCA/resource-health/a04ea5211fc60340656a20f45dcc0e9fa40eeee9/pytest-health/lib/other-examples/test_arxiv_api/requirements.txt" --env RESOURCE_HEALTH_RUNNER_SCRIPT="https://raw.githubusercontent.com/EOEPCA/resource-health/a04ea5211fc60340656a20f45dcc0e9fa40eeee9/pytest-health/lib/other-examples/test_arxiv_api/test_arxiv_api.py" temporary_runner_image:v0.0.1
+docker run --rm --env RH_RUNNER_REQUIREMENTS="https://raw.githubusercontent.com/EOEPCA/resource-health/a04ea5211fc60340656a20f45dcc0e9fa40eeee9/pytest-health/lib/other-examples/test_arxiv_api/requirements.txt" --env RH_RUNNER_SCRIPT="https://raw.githubusercontent.com/EOEPCA/resource-health/a04ea5211fc60340656a20f45dcc0e9fa40eeee9/pytest-health/lib/other-examples/test_arxiv_api/test_arxiv_api.py" temporary_runner_image:v0.0.1
 ```
 
 The image includes the OpenTelemety instrumentation for PyTest. If you have an OpenTelemetry endpoint accessible on the host machine you can, for example, run
 ```
-docker run --network host --rm --env RESOURCE_HEALTH_RUNNER_REQUIREMENTS="https://raw.githubusercontent.com/EOEPCA/resource-health/a04ea5211fc60340656a20f45dcc0e9fa40eeee9/pytest-health/lib/other-examples/test_arxiv_api/requirements.txt" --env RESOURCE_HEALTH_RUNNER_SCRIPT="https://raw.githubusercontent.com/EOEPCA/resource-health/a04ea5211fc60340656a20f45dcc0e9fa40eeee9/pytest-health/lib/other-examples/test_arxiv_api/test_arxiv_api.py" temporary_runner_image:v0.0.1
+docker run --network host --rm --env RH_RUNNER_REQUIREMENTS="https://raw.githubusercontent.com/EOEPCA/resource-health/a04ea5211fc60340656a20f45dcc0e9fa40eeee9/pytest-health/lib/other-examples/test_arxiv_api/requirements.txt" --env RH_RUNNER_SCRIPT="https://raw.githubusercontent.com/EOEPCA/resource-health/a04ea5211fc60340656a20f45dcc0e9fa40eeee9/pytest-health/lib/other-examples/test_arxiv_api/test_arxiv_api.py" temporary_runner_image:v0.0.1
 ```
 
-It is currently published as `docker.io/eoepca/healthcheck_runner:2.0.0-rc1`.
+It is currently published as `docker.io/eoepca/healthcheck_runner:v0.3.0-internal7-ccd84f1`.
+
+## Pre and post commands
+
+You can set environment variable `RH_RUNNER_RUN_BEFORE` when running the image to execute some command before running health checks.
+`RH_RUNNER_RUN_AFTER` is an analogous command to run after running health checks. Note that it will execute regardless if any of the previous commands fail.
+If any script command fails (including the before or after commands), the whole script will fail (i.e. have a non-zero exit code)
 
 # Notes
 
