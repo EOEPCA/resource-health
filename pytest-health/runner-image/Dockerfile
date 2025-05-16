@@ -11,6 +11,9 @@ RUN uv venv && uv pip install -Ur requirements.txt
 
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS runner
 
+ENV RH_RUNNER_RUN_BEFORE=
+ENV RH_RUNNER_RUN_AFTER=
+
 COPY --from=compiler /app/.venv /app/.venv
 
 WORKDIR /app
@@ -19,11 +22,11 @@ WORKDIR /app
 COPY ./runner-image/run_script.sh ./runner-image/tests.py ./instrumentation/conftest.py /app/
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
-    curl git && \
+    curl git netcat-traditional && \
     # Clean up after installation
     apt-get clean && rm -rf /var/lib/apt-get/lists/* && \
     chmod +x /app/run_script.sh
 
 ENTRYPOINT [ "/app/run_script.sh" ]
 
-CMD [ "pytest", "--export-traces", "tests.py" ]
+CMD [ "pytest", "--export-traces", "--suppress-tests-failed-exit-code", "-rP", "tests.py" ]

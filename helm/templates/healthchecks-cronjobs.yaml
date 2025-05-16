@@ -56,9 +56,9 @@ spec:
                 user.id={{$check.userid}},
                 {{ end -}}
                 health_check.name={{$check.name}}
-            - name: RESOURCE_HEALTH_RUNNER_REQUIREMENTS
+            - name: RH_RUNNER_REQUIREMENTS
               value: {{ $check.requirements }}
-            - name: RESOURCE_HEALTH_RUNNER_SCRIPT
+            - name: RH_RUNNER_SCRIPT
               value: {{ $check.script }}
 
             volumeMounts:

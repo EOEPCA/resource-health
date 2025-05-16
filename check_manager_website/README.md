@@ -1,10 +1,14 @@
+# Check Manager Website
+
+Web UI for managing and inspecting checks and their outcomes
+
 ## Getting Started
 
 First install yarn by following https://yarnpkg.com/getting-started/install step 1.
 That's right, just call `corepack enable` and it should work if you have a modern node js installed.
 If you have trouble here, see https://yarnpkg.com/corepack
 
-Run the check api first. For how to do that, see `check_manager/README.md`
+Run the check REST api first. For how to do that, see [../check_manager/README.md](../check_manager/README.md)
 
 Then, run the development server:
 
@@ -14,7 +18,7 @@ NEXT_PUBLIC_RELOGIN_URL=https://example.com NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT=h
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+You can start editing the page by modifying [src/app/page.tsx](src/app/page.tsx). The page auto-updates as you edit the file.
 
 ## Production
 
