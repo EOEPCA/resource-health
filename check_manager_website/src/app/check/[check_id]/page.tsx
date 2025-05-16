@@ -1,6 +1,6 @@
 "use client";
 
-import { JSX, useState } from "react";
+import { JSX, useEffect, useState } from "react";
 import Form from "@rjsf/chakra-ui";
 import {
   RemoveCheck,
@@ -44,6 +44,7 @@ import {
 import { IoReload as Reload } from "react-icons/io5";
 import { Duration, formatDuration } from "date-fns";
 import {
+  CallBackend,
   FindCheckTemplate,
   GetRelLink,
   GetSpanFilterParams,
@@ -52,8 +53,13 @@ import {
   LOADING_STRING,
   SpanFilterParamsToDql,
   StringifyPretty,
+  useFetchState,
 } from "@/lib/helpers";
-import { CheckError } from "@/components/CheckError";
+import {
+  CheckErrorPopup,
+  SetErrorsPropsType,
+  useError,
+} from "@/components/CheckError";
 import { TELEMETRY_DURATION } from "@/lib/config";
 import { useRouter } from "next/navigation";
 import DefaultLayout from "@/layouts/DefaultLayout";
@@ -67,38 +73,47 @@ type HealthCheckPageProps = {
 export default function HealthCheckPage({
   params: { check_id },
 }: HealthCheckPageProps): JSX.Element {
+  const { errorsProps, setErrorsProps, isErrorOpen } = useError();
   return (
     <DefaultLayout>
+      <CheckErrorPopup
+        errorsProps={errorsProps}
+        setErrorsProps={setErrorsProps}
+        isOpen={isErrorOpen}
+      />
       <CustomLink href={GetRelLink({})}>Home</CustomLink>
-      <HealthCheckDetails checkId={check_id} />
+      <HealthCheckDetails checkId={check_id} setErrorsProps={setErrorsProps} />
     </DefaultLayout>
   );
 }
 
-function HealthCheckDetails({ checkId }: { checkId: string }): JSX.Element {
+function HealthCheckDetails({
+  checkId,
+  setErrorsProps,
+}: {
+  checkId: string;
+  setErrorsProps: SetErrorsPropsType;
+}): JSX.Element {
   const router = useRouter();
-  const [error, setError] = useState<Error | null>(null);
-  const [checkTemplates, setCheckTemplates] = useState<CheckTemplate[] | null>(
-    null
-  );
-  const [check, setCheck] = useState<Check | null>(null);
+  const [checkTemplates] = useFetchState(GetCheckTemplates, setErrorsProps, []);
+  const [check] = useFetchState(() => GetCheck(checkId), setErrorsProps, [
+    checkId,
+  ]);
   const [now, setNow] = useState(new Date());
+
   const [allSpans, setAllSpans] = useState<SpanResult | null>(null);
-  if (error !== null) {
-    return <CheckError {...error} />;
-  }
-  if (checkTemplates === null) {
-    GetCheckTemplates().then(setCheckTemplates).catch(setError);
-  }
-  if (check === null) {
-    GetCheck(checkId).then(setCheck).catch(setError);
-  }
+  useEffect(() => {
+    if (check !== null) {
+      CallBackend(
+        () => GetAllSpans(GetSpanFilterParams(check, now)),
+        setAllSpans,
+        setErrorsProps
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [check, now]);
   if (checkTemplates === null || check === null) {
     return <Text>{LOADING_STRING}</Text>;
-  }
-  const spanFilterParams = GetSpanFilterParams(check, now);
-  if (allSpans === null) {
-    GetAllSpans(spanFilterParams).then(setAllSpans).catch(setError);
   }
 
   return (
@@ -107,7 +122,7 @@ function HealthCheckDetails({ checkId }: { checkId: string }): JSX.Element {
       telemetryDuration={TELEMETRY_DURATION}
       templates={checkTemplates}
       setNow={setNow}
-      filterParamsDql={SpanFilterParamsToDql(spanFilterParams)}
+      filterParamsDql={SpanFilterParamsToDql(GetSpanFilterParams(check, now))}
       allSpans={allSpans}
       setAllSpans={setAllSpans}
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -116,7 +131,7 @@ function HealthCheckDetails({ checkId }: { checkId: string }): JSX.Element {
       }}
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       onCheckRemove={(_checkId) => router.push("/")}
-      setError={setError}
+      setErrorsProps={setErrorsProps}
     />
   );
 }
@@ -131,7 +146,7 @@ export type CheckDivProps = {
   setAllSpans: (allSpans: SpanResult | null) => void;
   onCheckUpdate: (check: Check) => void;
   onCheckRemove: (checkId: CheckId) => void;
-  setError: (error: Error) => void;
+  setErrorsProps: SetErrorsPropsType;
 };
 
 function CheckDiv({
@@ -144,7 +159,7 @@ function CheckDiv({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onCheckUpdate,
   onCheckRemove,
-  setError,
+  setErrorsProps,
 }: CheckDivProps): JSX.Element {
   const [templateId, setTemplateId] = useState(
     check.attributes.metadata.template_id
@@ -325,16 +340,24 @@ function CheckDiv({
             Copy filter parameters in DQL
           </ButtonWithCheckmark>
           <ButtonWithCheckmark
-            onClick={() => RunCheck(check.id).catch(setError)}
+            onClick={() =>
+              CallBackend(
+                () => RunCheck(check.id),
+                () => {},
+                setErrorsProps
+              )
+            }
           >
             Run Check
           </ButtonWithCheckmark>
           <RemoveCheckButton
-            onClick={() => {
-              RemoveCheck(check.id)
-                .then(() => onCheckRemove(check.id))
-                .catch(setError);
-            }}
+            onClick={() =>
+              CallBackend(
+                () => RemoveCheck(check.id),
+                () => onCheckRemove(check.id),
+                setErrorsProps
+              )
+            }
           />
         </div>
         <Text>

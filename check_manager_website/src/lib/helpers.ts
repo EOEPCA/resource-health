@@ -2,6 +2,7 @@ import {
   Check,
   CheckTemplate,
   CheckTemplateId,
+  GetEnvVarOrThrow,
   GetSpansQueryParams,
   ReduceSpans,
   Span,
@@ -9,11 +10,55 @@ import {
   SpanStatus,
   TelemetryAttributes,
 } from "./backend-wrapper";
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
+import {
+  DependencyList,
+  Dispatch,
+  SetStateAction,
+  useEffect,
+  useState,
+} from "react";
 import { sub as subDuration } from "date-fns";
 import { TELEMETRY_DURATION } from "./config";
+import {
+  DefaultErrorHandler,
+  SetErrorsPropsType,
+} from "@/components/CheckError";
 
 export const LOADING_STRING = "Loading ...";
+
+export function GetReLoginURL(): string {
+  return GetEnvVarOrThrow("NEXT_PUBLIC_RELOGIN_URL");
+}
+
+// The difference from func().then(...).catch(...) is that it handles errors and retries with setErrorProps
+export function CallBackend<T>(
+  func: () => Promise<T>,
+  then: (value: T) => void,
+  setErrorsProps: SetErrorsPropsType
+): void {
+  func()
+    .then(then)
+    .catch(
+      DefaultErrorHandler(setErrorsProps, () =>
+        CallBackend<T>(func, then, setErrorsProps)
+      )
+    );
+}
+
+export function useFetchState<T>(
+  fetch: () => Promise<T>,
+  setErrorsProps: SetErrorsPropsType,
+  deps: DependencyList
+): [T | null, (value: T | null) => void] {
+  const [value, setValue] = useState<T | null>(null);
+  useEffect(() => {
+    if (value === null) {
+      CallBackend(fetch, setValue, setErrorsProps);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, ...deps]);
+  return [value, setValue] as const;
+}
 
 export function GetRelLink({
   checkId,

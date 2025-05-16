@@ -11,10 +11,8 @@ from fastapi import (
     status,
     Depends,
 )
-from fastapi.security.base import SecurityBase
 from fastapi.middleware.cors import CORSMiddleware
 from os import environ
-import pathlib
 from check_hooks import load_hooks
 import inspect
 
@@ -37,7 +35,6 @@ from api_utils.api_utils import (
     set_custom_json_schema,
 )
 from check_backends.check_backend import (
-    AuthenticationObject,
     CheckBackend,
     CheckIdError,
     CheckIdNonUniqueError,
@@ -71,8 +68,10 @@ from api_utils.json_api_types import (
 BASE_URL = get_env_var_or_throw("RH_CHECK_API_BASE_URL")
 
 app = FastAPI()
-app.add_middleware(
-    CORSMiddleware,
+# A solution to make CORS headers appear in error responses too, based on
+# https://github.com/fastapi/fastapi/discussions/8027#discussioncomment-5146484
+wrapped_app = CORSMiddleware(
+    app=app,
     allow_origin_regex=".*",
     # Even though the below allows all things too, it disables returns Access-Control-Allow-Origin=* in the header
     # and borwsers don't allow to use that with withCredentials=True
@@ -532,7 +531,7 @@ def uvicorn_dev() -> None:
 
     port = environ.get("PORT")
     uvicorn.run(
-        "check_api:app",
+        "check_api:wrapped_app",
         port=int(port) if port else 8000,
         # reload=True,
         root_path=environ.get("FAST_API_ROOT_PATH") or "",
@@ -543,7 +542,7 @@ def unicorn_dummy_prod() -> None:
     import uvicorn
 
     uvicorn.run(
-        "check_api:app",
+        "check_api:wrapped_app",
         host="0.0.0.0",
         reload=True,
         root_path=environ.get("FAST_API_ROOT_PATH") or "",
@@ -571,7 +570,9 @@ def uvicorn_k8s() -> None:
     import uvicorn
 
     # This is the host fastapi run uses, see https://fastapi.tiangolo.com/it/fastapi-cli/#fastapi-run
-    uvicorn.run(app, host="0.0.0.0", root_path=environ.get("FAST_API_ROOT_PATH") or "")
+    uvicorn.run(
+        wrapped_app, host="0.0.0.0", root_path=environ.get("FAST_API_ROOT_PATH") or ""
+    )
 
 
 if __name__ == "__main__":

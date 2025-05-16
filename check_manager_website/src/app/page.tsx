@@ -32,14 +32,20 @@ import {
 import { IoReload as Reload } from "react-icons/io5";
 import { Duration, formatDuration, sub as subDuration } from "date-fns";
 import {
+  CallBackend,
   ComputeSpansSummary,
   FindCheckTemplate,
   GetAverageDuration,
   GetRelLink,
   LOADING_STRING,
   SpansSummary,
+  useFetchState,
 } from "@/lib/helpers";
-import { CheckError } from "@/components/CheckError";
+import {
+  CheckErrorPopup,
+  SetErrorsPropsType,
+  useError,
+} from "@/components/CheckError";
 import { TELEMETRY_DURATION } from "@/lib/config";
 import DefaultLayout from "@/layouts/DefaultLayout";
 import CustomLink from "@/components/CustomLink";
@@ -48,36 +54,26 @@ import ButtonWithCheckmark from "@/components/ButtonWithCheckmark";
 const log = (type: string) => console.log.bind(console, type);
 
 export default function Home(): JSX.Element {
+  const { errorsProps, setErrorsProps, isErrorOpen } = useError();
   return (
     <DefaultLayout>
-      <HomeDetails />
+      <CheckErrorPopup
+        errorsProps={errorsProps}
+        setErrorsProps={setErrorsProps}
+        isOpen={isErrorOpen}
+      />
+      <HomeDetails setErrorsProps={setErrorsProps} />
     </DefaultLayout>
   );
-  // return (
-  //   <ThemeProvider theme={theme}>
-  //     <CSSReset />
-  //     <main className="flex min-h-screen flex-col items-start p-24">
-  //       <HomeDetails />
-  //     </main>
-  //   </ThemeProvider>
-  // )
 }
 
-function HomeDetails(): JSX.Element {
-  const [error, setError] = useState<Error | null>(null);
-  const [checkTemplates, setCheckTemplates] = useState<CheckTemplate[] | null>(
-    null
-  );
-  const [checks, setChecks] = useState<Check[] | null>(null);
-  if (error !== null) {
-    return <CheckError {...error} />;
-  }
-  if (checkTemplates === null) {
-    GetCheckTemplates().then(setCheckTemplates).catch(setError);
-  }
-  if (checks === null) {
-    GetChecks().then(setChecks).catch(setError);
-  }
+function HomeDetails({
+  setErrorsProps,
+}: {
+  setErrorsProps: SetErrorsPropsType;
+}): JSX.Element {
+  const [checkTemplates] = useFetchState(GetCheckTemplates, setErrorsProps, []);
+  const [checks, setChecks] = useFetchState(GetChecks, setErrorsProps, []);
   if (checkTemplates === null || checks === null) {
     return <Text>{LOADING_STRING}</Text>;
   }
@@ -87,14 +83,14 @@ function HomeDetails(): JSX.Element {
       telemetryDuration={TELEMETRY_DURATION}
       templates={checkTemplates}
       onCreateCheck={(check) => setChecks([check, ...checks])}
-      setError={setError}
+      setErrorsProps={setErrorsProps}
     />
   );
 }
 
 type CheckDivCommonProps = {
   telemetryDuration: Duration;
-  setError: (error: Error) => void;
+  setErrorsProps: SetErrorsPropsType;
 };
 
 function ChecksDiv({
@@ -204,11 +200,11 @@ function ChecksDiv({
 function CreateCheckDiv({
   templates,
   onCreateCheck,
-  setError,
+  setErrorsProps,
 }: {
   templates: CheckTemplate[];
   onCreateCheck: (check: Check) => void;
-  setError: (error: Error) => void;
+  setErrorsProps: SetErrorsPropsType;
 }): JSX.Element {
   const [templateId, setTemplateId] = useState(templates[0].id);
   // Only used as a hacky way to force clearing of form data
@@ -275,30 +271,35 @@ function CreateCheckDiv({
             schema={template.attributes.arguments}
             validator={validator}
             onChange={log("changed")}
-            onSubmit={(data) => {
-              setName("");
-              setSchedule("");
-              setDescription("");
-              // A hacky way to force clearing of form data
-              setKey(1 - key);
-              setTemplateId(templates[0].id);
-              CreateCheck({
-                data: {
-                  type: "check",
-                  attributes: {
-                    metadata: {
-                      name: name,
-                      description: description,
-                      template_id: templateId,
-                      template_args: data.formData,
+            onSubmit={(data) =>
+              CallBackend(
+                () =>
+                  CreateCheck({
+                    data: {
+                      type: "check",
+                      attributes: {
+                        metadata: {
+                          name: name,
+                          description: description,
+                          template_id: templateId,
+                          template_args: data.formData,
+                        },
+                        schedule: schedule,
+                      },
                     },
-                    schedule: schedule,
-                  },
+                  }),
+                (check: Check) => {
+                  setName("");
+                  setSchedule("");
+                  setDescription("");
+                  // A hacky way to force clearing of form data
+                  setKey(1 - key);
+                  setTemplateId(templates[0].id);
+                  onCreateCheck(check);
                 },
-              })
-                .then(onCreateCheck)
-                .catch(setError);
-            }}
+                setErrorsProps
+              )
+            }
             onError={log("errors")}
           />
         </details>
@@ -311,7 +312,7 @@ function CheckSummaryDiv({
   check,
   setCheckSpansSummary,
   telemetryDuration,
-  setError,
+  setErrorsProps,
 }: {
   check: Check;
   setCheckSpansSummary: (
@@ -324,21 +325,18 @@ function CheckSummaryDiv({
     check.attributes.metadata.description
   );
   const [now, setNow] = useState(new Date());
-  const [spansSummary, setSpansSummary] = useState<SpansSummary | null>(null);
-  if (spansSummary === null) {
-    ComputeSpansSummary({
-      fromTime: subDuration(now, telemetryDuration),
-      toTime: now,
-      resourceAttributes: check.attributes.outcome_filter.resource_attributes,
-      scopeAttributes: check.attributes.outcome_filter.scope_attributes,
-      spanAttributes: check.attributes.outcome_filter.span_attributes,
-    })
-      .then((spansSummary) => {
-        setSpansSummary(spansSummary);
-        setCheckSpansSummary(check.id, spansSummary);
-      })
-      .catch(setError);
-  }
+  const [spansSummary, setSpansSummary] = useFetchState(
+    () =>
+      ComputeSpansSummary({
+        fromTime: subDuration(now, telemetryDuration),
+        toTime: now,
+        resourceAttributes: check.attributes.outcome_filter.resource_attributes,
+        scopeAttributes: check.attributes.outcome_filter.scope_attributes,
+        spanAttributes: check.attributes.outcome_filter.span_attributes,
+      }),
+    setErrorsProps,
+    [now, telemetryDuration, check]
+  );
   const check_label =
     check.attributes.metadata.template_args === undefined
       ? check.id
@@ -361,7 +359,15 @@ function CheckSummaryDiv({
         >
           <Reload />
         </IconButton>
-        <ButtonWithCheckmark onClick={() => RunCheck(check.id).catch(setError)}>
+        <ButtonWithCheckmark
+          onClick={() =>
+            CallBackend(
+              () => RunCheck(check.id),
+              () => {},
+              setErrorsProps
+            )
+          }
+        >
           Run Check
         </ButtonWithCheckmark>
       </Td>
