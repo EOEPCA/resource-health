@@ -22,7 +22,7 @@ WORKDIR /app
 COPY ./runner-image/run_script.sh ./runner-image/tests.py ./instrumentation/conftest.py /app/
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
-    curl git && \
+    curl git netcat-traditional && \
     # Clean up after installation
     apt-get clean && rm -rf /var/lib/apt-get/lists/* && \
     chmod +x /app/run_script.sh
