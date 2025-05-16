@@ -71,7 +71,7 @@ check_api:
   image:
     repository: docker.io/eoepca/resourcehealth_check_api
     pullPolicy: IfNotPresent
-    tag: "2.0.0-rc1"
+    tag: "v0.3.0-internal16-0185976"
   serviceType: ClusterIP
   containerPort: 8000
   servicePort: 8000
