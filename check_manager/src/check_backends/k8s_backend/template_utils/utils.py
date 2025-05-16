@@ -136,9 +136,9 @@ def runner_container(
     else:
         env = env.copy()
 
-    env["RESOURCE_HEALTH_RUNNER_SCRIPT"] = script_url
+    env["RH_RUNNER_SCRIPT"] = script_url
     if requirements_url is not None:
-        env["RESOURCE_HEALTH_RUNNER_REQUIREMENTS"] = requirements_url
+        env["RH_RUNNER_REQUIREMENTS"] = requirements_url
 
     if resource_attributes is not None:
         env["OTEL_RESOURCE_ATTRIBUTES"] = ",".join(
@@ -389,6 +389,9 @@ def simple_runner_template[ArgumentType](
             env["OTEL_EXPORTER_OTLP_CERTIFICATE"] = "/tls/ca.crt"
             env["OTEL_EXPORTER_OTLP_CLIENT_KEY"] = "/tls/tls.key"
             env["OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE"] = "/tls/tls.crt"
+        if proxy:
+            env["RH_RUNNER_RUN_BEFORE"] = '(PING_HOST=127.0.0.1 PING_PORT=8080; for run in {1..20}; do nc -z $PING_HOST $PING_PORT && exit 0; echo "Try ${run} to ping ${PING_HOST}:${PING_PORT}"; sleep 1; done; exit 1)'
+            env["RH_RUNNER_RUN_AFTER"] = "curl -s 'http://127.0.0.1:8080/quitquitquit"
 
         these_containers = [
             runner_container(
@@ -398,11 +401,6 @@ def simple_runner_template[ArgumentType](
                 volume_mounts=volume_mounts,
                 env=env,
                 image=runner_image,
-                command=None if not proxy else ["/usr/bin/bash"],
-                args=None if not proxy else [
-                    "-c",
-                    "/app/run_script.sh pytest --export-traces -rP --suppress-tests-failed-exit-code tests.py; ret=$?; curl -s 'http://127.0.0.1:8080/quitquitquit'; exit $ret",
-                ]
             )
         ]
 
