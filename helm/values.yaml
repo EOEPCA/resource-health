@@ -132,8 +132,8 @@ web:
   replicaCount: 2
   environmentSecrets: []
   environmentFixed:
+      # The relogin link is temporary, should replace with a proper relogin link
     - name: NEXT_PUBLIC_RELOGIN_URL
-      # Temporary, should replace with a proper relogin link
       value: https://resource-health.apx.develop.eoepca.org
     - name: NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT
       value: http://resource-health-check-api:8000/v1
