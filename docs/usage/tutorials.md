@@ -25,7 +25,7 @@ You should follow along the following steps to get used to how things work.
    ![Submit a simple check](./img/basic-user-tutorial/03-Submit-a-simple-check.png)
    Note that `https://example.om/` deliberately contains a typo for us to see how to debug errors.  
    `schedule` is a CRON-style schedule specifying when the health check is to be executed. The schedule `0 0 1,15 * *` means the check will run `At 00:00 on day-of-month 1 and 15`. See [Cron Schedule](#cron-schedule) for more detailed information.
-   Then click sumbit. Note that you might get an `AxiosError`, and that just means that it's been too long since you logged in. Just reload the page, log in, and fill in the details again.
+   Then click sumbit.
 3. After submitting the check, click on `Create new check` again (to hide the check creation form).  
    Your new check `Ping example.com` (or however you named it) should appear somewhere in the list, usually near the top.  
    Since the new check hasn't executed yet, all the stats in the table show empty values for it.  
