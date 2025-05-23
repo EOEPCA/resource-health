@@ -1,17 +1,4 @@
-# from check_hooks.hook_utils import *
-from check_hooks.hook_utils import (
-    K8sClient,
-    OutCheck,
-    InCheckAttributes,
-    CheckTemplate,
-    APIException,
-    Error,
-    K8sConfiguration,
-    K8sCronJob,
-    k8s_config_from_file,
-    lookup_k8s_secret,
-    create_k8s_secret
-)
+import check_hooks.hook_utils as hu
 
 from eoepca_security import OIDCProxyScheme, Tokens
 from typing import TypedDict
@@ -42,8 +29,8 @@ def on_auth(tokens: Tokens | None) -> UserInfo:
     print("ON AUTH")
 
     if tokens is None or tokens["auth"] is None:  # or tokens['id'] is None:
-        raise APIException(
-            Error(
+        raise hu.APIException(
+            hu.Error(
                 status="403",
                 code="MissingTokens",
                 title="Missing authentication or ID token",
@@ -64,8 +51,8 @@ def on_auth(tokens: Tokens | None) -> UserInfo:
 
     if user_id is None or username is None:
         print(claims)
-        raise APIException(
-            Error(
+        raise hu.APIException(
+            hu.Error(
                 status="401",
                 code="Missing user id/name",
                 title="Missing user identification",
@@ -81,7 +68,7 @@ def on_auth(tokens: Tokens | None) -> UserInfo:
     )
 
 
-def on_template_access(userinfo: UserInfo, template: CheckTemplate) -> bool:
+def on_template_access(userinfo: UserInfo, template: hu.CheckTemplate) -> bool:
     print("ON TEMPLATE_ACCESS")
 
     if template.id == "default_k8s_template" and userinfo["username"] != "bob":
@@ -90,7 +77,7 @@ def on_template_access(userinfo: UserInfo, template: CheckTemplate) -> bool:
     return True
 
 
-def on_check_create(userinfo: UserInfo, check: InCheckAttributes) -> bool:
+def on_check_create(userinfo: UserInfo, check: hu.InCheckAttributes) -> bool:
     print("ON CHECK CREATE")
 
     if userinfo["username"] not in ["alice", "bob"]:
@@ -99,7 +86,7 @@ def on_check_create(userinfo: UserInfo, check: InCheckAttributes) -> bool:
     return True
 
 
-def on_check_remove(userinfo: UserInfo, check: OutCheck) -> bool:
+def on_check_remove(userinfo: UserInfo, check: hu.OutCheck) -> bool:
     print("ON CHECK REMOVE")
 
     if userinfo["username"] not in ["alice", "bob"]:
@@ -108,13 +95,13 @@ def on_check_remove(userinfo: UserInfo, check: OutCheck) -> bool:
     return True
 
 
-def on_check_access(userinfo: UserInfo, check: OutCheck) -> bool:
+def on_check_access(userinfo: UserInfo, check: hu.OutCheck) -> bool:
     print("ON CHECK ACCESS")
 
     return True
 
 
-def on_check_run(userinfo: UserInfo, check: OutCheck) -> bool:
+def on_check_run(userinfo: UserInfo, check: hu.OutCheck) -> bool:
     print("ON CHECK RUN")
 
     return True
@@ -123,10 +110,10 @@ def on_check_run(userinfo: UserInfo, check: OutCheck) -> bool:
 ## For the k8s backend
 
 
-async def get_k8s_config(userinfo: UserInfo) -> K8sConfiguration:
+async def get_k8s_config(userinfo: UserInfo) -> hu.K8sConfiguration:
     ## Using kube[ctl] config
     print("get_k8s_config: Using local kube config file")
-    return await k8s_config_from_file(
+    return await hu.k8s_config_from_file(
         # config_file="~/.kube/config",
         context=os.environ.get("RH_CHECK_KUBE_CONTEXT"),
     )
@@ -139,7 +126,7 @@ def get_k8s_namespace(userinfo: UserInfo) -> str:
 
 
 async def on_k8s_cronjob_access(
-    userinfo: UserInfo, client: K8sClient, cronjob: K8sCronJob
+    userinfo: UserInfo, client: hu.K8sClient, cronjob: hu.K8sCronJob
 ) -> bool:
     print("on_k8s_cronjob_access")
 
@@ -147,7 +134,7 @@ async def on_k8s_cronjob_access(
 
 
 async def on_k8s_cronjob_create(
-    userinfo: UserInfo, client: K8sClient, cronjob: K8sCronJob
+    userinfo: UserInfo, client: hu.K8sClient, cronjob: hu.K8sCronJob
 ) -> bool:
     print("on_k8s_cronjob_create")
 
@@ -166,7 +153,7 @@ async def on_k8s_cronjob_create(
     secret_name = f"resource-health-{userinfo['username']}-offline-secret"
     secret_namespace = get_k8s_namespace(userinfo)
 
-    offline_secret = await lookup_k8s_secret(
+    offline_secret = await hu.lookup_k8s_secret(
         client=client,
         namespace=secret_namespace,
         name=secret_name
@@ -174,12 +161,12 @@ async def on_k8s_cronjob_create(
 
     if offline_secret is None:
         if userinfo['refresh_token'] is None:
-            raise APIException(Error(
+            raise hu.APIException(hu.Error(
                 status="404",
                 code="MissingOfflineToken",
                 title="Missing offline token, please create at least one check using the website",
             ))
-        await create_k8s_secret(
+        await hu.create_k8s_secret(
             client=client,
             name=secret_name,
             namespace=secret_namespace,
@@ -192,7 +179,7 @@ async def on_k8s_cronjob_create(
 
 
 def on_k8s_cronjob_remove(
-    userinfo: UserInfo, client: K8sClient, cronjob: K8sCronJob
+    userinfo: UserInfo, client: hu.K8sClient, cronjob: hu.K8sCronJob
 ) -> bool:
     print("on_k8s_cronjob_remove")
 
@@ -201,7 +188,7 @@ def on_k8s_cronjob_remove(
     return True
 
 
-def on_k8s_cronjob_run(userinfo: UserInfo, client: K8sClient, cronjob: K8sCronJob) -> bool:
+def on_k8s_cronjob_run(userinfo: UserInfo, client: hu.K8sClient, cronjob: hu.K8sCronJob) -> bool:
     print("on_k8s_cronjob_run")
 
     ## Access already checked as part of on_k8s_cronjob_access

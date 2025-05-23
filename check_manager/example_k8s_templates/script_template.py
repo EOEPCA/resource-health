@@ -1,14 +1,13 @@
-from pydantic import ConfigDict
-from check_backends.k8s_backend.template_utils import *
+import check_backends.k8s_backend.template_utils as tu
 
 
-class DefaultK8sArguments(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    script: str = Field(json_schema_extra={"format": "textarea"})
-    requirements: str = Field(json_schema_extra={"format": "textarea"}, default="")
+class DefaultK8sArguments(tu.BaseModel):
+    model_config = tu.ConfigDict(extra="forbid")
+    script: str = tu.Field(json_schema_extra={"format": "textarea"})
+    requirements: str = tu.Field(json_schema_extra={"format": "textarea"}, default="")
 
 
-GenericScriptTemplate = simple_runner_template(
+GenericScriptTemplate = tu.simple_runner_template(
     template_id="generic_script_template",
     argument_type=DefaultK8sArguments,
     label="Generic script template",

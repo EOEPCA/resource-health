@@ -1,15 +1,14 @@
-from pydantic import ConfigDict
-from check_backends.k8s_backend.template_utils import *
+import check_backends.k8s_backend.template_utils as tu
 import os
 
 
-class TelemetryAccessArguments(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    script: str = Field(json_schema_extra={"format": "textarea"})
-    requirements: str = Field(json_schema_extra={"format": "textarea"}, default="")
+class TelemetryAccessArguments(tu.BaseModel):
+    model_config = tu.ConfigDict(extra="forbid")
+    script: str = tu.Field(json_schema_extra={"format": "textarea"})
+    requirements: str = tu.Field(json_schema_extra={"format": "textarea"}, default="")
 
 
-TelemetryAccessTemplate = simple_runner_template(
+TelemetryAccessTemplate = tu.simple_runner_template(
     template_id="telemetry_access_template",
     argument_type=TelemetryAccessArguments,
     label="Script with telemetry access",

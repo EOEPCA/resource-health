@@ -12,4 +12,4 @@ from .utils import (
     src_to_data_url,
 )
 from typing import Any
-from pydantic import BaseModel, Field, TypeAdapter
+from pydantic import BaseModel, Field, TypeAdapter, ConfigDict
