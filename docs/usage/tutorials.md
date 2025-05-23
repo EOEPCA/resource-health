@@ -201,22 +201,81 @@ In this tutorial we will learn:
 
 Health check templates define what kinds of checks users can create, what parameters users need to supply to create the checks, and how those parameters are interpreted.
 
+Follow along the following steps to add a health check template:
+
+1. We will create a health check template defined below
+    ```python
+    import check_backends.k8s_backend.template_utils as tu
+
+    SOURCE = """
+    import requests
+
+    URL = environ["URL"]
+    COLLECTION_FIELD = environ["COLLECTION_FIELD"]
+    EXPECTED_COUNT = environ["EXPECTED_COUNT"]
+
+    def test_collections() -> None:
+        response = requests.get(URL)
+        assert response.ok
+        resp_json = response.json()
+        assert COLLECTION_FIELD in resp_json
+        assert isinstance(resp_json[COLLECTION_FIELD], list)
+        assert len(resp_json[COLLECTION_FIELD]) >= EXPECTED_COUNT
+    """
+
+
+    class CollectionCheckArguments(tu.BaseModel):
+        model_config = tu.ConfigDict(extra="forbid")
+        url: str = tu.Field(json_schema_extra={"format": "textarea"})
+        collection_field: str = tu.Field(
+            description="Response field which has the collection to inspect"
+        )
+        expected_count: int = tu.Field(gt=0)
+
+
+    CollectionCheck = tu.simple_runner_template(
+        template_id="collection_check",
+        argument_type=CollectionCheckArguments,
+        label="Collection Check Template",
+        description="To create checks which query an endpoint and check that the returned collection size is not smaller than expected.",
+        script_url=tu.src_to_data_url(SOURCE),
+        runner_env=lambda template_args, userinfo: {
+            "URL": template_args.url,
+            "COLLECTION_FIELD": template_args.collection_field,
+            "EXPECTED_COUNT": str(template_args.expected_count),
+        },
+        user_id=lambda template_args, userinfo: userinfo["username"],
+        otlp_tls_secret="resource-health-healthchecks-certificate",
+    )
+    ```
+    Let's unpack this. The health checks generally are just [Pytest](https://docs.pytest.org/en/stable/) scripts which generate appropriately annotated OpenTelemetry traces upon execution. See [Health Check Script](#health-check-script) for more details about health check scripts.  
+    Health check template definition, as we see above, is also just a Python script
+    TODO: continue here
+
+### Health Check Templates (old)
+
+In this tutorial we will learn:
+
+* How to configure what kinds of health checks the users can create
+
+Health check templates define what kinds of checks users can create, what parameters users need to supply to create the checks, and how those parameters are interpreted.
+
 You can see example check templates [here](https://github.com/EOEPCA/resource-health/tree/58087ff26eca34e6aeaf58216fd87b18b745e36b/check_manager/example_k8s_templates).
 
 The health checks generally are just [Pytest](https://docs.pytest.org/en/stable/) scripts which generate appropriately annotated OpenTelemetry traces upon execution. See [Health Check Script](#health-check-script) for more details about health check scripts.  
-Health check template definition is just a Python script. To be picked up as a check template script it's easiest to just include the code of the script [here](https://github.com/EOEPCA/resource-health/blob/58087ff26eca34e6aeaf58216fd87b18b745e36b/helm/values.yaml#L39).
+Health check template definition is also just a Python script. To be picked up as a check template script it's easiest to just include the code of the script [here](https://github.com/EOEPCA/resource-health/blob/58087ff26eca34e6aeaf58216fd87b18b745e36b/helm/values.yaml#L39).
 <!-- (TODO: add a note what to do if want script in a file, and not inline here?) -->
 The Python script creates a class which specifies what check arguments exist, how to interpret them, and any additional setup necessary to execute the checks. At least for now, the health check template will get the user supplied check arguments, and will need to specify what Python script to execute, what additional dependencies the script needs, and what environment variables to set.  
 For example, below is a simple script template.
 ```python
-from check_backends.k8s_backend.template_utils import *
+import check_backends.k8s_backend.template_utils as tu
 
-class ScriptTemplateArguments(BaseModel):
-    script: str = Field(json_schema_extra={"format": "textarea"})
-    requirements: str = Field(json_schema_extra={"format": "textarea"}, default="")
+class ScriptTemplateArguments(tu.BaseModel):
+    model_config = tu.ConfigDict(extra="forbid")
+    script: str = tu.Field(json_schema_extra={"format": "textarea"})
+    requirements: str = tu.Field(json_schema_extra={"format": "textarea"}, default="")
 
-
-GenericScriptTemplate = simple_runner_template(
+GenericScriptTemplate = tu.simple_runner_template(
     template_id="generic_script_template",
     argument_type=ScriptTemplateArguments,
     label="Generic script template",
@@ -237,8 +296,7 @@ The `GenericScriptTemplate` variable stores a class which is what the K8s backen
 
 Let's look at another template example.
 ```python
-from check_backends.k8s_backend.template_utils import *
-from typing import TypedDict
+import check_backends.k8s_backend.template_utils as tu
 
 SIMPLE_PING_SRC = """from os import environ
 import requests
@@ -255,17 +313,18 @@ def test_ping() -> None:
 """
 
 
-class SimplePingArguments(BaseModel):
-    endpoint: str = Field(json_schema_extra={"format": "textarea"})
-    expected_status_code: int = Field(ge=100, lt=600, default=200)
+class SimplePingArguments(tu.BaseModel):
+    model_config = tu.ConfigDict(extra="forbid")
+    endpoint: str = tu.Field(json_schema_extra={"format": "textarea"})
+    expected_status_code: int = tu.Field(ge=100, lt=600, default=200)
 
 
-SimplePing = simple_runner_template(
+SimplePing = tu.simple_runner_template(
     template_id="simple_ping",
     argument_type=SimplePingArguments,
     label="Simple ping template",
     description="Simple template with preset script for pinging single endpoint.",
-    script_url=src_to_data_url(SIMPLE_PING_SRC),
+    script_url=tu.src_to_data_url(SIMPLE_PING_SRC),
     runner_env=lambda template_args, userinfo: {
         "GENERIC_ENDPOINT": template_args.endpoint,
         "EXPECTED_STATUS_CODE": str(template_args.expected_status_code),
@@ -279,190 +338,45 @@ Note that as `simple_runner_template` function needs a URL to the check script, 
 
 It is expected that most health check templates will be like this - some predefined script, and put the user-supplied check arguments to environment variables to be used by the script upon execution.
 
-### Hooks
+### Hooks Tutorial
 
 In this tutorial we will learn:
 
-* How to configure Health Check API and Telemetry API backends using hooks
-* How to configure Health Check API and Telemetry API authentication using hooks
+* How to configure authorization for Health Check API using hooks
 
-Hooks are Python functions which define API backend and authentication configuration. For more about API backends, see [Health Check API Backend](#health-check-api-backend) and [Telemetry API Backend/Proxy](#telemetry-api-backendproxy). The following hook parts are common for both Health Check API and Telemetry API hooks:
+Hooks are Python functions which define API backend and authentication configuration. For more about API backends, see [Health Check API Backend](#health-check-api-backend) and [Telemetry API Backend/Proxy](#telemetry-api-backendproxy).
 
-1. `UserInfo` type definition. You will produce a value of this type upon inspecting the user authentication data, and you will use it later on to make authentication decisions such as "Bob gets to use this check template and Alice does not".  
-    Note that Python is dynamically typed, so you don't have to do this, but it shows your tooling what you expect, and thus the tooling (such as mypy) can point to your mistakes before executing the code.
-    <!-- TODO: add a note of how to set up stuff to get type checking of hooks code. -->
-    For example
+Here is how you would forbid some user (eric in this case) to create a ping-an-endpoint check. Your deployment might differ from the development cluster which is referenced below, but the steps should translate well to your deployment:
+
+1. If we can, we should first check that eric can create a ping-an-endpoint check right now. So that when we're done and eric can't create a ping-an-endpoint check anymore, we know it's because of what we did, and not some unrelated reason.
+2. We first need to figure out what hook to implement. Since we want to configure something about check management (as opposed to telemetry management), we'll need to update the Health Check API configuration. Then we take a look at [Health Check Hooks Example Implementation](https://github.com/EOEPCA/resource-health/blob/58087ff26eca34e6aeaf58216fd87b18b745e36b/check_manager/example_hooks/oidc_auth/auth_hooks.py) to see what hooks are available, and example implementations for each of them. Check lifecycle hooks are named `on_template_...` or `on_check_...`. We see that `on_check_create` hook is what we can use for this. As the name suggests, it's called before any check is created, so it's a good place to forbid check creation when conditions of our choosing aren't met.
+
+    !!! note
+        `on_template_access` hook could also be used for this, but updating it would make it difficult for eric to understand the details of existing ping-an-endpoint checks, as to understand what check parameters mean it helps to have access to the check template from which the check was created.
+        Also he couldn't inspect an existing ping-an-endpoint check in the web UI, as it relies on having access to the check templates from which the check was created.
+
+3. We now need to figure out what the check template id is from which ping-an-endpoint checks are created. We go to where the current deployment check templates are synced from. For the development cluster, it is [here](https://github.com/EOEPCA/eoepca-plus/blob/549c1d6ff43ce442cc88c56125f6fb9468854e0e/argocd/eoepca/resource-health/resource-health.yaml#L342) (where `templates:` is). We see [here](https://github.com/EOEPCA/eoepca-plus/blob/549c1d6ff43ce442cc88c56125f6fb9468854e0e/argocd/eoepca/resource-health/resource-health.yaml#L368) that the template id is `simple_ping`.
+4. Now we go to where the current deployment hooks are synced from. For the development cluster, it is [here](https://github.com/EOEPCA/eoepca-plus/blob/549c1d6ff43ce442cc88c56125f6fb9468854e0e/argocd/eoepca/resource-health/resource-health.yaml#L187) (we just look at the `hooks:` part of the `check_api`).
+5. To actually code the hook changes it is recommended that you clone [Resource Health repo](https://github.com/EOEPCA/resource-health), open `check-manager` directory, and set up your development environment in by following [Setting Up a Development Environment](#setting-up-a-development-environment) section to have the IDE and type checking support. Then copy the existing hooks we've found in the step above to a Python file here. We fill edit this file, and when we're satisfied with the changes, we'll copy them (or otherwise sync them) to where the actual hooks are defined.
+6. We will now update (or create) `on_check_create` hook to disalow eric to create a health check from the `simple_ping` template.
+We are looking for a function named `on_check_create`. We want to modify (or create one if it doesn't exist) `on_check_create` function so that it contains our new condition
     ```python
-    class UserInfo(TypedDict):
-        userid: str
-        username: str
-        access_token: str
-        refresh_token: str | None
+    if userinfo["username"] == "eric" and check.metadata.template_id == "simple_ping":
+        return False
     ```
-2. The hooks themselves, which are just python functions with certain names and signatures. The following hooks need to be defined for both Health Check API and Telemetry API.
-    1. `get_fastapi_security`. Returns a function (or a callable class, see explained [here](https://stackoverflow.com/a/111255)), which takes a request object and returns authentication data from it. In the example below, the authentication data has `auth`, `id`, `refresh` tokens or `None`. You must implement this hook if you want the other authorization hooks to be able to make authorization decisions.
-    For example
+    So the final `on_check_create` would look something like this
     ```python
-    def get_fastapi_security() -> OIDCProxyScheme:
-        return OIDCProxyScheme(
-            openIdConnectUrl=os.environ["OPEN_ID_CONNECT_URL"],
-            audience=os.environ["OPEN_ID_CONNECT_AUDIENCE"],
-            id_token_header="x-id-token",
-            refresh_token_header="x-refresh-token",
-            auth_token_header="Authorization",
-            auth_token_in_authorization=True,
-            auto_error=True,  ## Set False to allow unauthenticated access!
-            scheme_name="OIDC behind auth proxy",
-        )
-    ```
-    2. `on_auth`. Takes the authentication data produced by calling the function (or callable class) returned from the `get_fastapi_security` hook. Decides if user is authorised to use the API (raises an exception if they aren't), creates `UserInfo` object which stores the relevant user authentication information, such as username, access token, etc. This function must also be implemented to make authorization decisions later on.
-    For example
-    ```python
-    def on_auth(tokens: Tokens | None) -> UserInfo:
-        if tokens is None or tokens["auth"] is None:
-            raise APIException(
-                Error(
-                    status="403",
-                    code="MissingTokens",
-                    title="Missing authentication token",
-                    detail="Potentially missing authenticating proxy",
-                )
-            )
+    def on_check_create(userinfo: UserInfo, check: hu.InCheckAttributes) -> bool:
+        
+        # The previous if-statements go here
 
-        username_claim = (
-            os.environ.get("RH_TELEMETRY_USERNAME_CLAIM") or "preferred_username"
-        )
-
-        return UserInfo(
-            username=tokens["id"].decoded[username_claim]
-            if tokens["id"] is not None and username_claim in tokens["id"].decoded
-            else tokens["auth"].decoded["payload"].get(username_claim),
-            access_token=tokens["auth"].raw,
-        )
-    ```
-
-Keep in mind, that hooks are just Python functions, so you're free to do any other actions in them than what's described here. You could log user access instances, or emit notifications upon check creation and removal, for example. You could even modify the arguments provided to those functions.
-
-#### Health Check API hooks
-
-You should put Health Check API hooks code [here](https://github.com/EOEPCA/resource-health/blob/58087ff26eca34e6aeaf58216fd87b18b745e36b/helm/values.yaml#L82).
-<!-- (TODO: add a note what to do if want script in a file, and not inline here?). -->
-
-You can see example Health Check API hooks [here](https://github.com/EOEPCA/resource-health/tree/58087ff26eca34e6aeaf58216fd87b18b745e36b/check_manager/example_hooks).
-
-In particular, [OIDC auth hooks](https://github.com/EOEPCA/resource-health/blob/58087ff26eca34e6aeaf58216fd87b18b745e36b/check_manager/example_hooks/oidc_auth/auth_hooks.py) is an example Health Check API hooks implementation for authentication with OpenID Connect protocol, and implements examples for all available Health Check API hooks.
-
-Hooks script parts specific to Health Check API:
-
-1. Imports. `from check_hooks.hook_utils import *` (or equivalent) should be included every time - it contains K8s config and secret helper functions. In addition import authentication stuff from `eoepca_security`.
-2. Backend-agnostic authorization hooks, such as `on_template_access`, `on_check_create`, `on_check_run`, etc. give you an opportunity to forbid certain API functionality for certain users. Such authorization decisions can also take the data to be accessed/created/modified/deleted into account. Each of these hooks is optional, and not implementing it wouldn't impact any other hooks. See example below
-    ```python
-    def on_template_access(userinfo: UserInfo, template: CheckTemplate) -> bool:
-        print("ON TEMPLATE_ACCESS")
-
-        ## Only bob can use/access unsafe templates
-        if userinfo["username"] != "bob" and template.id != "simple_ping":
-            return False
-
-        ## Only bob, alice, and eric can access the templates
-        if userinfo["username"] not in ["bob", "alice", "eric"]:
+        if userinfo["username"] == "eric" and check.metadata.template_id == "simple_ping":
             return False
 
         return True
     ```
-
-    !!! info
-        The access/usage is denied *only* if the hook returns `False`. If the hook doesn't exist, or returns other falsey values like `None`, the access/usage is allowed.
-        <!-- TODO: write about multiple hooks here, I think such is possible. -->
-
-3. Kubernetes configuration and authorization hooks:
-    1. `get_k8s_config`. Takes `UserInfo` and returns `K8sConfiguration`. `check_hooks.hook_utils` has a few helper functions to help with this. You must implement this function to use the K8s backend.
-    2. `get_k8s_namespace`. Takes `UserInfo` and returns the namespace name. Must be implemented to use the K8s backend.
-    3. `on_k8s_cronjob_create`. Takes `UserInfo`, `K8sClient`, and `K8sCronJob` parameters, and returns if the specified user is allowed to create the cronjob.
-
-        !!! info
-            `on_k8s_cronjob_create` hook is also often used to ensure that when the cronjob does execute, it has the user credentials available to authenticate against the telemetry database (in case the health check uses previous telemetry).
-        The example below stores an offline token in a K8s secret, see info above for why that's necessary
-        ```python
-        async def on_k8s_cronjob_create(
-            userinfo: UserInfo, client: K8sClient, cronjob: K8sCronJob
-        ) -> bool:
-            print("on_k8s_cronjob_create")
-
-            ## Ensure cronjob is tagged with correct owner
-
-            if (
-                "owner" in cronjob.metadata.annotations
-                and cronjob.metadata.annotations["owner"] != userinfo["username"]
-            ):
-                return False
-
-            cronjob.metadata.annotations["owner"] = userinfo["username"]
-
-            ## Ensure the user has an offline token set
-            ## Note: Would be more robust to check on every access but use a cache
-            secret_name = f"resource-health-{userinfo['username']}-offline-secret"
-            secret_namespace = get_k8s_namespace(userinfo)
-
-            offline_secret = await lookup_k8s_secret(
-                client=client,
-                namespace=secret_namespace,
-                name=secret_name
-            )
-
-            if offline_secret is None:
-                if userinfo['refresh_token'] is None:
-                    raise APIException(Error(
-                        status="404",
-                        code="MissingOfflineToken",
-                        title="Missing offline token, please create at least one check using the website",
-                    ))
-                await create_k8s_secret(
-                    client=client,
-                    name=secret_name,
-                    namespace=secret_namespace,
-                    string_data={
-                        "offline_token": userinfo['refresh_token']
-                    }
-                )
-        ```
-
-    4. The remaining K8s backend hooks give you a chance to forbid certain K8s operations for certain users. Such authorization decisions can also take the `K8sClient` and `K8sCronJob` into account when making such decisions.
-
-!!! info
-    You can also configure what each hook is called through environment variables. You get the default naming by setting environment variables like so (or not setting them at all)
-    ```
-    GET_FASTAPI_SECURITY_HOOK_NAME=get_fastapi_security
-    RH_CHECK_ON_AUTH_HOOK_NAME=on_auth
-    RH_CHECK_ON_TEMPLATE_ACCESS_HOOK_NAME=on_template_access
-    RH_CHECK_ON_CHECK_ACCESS_HOOK_NAME=on_check_access
-    RH_CHECK_ON_CHECK_CREATE_HOOK_NAME=on_check_create
-    RH_CHECK_ON_CHECK_REMOVE_HOOK_NAME=on_check_remove
-    RH_CHECK_ON_CHECK_RUN_HOOK_NAME=on_check_run
-    ```
-    <!-- Which environment variables correspond to which hook names can be seen [here](https://github.com/EOEPCA/resource-health/blob/58087ff26eca34e6aeaf58216fd87b18b745e36b/check_manager/src/check_api/__init__.py#L92). -->
-    This is mostly useful if you define multiple versions of the same hook, and then choose among them by setting environment variables.
-
-
-#### Telemetry API hooks
-
-You should put Telemetry API hooks code [here](https://github.com/EOEPCA/resource-health/blob/58087ff26eca34e6aeaf58216fd87b18b745e36b/helm/values.yaml#L111).
-<!-- (TODO: add a note what to do if want script in a file, and not inline here?). -->
-
-You can see example Telemetry API hooks implementation [here](https://github.com/EOEPCA/python-opentelemetry-access/blob/2275ab863e4d17dcd123ca48be35219acf36f21a/example_hooks/oidc_auth/auth_hooks.py). It implements authentication with OpenID Connect protocol, configuration to take telemetry from OpenSearch database.
-
-Hooks script parts specific to Telemetry API:
-
-1. Imports. `from python_opentelemetry_access.telemetry_hooks.utils *` (or equivalent) should be included every time - it contains `OpenSearchConfig` type and API exception classes. Also import authentication stuff from `eoepca_security`.
-2. `get_opensearch_config` is the only Telemetry-API-specific hook at the moment. It takes `UserInfo` and returns OpenSearch proxy configuration, including authorization headers to be used for the given user.
-
-!!! info
-    Just like for Healh Check API hooks, you can configure what each hook is called through environment variables. You get the default naming by setting environment variables like so (or not setting them at all)
-    ```
-    RH_TELEMETRY_GET_FASTAPI_SECURITY_HOOK_NAME=get_fastapi_security
-    RH_TELEMETRY_ON_AUTH_HOOK_NAME=on_auth
-    ```
-    This is mostly useful if you define multiple versions of the same hook, and then choose among them by setting environment variables.
+7. Push the updated hooks. Then we either manually sync the changes or wait for automatic syncing. When you see that your changes are visible in the resource health deployment manifest, restart the `resource-health-check-api` **service** (the icon should be as in the image below). ![Restart resource-health-check-api](./img/hooks/restart-health-check-api.png).
+8. Now we're done! If possible, we should check that eric can no longer create a ping-an-endpoint check (he should get an error like `Check creation disallowed (code 403): You are not authorized to create this check`), and that other users still can.
 
 ## Appendix
 
@@ -471,6 +385,20 @@ Hooks script parts specific to Telemetry API:
 `schedule` is a CRON-style schedule specifying when the health check is to be executed. The schedule `0 0 1,15 * *` means the check will run `At 00:00 on day-of-month 1 and 15`. You can go to [https://www.baeldung.com/cron-expressions](https://www.baeldung.com/cron-expressions#cron-expression) to learn about Cron expression syntax, and to [https://crontab.guru](https://crontab.guru/#0_0_1,15_*_*) to see an explanation for your own schedule expression.  
 !!! warning
     Not all tools which support CRON schedule expressions support exactly the same syntax. Some tools support more than the 5 standard parts of the expression, for example.
+
+### Setting up a development environment
+
+1. [Install uv](https://docs.astral.sh/uv/#installation).
+2. Go to the subdirectory where the project is (as [Resource Health repo](TODO: add link) is a monorepo, with each subdirectory generally being a separate project). It should have a `pyproject.toml` file, which specifies the dependencies.
+3. Run `uv sync`. This installs all dependencies and a suitable Python version in a virtual environment `.venv` placed in the current working directory.
+4. If you IDE support, you should point you IDE to use the Python from the virtual environment. For example, in vscode should do that automatically, or give a popup ![Python environment prompt](./img/dev-environment/python-environment-prompt.png) where you should select `Yes`.
+
+    !!! note
+        Some vscode extensions (such as Ruff) need to be reloaded for them to pick up a newly created virtual environment
+
+5. You should also consider enabling mypy type checking in your IDE. For example, in vscode install [Mypy extension](https://marketplace.visualstudio.com/items?itemName=matangover.mypy), and set `mypy.runUsingActiveInterpreter` setting to `true`. This will mean that mypy uses the virtual environment to run, just like Python, and will be able to see all the installed dependencies properly.
+6. You can now run code with `uv run <the-usual-command>`, e.g. `uv run python my_file.py` or `uv run pytest .`
+In particular, you can type check using mypy by running `uv run mypy my_file.py`.
 
 ### Health Check Script
 
@@ -650,3 +578,193 @@ Just like Health Check API, the Telemetry API by itself doesn't know how to fulf
 Raw check telemetry is just appropriately annotated OpenTelemetry traces in [OTLP/JSON](https://opentelemetry.io/docs/specs/otlp/#json-protobuf-encoding) format. TODO: write what appropriately annotated means, i.e. what exact annotations are expected?
 
 You can read more about distributed tracing in OpenTelemetry [here](https://opentelemetry.io/docs/concepts/observability-primer/#understanding-distributed-tracing) (For now we don't have log support, so you should skip that part).
+
+
+### Hooks Documentation
+
+Here we will learn:
+
+* How to configure Health Check API and Telemetry API backends using hooks
+* How to configure Health Check API and Telemetry API authentication using hooks
+
+Hooks are Python functions which define API backend and authentication configuration. For more about API backends, see [Health Check API Backend](#health-check-api-backend) and [Telemetry API Backend/Proxy](#telemetry-api-backendproxy). The following hook parts are common for both Health Check API and Telemetry API hooks:
+
+1. `UserInfo` type definition. You will produce a value of this type upon inspecting the user authentication data, and you will use it later on to make authentication decisions such as "Bob gets to use this check template and Alice does not".  
+    Note that Python is dynamically typed, so you don't have to do this, but it shows your tooling what you expect, and thus the tooling (such as mypy) can point to your mistakes before executing the code.
+    <!-- TODO: add a note of how to set up stuff to get type checking of hooks code. -->
+    For example
+    ```python
+    class UserInfo(TypedDict):
+        userid: str
+        username: str
+        access_token: str
+        refresh_token: str | None
+    ```
+2. The hooks themselves, which are just python functions with certain names and signatures. The following hooks need to be defined for both Health Check API and Telemetry API.
+    1. `get_fastapi_security`. Returns a function (or a callable class, see explained [here](https://stackoverflow.com/a/111255)), which takes a request object and returns authentication data from it. In the example below, the authentication data has `auth`, `id`, `refresh` tokens or `None`. You must implement this hook if you want the other authorization hooks to be able to make authorization decisions.
+    For example
+    ```python
+    def get_fastapi_security() -> OIDCProxyScheme:
+        return OIDCProxyScheme(
+            openIdConnectUrl=os.environ["OPEN_ID_CONNECT_URL"],
+            audience=os.environ["OPEN_ID_CONNECT_AUDIENCE"],
+            id_token_header="x-id-token",
+            refresh_token_header="x-refresh-token",
+            auth_token_header="Authorization",
+            auth_token_in_authorization=True,
+            auto_error=True,  ## Set False to allow unauthenticated access!
+            scheme_name="OIDC behind auth proxy",
+        )
+    ```
+    2. `on_auth`. Takes the authentication data produced by calling the function (or callable class) returned from the `get_fastapi_security` hook. Decides if user is authorised to use the API (raises an exception if they aren't), creates `UserInfo` object which stores the relevant user authentication information, such as username, access token, etc. This function must also be implemented to make authorization decisions later on.
+    For example
+    ```python
+    def on_auth(tokens: Tokens | None) -> UserInfo:
+        if tokens is None or tokens["auth"] is None:
+            raise hu.APIException(
+                hu.Error(
+                    status="403",
+                    code="MissingTokens",
+                    title="Missing authentication token",
+                    detail="Potentially missing authenticating proxy",
+                )
+            )
+
+        username_claim = (
+            os.environ.get("RH_TELEMETRY_USERNAME_CLAIM") or "preferred_username"
+        )
+
+        return UserInfo(
+            username=tokens["id"].decoded[username_claim]
+            if tokens["id"] is not None and username_claim in tokens["id"].decoded
+            else tokens["auth"].decoded["payload"].get(username_claim),
+            access_token=tokens["auth"].raw,
+        )
+    ```
+
+Keep in mind, that hooks are just Python functions, so you're free to do any other actions in them than what's described here. You could log user access instances, or emit notifications upon check creation and removal, for example. You could even modify the arguments provided to those functions.
+
+#### Health Check API hooks
+
+You should put Health Check API hooks code [here](https://github.com/EOEPCA/resource-health/blob/58087ff26eca34e6aeaf58216fd87b18b745e36b/helm/values.yaml#L82).
+<!-- (TODO: add a note what to do if want script in a file, and not inline here?). -->
+
+You can see example Health Check API hooks [here](https://github.com/EOEPCA/resource-health/tree/58087ff26eca34e6aeaf58216fd87b18b745e36b/check_manager/example_hooks).
+
+In particular, [OIDC auth hooks](https://github.com/EOEPCA/resource-health/blob/58087ff26eca34e6aeaf58216fd87b18b745e36b/check_manager/example_hooks/oidc_auth/auth_hooks.py) is an example Health Check API hooks implementation for authentication with OpenID Connect protocol, and implements examples for all available Health Check API hooks.
+
+Hooks script parts specific to Health Check API:
+
+1. Imports. `import check_hooks.hook_utils as hu` (or equivalent) should be included every time - it contains K8s config and secret helper functions. In addition import authentication stuff from `eoepca_security`.
+2. Backend-agnostic authorization hooks, such as `on_template_access`, `on_check_create`, `on_check_run`, etc. give you an opportunity to forbid certain API functionality for certain users. Such authorization decisions can also take the data to be accessed/created/modified/deleted into account. Each of these hooks is optional, and not implementing it wouldn't impact any other hooks. See example below
+    ```python
+    def on_template_access(userinfo: UserInfo, template: hu.CheckTemplate) -> bool:
+        print("ON TEMPLATE_ACCESS")
+
+        ## Only bob can use/access unsafe templates
+        if userinfo["username"] != "bob" and template.id != "simple_ping":
+            return False
+
+        ## Only bob, alice, and eric can access the templates
+        if userinfo["username"] not in ["bob", "alice", "eric"]:
+            return False
+
+        return True
+    ```
+
+    !!! info
+        The access/usage is denied *only* if the hook returns `False`. If the hook doesn't exist, or returns other falsey values like `None`, the access/usage is allowed.
+        <!-- TODO: write about multiple hooks here, I think such is possible. -->
+
+3. Kubernetes configuration and authorization hooks:
+    1. `get_k8s_config`. Takes `UserInfo` and returns `K8sConfiguration`. `check_hooks.hook_utils` has a few helper functions to help with this. You must implement this function to use the K8s backend.
+    2. `get_k8s_namespace`. Takes `UserInfo` and returns the namespace name. Must be implemented to use the K8s backend.
+    3. `on_k8s_cronjob_create`. Takes `UserInfo`, `K8sClient`, and `K8sCronJob` parameters, and returns if the specified user is allowed to create the cronjob.
+
+        !!! info
+            `on_k8s_cronjob_create` hook is also often used to ensure that when the cronjob does execute, it has the user credentials available to authenticate against the telemetry database (in case the health check uses previous telemetry).
+        The example below stores an offline token in a K8s secret, see info above for why that's necessary
+        ```python
+        async def on_k8s_cronjob_create(
+            userinfo: UserInfo, client: hu.K8sClient, cronjob: hu.K8sCronJob
+        ) -> bool:
+            print("on_k8s_cronjob_create")
+
+            ## Ensure cronjob is tagged with correct owner
+
+            if (
+                "owner" in cronjob.metadata.annotations
+                and cronjob.metadata.annotations["owner"] != userinfo["username"]
+            ):
+                return False
+
+            cronjob.metadata.annotations["owner"] = userinfo["username"]
+
+            ## Ensure the user has an offline token set
+            ## Note: Would be more robust to check on every access but use a cache
+            secret_name = f"resource-health-{userinfo['username']}-offline-secret"
+            secret_namespace = get_k8s_namespace(userinfo)
+
+            offline_secret = await hu.lookup_k8s_secret(
+                client=client,
+                namespace=secret_namespace,
+                name=secret_name
+            )
+
+            if offline_secret is None:
+                if userinfo['refresh_token'] is None:
+                    raise hu.APIException(hu.Error(
+                        status="404",
+                        code="MissingOfflineToken",
+                        title="Missing offline token, please create at least one check using the website",
+                    ))
+                await hu.create_k8s_secret(
+                    client=client,
+                    name=secret_name,
+                    namespace=secret_namespace,
+                    string_data={
+                        "offline_token": userinfo['refresh_token']
+                    }
+                )
+
+            return True
+        ```
+
+    4. The remaining K8s backend hooks give you a chance to forbid certain K8s operations for certain users. Such authorization decisions can also take the `K8sClient` and `K8sCronJob` into account when making such decisions.
+
+!!! info
+    You can also configure what each hook is called through environment variables. You get the default naming by setting environment variables like so (or not setting them at all)
+    ```
+    GET_FASTAPI_SECURITY_HOOK_NAME=get_fastapi_security
+    RH_CHECK_ON_AUTH_HOOK_NAME=on_auth
+    RH_CHECK_ON_TEMPLATE_ACCESS_HOOK_NAME=on_template_access
+    RH_CHECK_ON_CHECK_ACCESS_HOOK_NAME=on_check_access
+    RH_CHECK_ON_CHECK_CREATE_HOOK_NAME=on_check_create
+    RH_CHECK_ON_CHECK_REMOVE_HOOK_NAME=on_check_remove
+    RH_CHECK_ON_CHECK_RUN_HOOK_NAME=on_check_run
+    ```
+    <!-- Which environment variables correspond to which hook names can be seen [here](https://github.com/EOEPCA/resource-health/blob/58087ff26eca34e6aeaf58216fd87b18b745e36b/check_manager/src/check_api/__init__.py#L92). -->
+    This is mostly useful if you define multiple versions of the same hook, and then choose among them by setting environment variables.
+
+
+#### Telemetry API hooks
+
+You should put Telemetry API hooks code [here](https://github.com/EOEPCA/resource-health/blob/58087ff26eca34e6aeaf58216fd87b18b745e36b/helm/values.yaml#L111).
+<!-- (TODO: add a note what to do if want script in a file, and not inline here?). -->
+
+You can see example Telemetry API hooks implementation [here](https://github.com/EOEPCA/python-opentelemetry-access/blob/2275ab863e4d17dcd123ca48be35219acf36f21a/example_hooks/oidc_auth/auth_hooks.py). It implements authentication with OpenID Connect protocol, configuration to take telemetry from OpenSearch database.
+
+Hooks script parts specific to Telemetry API:
+
+1. Imports. `import python_opentelemetry_access.telemetry_hooks.utils as hu` (or equivalent) should be included every time - it contains `OpenSearchConfig` type and API exception classes. Also import authentication stuff from `eoepca_security`.
+2. `get_opensearch_config` is the only Telemetry-API-specific hook at the moment. It takes `UserInfo` and returns OpenSearch proxy configuration, including authorization headers to be used for the given user.
+
+!!! info
+    Just like for Healh Check API hooks, you can configure what each hook is called through environment variables. You get the default naming by setting environment variables like so (or not setting them at all)
+    ```
+    RH_TELEMETRY_GET_FASTAPI_SECURITY_HOOK_NAME=get_fastapi_security
+    RH_TELEMETRY_ON_AUTH_HOOK_NAME=on_auth
+    ```
+    This is mostly useful if you define multiple versions of the same hook, and then choose among them by setting environment variables.
+
+
