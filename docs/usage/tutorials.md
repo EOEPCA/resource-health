@@ -108,7 +108,9 @@ Follow along the following steps:
    The check creation should look something like this
    ![Create report check](./img/advanced-user-tutorial/01-Create-Report-Check.png)
    Click `Submit`
-3. Run the check once, just as before. The check should succeed. Now go to the check results table and click on the check ID (TODO: show screenshot). A page with the raw telemetry for that check run should open up - in here you see what information is stored about each check run in the database. See [Raw Health Check Telemetry](#raw-health-check-telemetry). In particular, you can search (with ctrl + F) for `resourcehealth.example.random_outcome` or `resourcehealth.example.random_outcome1` and see those results.
+3. Run the check once, just as before. The check should succeed. Now go to the check results table and click on the check run ID. A page with the raw telemetry (like below) for that check run should open up - in here you see what information is stored about each check run in the database.
+![Inspect Raw Telemetry](./img/advanced-user-tutorial/02-Inspect-Raw-Telemetry.png)
+See [Raw Health Check Telemetry](#raw-health-check-telemetry). In particular, you can search (with ctrl + F) for `resourcehealth.example.random_outcome` or `resourcehealth.example.random_outcome1` and see those results.
 4. We will now see one way to use the detailed health check telemetry. We will create a health check which looks into the telemetry generated from the above checks and verifies that the results from above overall are as expected. The check code is shown below
    ```python
    from datetime import timedelta
@@ -436,7 +438,9 @@ Just like Health Check API, the Telemetry API by itself doesn't know how to fulf
 
 #### Raw Health Check Telemetry
 
-Raw check telemetry is just appropriately annotated OpenTelemetry traces in [OTLP/JSON](https://opentelemetry.io/docs/specs/otlp/#json-protobuf-encoding) format. TODO: write what appropriately annotated means, i.e. what exact annotations are expected?
+Raw check telemetry is just OpenTelemetry traces in [OTLP/JSON](https://opentelemetry.io/docs/specs/otlp/#json-protobuf-encoding) format, with a resource attribute `user.id` set to the user id who is entitled to view the trace. The `user.id` is used to decide if a user is authorized to view that specific trace.
+
+Health check is considered failing if the OTEL trace produced from the check execution contains evidence of unhealth, which by default means if it contains a span with [span status](https://opentelemetry.io/docs/concepts/signals/traces/#span-status) being `Error`. This is encoded as `"status": { "code": 2 }` in the span.
 
 You can read more about distributed tracing in OpenTelemetry [here](https://opentelemetry.io/docs/concepts/observability-primer/#understanding-distributed-tracing) (For now we don't have log support, so you should skip that part).
 
