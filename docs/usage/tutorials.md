@@ -389,7 +389,7 @@ We are looking for a function named `on_check_create`. We want to modify (or cre
 ### Setting up a development environment
 
 1. [Install uv](https://docs.astral.sh/uv/#installation).
-2. Go to the subdirectory where the project is (as [Resource Health repo](TODO: add link) is a monorepo, with each subdirectory generally being a separate project). It should have a `pyproject.toml` file, which specifies the dependencies.
+2. Go to the subdirectory where the project is (as [Resource Health repo](https://github.com/EOEPCA/resource-health) is a monorepo, with each subdirectory generally being a separate project). It should have a `pyproject.toml` file, which specifies the dependencies.
 3. Run `uv sync`. This installs all dependencies and a suitable Python version in a virtual environment `.venv` placed in the current working directory.
 4. If you IDE support, you should point you IDE to use the Python from the virtual environment. For example, in vscode should do that automatically, or give a popup ![Python environment prompt](./img/dev-environment/python-environment-prompt.png) where you should select `Yes`.
 
@@ -402,7 +402,7 @@ In particular, you can type check using mypy by running `uv run mypy my_file.py`
 
 ### Health Check Script
 
-By default, health checks are just Python tests using [Pytest framework](https://docs.pytest.org/en/stable/), with some helper functionality provided by Resource Health BB. In principle, any program in any language could be considered a health check as long as it generates appropriately annotated [Opentelemetry](TODO: add link) traces upon execution, but Resource Health BB currently only provides means to execute Pytest-based checks.
+By default, health checks are just Python tests using [Pytest framework](https://docs.pytest.org/en/stable/), with some helper functionality provided by Resource Health BB. In principle, any program in any language could be considered a health check as long as it generates appropriately annotated [Opentelemetry](https://opentelemetry.io/docs/concepts/signals/traces/) traces upon execution, but Resource Health BB currently only provides means to execute Pytest-based checks.
 
 !!! warning
     Test function names must start with `test`, and test class names must start with `Test`.
