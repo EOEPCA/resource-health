@@ -18,6 +18,7 @@ def test_collections() -> None:
 
 
 class CollectionCheckArguments(tu.BaseModel):
+    model_config = tu.ConfigDict(extra="forbid")
     url: str = tu.Field(json_schema_extra={"format": "textarea"})
     collection_field: str = tu.Field(
         description="Response field which has the collection to inspect"
