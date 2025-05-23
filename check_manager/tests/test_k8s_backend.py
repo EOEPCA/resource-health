@@ -156,7 +156,7 @@ async def test_aclose(mock_api_client) -> None:
     "template_ids, expected",
     [
         (["simple_ping"], ["simple_ping"]),
-        (None, ["generic_script_template", "simple_ping", "telemetry_access_template"]),
+        (None, ["generic_script_template", "simple_ping", "telemetry_access_template", "collection_check"]),
     ],
 )
 @patch("test_k8s_backend.client.BatchV1Api")
