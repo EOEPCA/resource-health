@@ -38,8 +38,8 @@ check_description = "Dummy description"
 template_id = "simple_ping"
 bad_template_id = "simply_ping"
 template_args: dict[str, object] = {
-    "health_check.name": "test-check",
     "endpoint": "www.example.com",
+    "expected_status_code": 200,
 }
 schedule = "* * * * *"
 
