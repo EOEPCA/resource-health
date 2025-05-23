@@ -7,8 +7,9 @@ In other deployments the links will be different. I will also note all deploymen
 
 ## Basic tutorial for users
 
-In this tutorial we will learn:
+In this tutorial you will learn:
 
+* What a health check is
 * How to navigate the Health Check Web UI
 * How to define a simple health check
 * How to specify when the check runs (or run it on demand)
@@ -19,6 +20,7 @@ You should follow along the following steps to get used to how things work.
 1. Go to the Health Check website [https://resource-health.apx.develop.eoepca.org/](https://resource-health.apx.develop.eoepca.org/). As noted above, you should log in as one of the standard users.
 2. Click on `Create new check`.
    ![Create new check](./img/basic-user-tutorial/01-Create-new-check.png)
+   Platform operators configure what kinds of checks you can create. You choose the check kind by picking a check template. For example, in the reference deployment you can choose `Generic script template`, and the check will by a Python script you provide (we will take a look at that later in an advanced guide). For now, we will choose `simple ping template`, which will create a check which pings an endpoint that we specify, and checks that the return code is as specified.  
    From the dropdown shown below choose `simple ping template` check template (keep in mind that the platform might be configured to not have a check template exactly like this - the name of check template might be different, or it might not even exist, for example)
    ![Choose check template](./img/basic-user-tutorial/02-Choose-check-template.png)
    Enter the values as you see below
@@ -625,5 +627,3 @@ Hooks script parts specific to Telemetry API:
     RH_TELEMETRY_ON_AUTH_HOOK_NAME=on_auth
     ```
     This is mostly useful if you define multiple versions of the same hook, and then choose among them by setting environment variables.
-
-
