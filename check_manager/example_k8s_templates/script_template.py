@@ -1,7 +1,9 @@
+from pydantic import ConfigDict
 from check_backends.k8s_backend.template_utils import *
 
 
 class DefaultK8sArguments(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     script: str = Field(json_schema_extra={"format": "textarea"})
     requirements: str = Field(json_schema_extra={"format": "textarea"}, default="")
 

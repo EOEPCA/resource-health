@@ -1,3 +1,4 @@
+from pydantic import ConfigDict
 from check_backends.k8s_backend.template_utils import *
 from typing import TypedDict
 
@@ -17,6 +18,7 @@ def test_ping() -> None:
 
 
 class SimplePingArguments(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     endpoint: str = Field(json_schema_extra={"format": "textarea"})
     expected_status_code: int = Field(ge=100, lt=600, default=200)
 
