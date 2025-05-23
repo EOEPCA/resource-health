@@ -344,7 +344,7 @@ In this tutorial we will learn:
 
 * How to configure authorization for Health Check API using hooks
 
-Hooks are Python functions which define API backend and authentication configuration. For more about API backends, see [Health Check API Backend](#health-check-api-backend) and [Telemetry API Backend/Proxy](#telemetry-api-backendproxy).
+Hooks are Python functions which define API backend and authentication configuration. See [Hooks Documentation](#hooks-documentation), [Health Check API Backend](#health-check-api-backend), and [Telemetry API Backend/Proxy](#telemetry-api-backendproxy).
 
 Here is how you would forbid some user (eric in this case) to create a ping-an-endpoint check. Your deployment might differ from the development cluster which is referenced below, but the steps should translate well to your deployment:
 
