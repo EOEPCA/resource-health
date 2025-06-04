@@ -312,6 +312,10 @@ export async function ComputeSpansSummary(
   );
 }
 
+export function IsStatusError(status: SpanStatus): boolean {
+  return status?.code === SpanStatus.ERROR;
+}
+
 export function IsSpanError(span: Span): boolean {
-  return span.status?.code === SpanStatus.ERROR;
+  return IsStatusError(span.status);
 }

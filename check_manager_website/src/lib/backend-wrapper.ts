@@ -335,20 +335,22 @@ export const SpanStatus = {
   ERROR: 2,
 };
 
+export type SpanStatus = {
+  // UNSET = 0
+  // OK = 1
+  // ERROR = 2
+  // According to https://opentelemetry-python.readthedocs.io/en/latest/api/trace.status.html
+  code?: 0 | 1 | 2;
+  message?: string;
+};
+
 export type Span = {
   traceId: string;
   spanId: string;
   parentSpanId: string;
   startTimeUnixNano: number;
   endTimeUnixNano: number;
-  status: {
-    // UNSET = 0
-    // OK = 1
-    // ERROR = 2
-    // According to https://opentelemetry-python.readthedocs.io/en/latest/api/trace.status.html
-    code?: 0 | 1 | 2;
-    message?: string;
-  };
+  status: SpanStatus;
   attributes: {
     key: string;
     value:

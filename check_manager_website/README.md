@@ -10,6 +10,14 @@ If you have trouble here, see https://yarnpkg.com/corepack
 
 Run the check REST api first. For how to do that, see [../check_manager/README.md](../check_manager/README.md)
 
+Install the dependencies by running
+
+```bash
+yarn install
+```
+
+You will only need to run that again if dependencies or their versions are changed.
+
 Then, run the development server:
 
 ```bash
