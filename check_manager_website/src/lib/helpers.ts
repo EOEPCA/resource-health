@@ -93,10 +93,11 @@ export function StringifyPretty(json: object): string {
 
 export function GetSpanFilterParams(
   check: Check,
+  delemetryDuration: Duration,
   now: Date
 ): GetSpansQueryParams {
   return {
-    fromTime: subDuration(now, TELEMETRY_DURATION),
+    fromTime: subDuration(now, delemetryDuration),
     toTime: now,
     resourceAttributes: check.attributes.outcome_filter.resource_attributes,
     scopeAttributes: check.attributes.outcome_filter.scope_attributes,

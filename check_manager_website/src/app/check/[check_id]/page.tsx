@@ -100,12 +100,12 @@ function HealthCheckDetails({
     checkId,
   ]);
   const [now, setNow] = useState(new Date());
-
   const [allSpans, setAllSpans] = useState<SpanResult | null>(null);
+  const telemetryDuration = GetTelemetryDuration();
   useEffect(() => {
     if (check !== null) {
       CallBackend(
-        () => GetAllSpans(GetSpanFilterParams(check, now)),
+        () => GetAllSpans(GetSpanFilterParams(check, telemetryDuration, now)),
         setAllSpans,
         setErrorsProps
       );
@@ -116,15 +116,15 @@ function HealthCheckDetails({
     return <Text>{LOADING_STRING}</Text>;
   }
 
-  const telemetryDuration = GetTelemetryDuration();
-
   return (
     <CheckDiv
       check={check}
       telemetryDuration={telemetryDuration}
       templates={checkTemplates}
       setNow={setNow}
-      filterParamsDql={SpanFilterParamsToDql(GetSpanFilterParams(check, now))}
+      filterParamsDql={SpanFilterParamsToDql(
+        GetSpanFilterParams(check, telemetryDuration, now)
+      )}
       allSpans={allSpans}
       setAllSpans={setAllSpans}
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
