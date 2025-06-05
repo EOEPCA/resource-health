@@ -21,7 +21,7 @@ You will only need to run that again if dependencies or their versions are chang
 Then, run the development server:
 
 ```bash
-NEXT_PUBLIC_RELOGIN_URL=https://example.com NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT=http://localhost:8000/v1 NEXT_PUBLIC_TELEMETRY_ENDPOINT=http://localhost:12345/v1 yarn dev
+NEXT_PUBLIC_RELOGIN_URL=http://localhost:3000/login NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT=http://localhost:8000/v1 NEXT_PUBLIC_TELEMETRY_ENDPOINT=http://localhost:12345/v1 yarn dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
@@ -50,8 +50,8 @@ From the current directory build the image with
 docker build -t check_manager_website -f Dockerfile .
 ```
 
-Run the image with (and replace https://example.com with a sensible URL)
+Run the image with
 
 ```bash
-docker run -e NEXT_PUBLIC_RELOGIN_URL=https://example.com -e NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT=http://localhost:8000/v1 -e NEXT_PUBLIC_TELEMETRY_ENDPOINT=http://localhost:12345/v1 -p 3000:3000 -it check_manager_website
+docker run -e NEXT_PUBLIC_RELOGIN_URL=http://localhost:3000/login -e NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT=http://localhost:8000/v1 -e NEXT_PUBLIC_TELEMETRY_ENDPOINT=http://localhost:12345/v1 -p 3000:3000 -it check_manager_website
 ```

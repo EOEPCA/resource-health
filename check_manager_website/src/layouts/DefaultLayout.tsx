@@ -14,7 +14,7 @@ const Link = defineStyleConfig({
 export default function DefaultLayout({
   children,
 }: {
-  children: JSX.Element | JSX.Element[];
+  children: React.ReactNode;
 }): JSX.Element {
   return (
     <ThemeProvider
