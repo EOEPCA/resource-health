@@ -48,6 +48,7 @@ import {
   FindCheckTemplate,
   GetRelLink,
   GetSpanFilterParams,
+  GetTelemetryDuration,
   GetTraceIdToSpans,
   IsSpanError,
   LOADING_STRING,
@@ -60,7 +61,6 @@ import {
   SetErrorsPropsType,
   useError,
 } from "@/components/CheckError";
-import { TELEMETRY_DURATION } from "@/lib/config";
 import { useRouter } from "next/navigation";
 import DefaultLayout from "@/layouts/DefaultLayout";
 import CustomLink from "@/components/CustomLink";
@@ -116,10 +116,12 @@ function HealthCheckDetails({
     return <Text>{LOADING_STRING}</Text>;
   }
 
+  const telemetryDuration = GetTelemetryDuration();
+
   return (
     <CheckDiv
       check={check}
-      telemetryDuration={TELEMETRY_DURATION}
+      telemetryDuration={telemetryDuration}
       templates={checkTemplates}
       setNow={setNow}
       filterParamsDql={SpanFilterParamsToDql(GetSpanFilterParams(check, now))}
@@ -151,6 +153,7 @@ export type CheckDivProps = {
 
 function CheckDiv({
   check,
+  telemetryDuration,
   templates,
   setNow,
   filterParamsDql,
@@ -361,7 +364,7 @@ function CheckDiv({
           />
         </div>
         <Text>
-          Displaying data from the last {formatDuration(TELEMETRY_DURATION)}
+          Displaying data from the last {formatDuration(telemetryDuration)}
         </Text>
         <CheckRunsTable checkId={check.id} allSpans={allSpans} />
       </div>

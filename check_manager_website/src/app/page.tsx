@@ -37,6 +37,7 @@ import {
   FindCheckTemplate,
   GetAverageDuration,
   GetRelLink,
+  GetTelemetryDuration,
   LOADING_STRING,
   SpansSummary,
   useFetchState,
@@ -46,7 +47,6 @@ import {
   SetErrorsPropsType,
   useError,
 } from "@/components/CheckError";
-import { TELEMETRY_DURATION } from "@/lib/config";
 import DefaultLayout from "@/layouts/DefaultLayout";
 import CustomLink from "@/components/CustomLink";
 import ButtonWithCheckmark from "@/components/ButtonWithCheckmark";
@@ -77,10 +77,11 @@ function HomeDetails({
   if (checkTemplates === null || checks === null) {
     return <Text>{LOADING_STRING}</Text>;
   }
+  const telemetryDuration = GetTelemetryDuration();
   return (
     <ChecksDiv
       checks={checks}
-      telemetryDuration={TELEMETRY_DURATION}
+      telemetryDuration={telemetryDuration}
       templates={checkTemplates}
       onCreateCheck={(check) => setChecks([check, ...checks])}
       setErrorsProps={setErrorsProps}

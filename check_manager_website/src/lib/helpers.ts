@@ -17,17 +17,28 @@ import {
   useEffect,
   useState,
 } from "react";
-import { sub as subDuration } from "date-fns";
-import { TELEMETRY_DURATION } from "./config";
+import { Duration, sub as subDuration } from "date-fns";
+import { DEFAULT_TELEMETRY_DURATION } from "./config";
 import {
   DefaultErrorHandler,
   SetErrorsPropsType,
 } from "@/components/CheckError";
+import { env } from "next-runtime-env";
 
 export const LOADING_STRING = "Loading ...";
 
 export function GetReLoginURL(): string {
   return GetEnvVarOrThrow("NEXT_PUBLIC_RELOGIN_URL");
+}
+
+export function GetTelemetryDuration(): Duration {
+  const telemetryDurationDays = env("NEXT_PUBLIC_TELEMETRY_DURATION_DAYS");
+  if (telemetryDurationDays) {
+    return {
+      days: Number(telemetryDurationDays),
+    };
+  }
+  return DEFAULT_TELEMETRY_DURATION;
 }
 
 // The difference from func().then(...).catch(...) is that it handles errors and retries with setErrorProps

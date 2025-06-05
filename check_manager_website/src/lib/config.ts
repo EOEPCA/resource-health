@@ -1,3 +1,3 @@
 import { Duration } from "date-fns";
 
-export const TELEMETRY_DURATION: Duration = { days: 5 };
+export const DEFAULT_TELEMETRY_DURATION: Duration = { days: 5 };
