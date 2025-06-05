@@ -133,7 +133,7 @@ web:
   environmentSecrets: []
   environmentFixed:
     - name: NEXT_PUBLIC_TELEMETRY_DURATION_DAYS
-      value: 5
+      value: "5"
     - name: NEXT_PUBLIC_RELOGIN_URL
       value: https://resource-health.apx.develop.eoepca.org/login
     - name: NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT
