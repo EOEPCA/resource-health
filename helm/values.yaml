@@ -125,7 +125,7 @@ web:
   image:
     repository: docker.io/eoepca/resourcehealth_web
     pullPolicy: IfNotPresent
-    tag: "v0.3.0-internal13-dc7f5b0"
+    tag: "v0.3.0-internal14-1976711"
   serviceType: ClusterIP
   containerPort: 3000
   servicePort: 80
@@ -134,7 +134,7 @@ web:
   environmentFixed:
       # The relogin link is temporary, should replace with a proper relogin link
     - name: NEXT_PUBLIC_RELOGIN_URL
-      value: https://resource-health.apx.develop.eoepca.org
+      value: https://resource-health.apx.develop.eoepca.org/login
     - name: NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT
       value: http://resource-health-check-api:8000/v1
     - name: NEXT_PUBLIC_TELEMETRY_ENDPOINT

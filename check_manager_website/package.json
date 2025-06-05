@@ -18,6 +18,7 @@
     "@rjsf/core": "^5.22",
     "@rjsf/utils": "^5.22",
     "@rjsf/validator-ajv8": "^5.22",
+    "@uiw/react-json-view": "^2.0.0-alpha.32",
     "avj": "^0.0",
     "axios": "^1.7",
     "chakra-react-select": "^5.0",
@@ -41,5 +42,5 @@
     "tailwindcss": "^3.4",
     "typescript": "^5"
   },
-  "packageManager": "yarn@4.5.3"
+  "packageManager": "yarn@4.9.1"
 }
