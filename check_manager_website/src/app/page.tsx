@@ -112,7 +112,7 @@ function ChecksDiv({
   //   }, {})
   // );
   return (
-    <div>
+    <>
       <Heading>Check List</Heading>
       <Text>
         Displaying data from the last{" "}
@@ -156,7 +156,7 @@ function ChecksDiv({
           </Tbody>
         </Table>
       </TableContainer>
-    </div>
+    </>
   );
 }
 

@@ -2,7 +2,7 @@
 
 import JsonView from "@uiw/react-json-view";
 import DefaultLayout from "@/layouts/DefaultLayout";
-import { Text } from "@chakra-ui/react";
+import { Heading, Text } from "@chakra-ui/react";
 import { GetAllSpans, SpanStatus } from "@/lib/backend-wrapper";
 import {
   CheckErrorPopup,
@@ -11,6 +11,7 @@ import {
 } from "@/components/CheckError";
 import {
   GetRelLink,
+  IsSpanError,
   IsStatusError,
   LOADING_STRING,
   SpanFilterParamsToDql,
@@ -35,10 +36,14 @@ export default function HealthCheckRunPage({
         setErrorsProps={setErrorsProps}
         isOpen={isErrorOpen}
       />
-      <CustomLink href={GetRelLink({})}>Home</CustomLink>
-      <CustomLink href={GetRelLink({ checkId: check_id })}>
-        Health Check
-      </CustomLink>
+      <div className="flex flex-row gap-1">
+        <CustomLink href={GetRelLink({})}>Home</CustomLink>
+        <Text>/</Text>
+        <CustomLink href={GetRelLink({ checkId: check_id })}>
+          Health Check
+        </CustomLink>
+      </div>
+      <Heading>Health Check Run Details</Heading>
       <HealthCheckRunPageDetails
         traceId={trace_id}
         setErrorsProps={setErrorsProps}
@@ -61,11 +66,45 @@ function HealthCheckRunPageDetails({
     [traceId]
   );
   const filterParamsDql = SpanFilterParamsToDql(spanFilterParams);
+  let checkPass: boolean | null = null;
   if (allSpans === null) {
     return <Text>{LOADING_STRING}</Text>;
+  } else {
+    checkPass = true;
+    for (const resourceSpans of allSpans.resourceSpans) {
+      for (const scopeSpans of resourceSpans.scopeSpans) {
+        for (const span of scopeSpans.spans) {
+          if (IsSpanError(span)) {
+            checkPass = false;
+          }
+        }
+      }
+    }
+  }
+  let checkResultClassName: string;
+  let checkResultString: string;
+  switch (checkPass) {
+    case true:
+      checkResultClassName = "bg-green-100";
+      checkResultString = "PASSED";
+      break;
+    case false:
+      checkResultClassName = "bg-red-100";
+      checkResultString = "FAILED";
+      break;
+    case null:
+    default:
+      checkResultClassName = "";
+      checkResultString = LOADING_STRING;
   }
   return (
     <>
+      <div>
+        <Text className={checkResultClassName}>
+          Health check run {traceId}{" "}
+          <span className={checkResultClassName}>{checkResultString}</span>
+        </Text>
+      </div>
       <ButtonWithCheckmark
         onClick={() => navigator.clipboard.writeText(filterParamsDql)}
       >
