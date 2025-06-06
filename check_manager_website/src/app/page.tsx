@@ -34,10 +34,10 @@ import { Duration, formatDuration, sub as subDuration } from "date-fns";
 import {
   CallBackend,
   ComputeSpansSummary,
+  durationStringToDuration,
   FindCheckTemplate,
   GetAverageDuration,
   GetRelLink,
-  GetTelemetryDuration,
   LOADING_STRING,
   SpansSummary,
   useFetchState,
@@ -50,6 +50,8 @@ import {
 import DefaultLayout from "@/layouts/DefaultLayout";
 import CustomLink from "@/components/CustomLink";
 import ButtonWithCheckmark from "@/components/ButtonWithCheckmark";
+import { DEFAULT_TELEMETRY_DURATION } from "@/lib/config";
+import { TelemetryDurationTextAndDropdown } from "@/components/TelemetryDurationDropdown";
 
 const log = (type: string) => console.log.bind(console, type);
 
@@ -77,11 +79,10 @@ function HomeDetails({
   if (checkTemplates === null || checks === null) {
     return <Text>{LOADING_STRING}</Text>;
   }
-  const telemetryDuration = GetTelemetryDuration();
+
   return (
     <ChecksDiv
       checks={checks}
-      telemetryDuration={telemetryDuration}
       templates={checkTemplates}
       onCreateCheck={(check) => setChecks([check, ...checks])}
       setErrorsProps={setErrorsProps}
@@ -90,7 +91,6 @@ function HomeDetails({
 }
 
 type CheckDivCommonProps = {
-  telemetryDuration: Duration;
   setErrorsProps: SetErrorsPropsType;
 };
 
@@ -104,21 +104,18 @@ function ChecksDiv({
   templates: CheckTemplate[];
   onCreateCheck: (check: Check) => void;
 } & CheckDivCommonProps): JSX.Element {
-  // const [spansSummaries, setSpansSummaries] = useState<
-  //   Record<string, SpansSummary | null>
-  // >(
-  //   checks.reduce((accum: Record<string, SpansSummary | null>, val: Check) => {
-  //     accum[val.id] = null;
-  //     return accum;
-  //   }, {})
-  // );
+  // const useTelemetryDuration = useTelemetryDuration();
+  const [durationString, setDurationString] = useState<string>(
+    formatDuration(DEFAULT_TELEMETRY_DURATION)
+  );
+  const telemetryDuration = durationStringToDuration.get(durationString)!;
   return (
     <>
       <Heading>Check List</Heading>
-      <Text>
-        Displaying data from the last{" "}
-        {formatDuration(commonProps.telemetryDuration)}
-      </Text>
+      <TelemetryDurationTextAndDropdown
+        durationString={durationString}
+        setDurationString={setDurationString}
+      />
       <TableContainer>
         <Table variant="simple">
           <Thead>
@@ -142,6 +139,7 @@ function ChecksDiv({
               <CheckSummaryDiv
                 key={check.id}
                 check={check}
+                telemetryDuration={telemetryDuration}
                 // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 setCheckSpansSummary={(checkId, spansSummary) => {
                   // const newSpansSummaries = {
@@ -311,11 +309,12 @@ function CreateCheckDiv({
 
 function CheckSummaryDiv({
   check,
-  setCheckSpansSummary,
   telemetryDuration,
+  setCheckSpansSummary,
   setErrorsProps,
 }: {
   check: Check;
+  telemetryDuration: Duration;
   setCheckSpansSummary: (
     checkId: string,
     spansSummary: SpansSummary | null
@@ -326,7 +325,7 @@ function CheckSummaryDiv({
     check.attributes.metadata.description
   );
   const [now, setNow] = useState(new Date());
-  const [spansSummary, setSpansSummary] = useFetchState(
+  const [spansSummary] = useFetchState(
     () =>
       ComputeSpansSummary({
         fromTime: subDuration(now, telemetryDuration),
@@ -338,7 +337,7 @@ function CheckSummaryDiv({
     setErrorsProps,
     [now, telemetryDuration, check]
   );
-  const check_label =
+  const checkLabel =
     check.attributes.metadata.template_args === undefined
       ? check.id
       : check.attributes.metadata.name ?? check.id;
@@ -346,7 +345,7 @@ function CheckSummaryDiv({
     <Tr>
       <Td>
         <CustomLink href={GetRelLink({ checkId: check.id })}>
-          {check_label}
+          {checkLabel}
         </CustomLink>
       </Td>
       <Td className="flex flex-row gap-4 items-center">
@@ -354,7 +353,6 @@ function CheckSummaryDiv({
           aria-label="Reload"
           onClick={() => {
             setNow(new Date());
-            setSpansSummary(null);
             setCheckSpansSummary(check.id, null);
           }}
         >

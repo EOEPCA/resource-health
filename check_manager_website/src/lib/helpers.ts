@@ -17,15 +17,23 @@ import {
   useEffect,
   useState,
 } from "react";
-import { Duration, sub as subDuration } from "date-fns";
-import { DEFAULT_TELEMETRY_DURATION } from "./config";
+import { Duration, formatDuration, sub as subDuration } from "date-fns";
+import { DEFAULT_TELEMETRY_DURATION, telemetryDurationOptions } from "./config";
 import {
   DefaultErrorHandler,
   SetErrorsPropsType,
 } from "@/components/CheckError";
 import { env } from "next-runtime-env";
+import { useSearchParams } from "next/navigation";
 
 export const LOADING_STRING = "Loading ...";
+
+export const durationStringToDuration: Map<string, Duration> = new Map(
+  telemetryDurationOptions.map((duration) => [
+    formatDuration(duration),
+    duration,
+  ])
+);
 
 export function GetReLoginURL(): string {
   return GetEnvVarOrThrow("NEXT_PUBLIC_RELOGIN_URL");
@@ -62,13 +70,23 @@ export function useFetchState<T>(
   deps: DependencyList
 ): [T | null, (value: T | null) => void] {
   const [value, setValue] = useState<T | null>(null);
-  useEffect(() => {
-    if (value === null) {
-      CallBackend(fetch, setValue, setErrorsProps);
-    }
+  useEffect(
+    () => CallBackend(fetch, setValue, setErrorsProps),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value, ...deps]);
+    deps
+  );
   return [value, setValue] as const;
+}
+
+const DURATION_QUERY_KEY = "duration";
+
+// Gets from query parameter, and if doesn't exist, uses a default
+export function useTelemetryDuration(): string {
+  const searchParams = useSearchParams();
+  return (
+    searchParams.get(DURATION_QUERY_KEY) ??
+    formatDuration(DEFAULT_TELEMETRY_DURATION)
+  );
 }
 
 export function GetRelLink({
@@ -86,6 +104,31 @@ export function GetRelLink({
   }
   return `/check/${checkId}/trace/${traceId}`;
 }
+
+// export function GetRelLink({
+//   checkId,
+//   traceId,
+//   telemetryDuration,
+// }: {
+//   checkId?: string;
+//   traceId?: string;
+//   telemetryDuration?: Duration;
+// }) {
+//   let path: string;
+//   if (checkId === undefined) {
+//     path = "/";
+//   } else {
+//     if (traceId === undefined) {
+//       path = `/check/${checkId}`;
+//     } else {
+//       path = `/check/${checkId}/trace/${traceId}`;
+//     }
+//   }
+//   const query = telemetryDuration
+//     ? `?${DURATION_QUERY_KEY}=${formatDuration(telemetryDuration)}`
+//     : "";
+//   return path + query;
+// }
 
 export function StringifyPretty(json: object): string {
   return JSON.stringify(json, null, 2);

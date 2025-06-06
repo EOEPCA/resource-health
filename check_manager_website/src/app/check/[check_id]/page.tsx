@@ -42,13 +42,13 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { IoReload as Reload } from "react-icons/io5";
-import { Duration, formatDuration } from "date-fns";
+import { formatDuration } from "date-fns";
 import {
   CallBackend,
+  durationStringToDuration,
   FindCheckTemplate,
   GetRelLink,
   GetSpanFilterParams,
-  GetTelemetryDuration,
   GetTraceIdToSpans,
   IsSpanError,
   LOADING_STRING,
@@ -65,6 +65,8 @@ import { useRouter } from "next/navigation";
 import DefaultLayout from "@/layouts/DefaultLayout";
 import CustomLink from "@/components/CustomLink";
 import ButtonWithCheckmark from "@/components/ButtonWithCheckmark";
+import { DEFAULT_TELEMETRY_DURATION } from "@/lib/config";
+import { TelemetryDurationTextAndDropdown } from "@/components/TelemetryDurationDropdown";
 
 type HealthCheckPageProps = {
   params: { check_id: string };
@@ -101,7 +103,10 @@ function HealthCheckDetails({
   ]);
   const [now, setNow] = useState(new Date());
   const [allSpans, setAllSpans] = useState<SpanResult | null>(null);
-  const telemetryDuration = GetTelemetryDuration();
+  const [durationString, setDurationString] = useState<string>(
+    formatDuration(DEFAULT_TELEMETRY_DURATION)
+  );
+  const telemetryDuration = durationStringToDuration.get(durationString)!;
   useEffect(() => {
     if (check !== null) {
       CallBackend(
@@ -111,7 +116,7 @@ function HealthCheckDetails({
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [check, now]);
+  }, [check, now, telemetryDuration]);
   if (checkTemplates === null || check === null) {
     return <Text>{LOADING_STRING}</Text>;
   }
@@ -119,7 +124,8 @@ function HealthCheckDetails({
   return (
     <CheckDiv
       check={check}
-      telemetryDuration={telemetryDuration}
+      durationString={durationString}
+      setDurationString={setDurationString}
       templates={checkTemplates}
       setNow={setNow}
       filterParamsDql={SpanFilterParamsToDql(
@@ -140,7 +146,8 @@ function HealthCheckDetails({
 
 export type CheckDivProps = {
   check: Check;
-  telemetryDuration: Duration;
+  durationString: string;
+  setDurationString: (duration: string) => void;
   templates: CheckTemplate[];
   setNow: (now: Date) => void;
   filterParamsDql: string;
@@ -151,19 +158,13 @@ export type CheckDivProps = {
   setErrorsProps: SetErrorsPropsType;
 };
 
-function CheckDiv({
+function CheckTemplateDiv({
   check,
-  telemetryDuration,
   templates,
-  setNow,
-  filterParamsDql,
-  allSpans,
-  setAllSpans,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onCheckUpdate,
-  onCheckRemove,
-  setErrorsProps,
-}: CheckDivProps): JSX.Element {
+}: {
+  check: Check;
+  templates: CheckTemplate[];
+}): JSX.Element {
   const [templateId, setTemplateId] = useState(
     check.attributes.metadata.template_id
   );
@@ -175,15 +176,10 @@ function CheckDiv({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isDisabled, setIsDisabled] = useState(true);
 
-  const check_label =
-    check.attributes.metadata.template_args === undefined
-      ? check.id
-      : check.attributes.metadata.name ?? check.id;
-  let checkDiv;
   if (templateId) {
     const template = FindCheckTemplate(templates, templateId);
     const form_id = "existing_check_" + check.id;
-    checkDiv = (
+    return (
       <>
         {/* Use isDisabled here instead of isReadonly, as the latter does nothing for the select, option, and button HTML tags,
             as discussed in this answer https://stackoverflow.com/a/7730719
@@ -270,7 +266,7 @@ function CheckDiv({
     );
   } else {
     const template_args = check.attributes.metadata.template_args!;
-    checkDiv = (
+    return (
       <>
         <FormControl isDisabled={isDisabled}>
           <Grid gap={6} marginBottom={6}>
@@ -304,6 +300,26 @@ function CheckDiv({
       </>
     );
   }
+}
+
+function CheckDiv({
+  check,
+  durationString,
+  setDurationString,
+  templates,
+  setNow,
+  filterParamsDql,
+  allSpans,
+  setAllSpans,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onCheckUpdate,
+  onCheckRemove,
+  setErrorsProps,
+}: CheckDivProps): JSX.Element {
+  const check_label =
+    check.attributes.metadata.template_args === undefined
+      ? check.id
+      : check.attributes.metadata.name ?? check.id;
   return (
     <>
       <Heading>{check_label}</Heading>
@@ -325,7 +341,7 @@ function CheckDiv({
               </div>
             </Grid>
           </FormControl>
-          {checkDiv}
+          <CheckTemplateDiv check={check} templates={templates} />
         </div>
         <div className="flex flex-row gap-6">
           <IconButton
@@ -363,9 +379,10 @@ function CheckDiv({
             }
           />
         </div>
-        <Text>
-          Displaying data from the last {formatDuration(telemetryDuration)}
-        </Text>
+        <TelemetryDurationTextAndDropdown
+          durationString={durationString}
+          setDurationString={setDurationString}
+        />
         <CheckRunsTable checkId={check.id} allSpans={allSpans} />
       </div>
     </>
