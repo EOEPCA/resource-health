@@ -71,7 +71,10 @@ export function useFetchState<T>(
 ): [T | null, (value: T | null) => void] {
   const [value, setValue] = useState<T | null>(null);
   useEffect(
-    () => CallBackend(fetch, setValue, setErrorsProps),
+    () => {
+      setValue(null);
+      CallBackend(fetch, setValue, setErrorsProps);
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     deps
   );
