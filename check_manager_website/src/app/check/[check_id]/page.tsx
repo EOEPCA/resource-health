@@ -11,7 +11,7 @@ import {
   CheckTemplate,
   CheckId,
   SpanResult,
-  GetAllSpans,
+  GetEmptySpanResult,
 } from "@/lib/backend-wrapper";
 import validator from "@rjsf/validator-ajv8";
 import {
@@ -31,6 +31,7 @@ import {
   ModalHeader,
   ModalOverlay,
   Select,
+  Skeleton,
   Table,
   Tbody,
   Td,
@@ -46,12 +47,15 @@ import { formatDuration } from "date-fns";
 import {
   CallBackend,
   durationStringToDuration,
+  FetchState,
+  FetchToIncremental,
   FindCheckTemplate,
+  GetAllSpans,
   GetRelLink,
   GetSpanFilterParams,
   GetTraceIdToSpans,
   IsSpanError,
-  LOADING_STRING,
+  SetResultType,
   SpanFilterParamsToDql,
   StringifyPretty,
   useFetchState,
@@ -97,28 +101,55 @@ function HealthCheckDetails({
   setErrorsProps: SetErrorsPropsType;
 }): JSX.Element {
   const router = useRouter();
-  const [checkTemplates] = useFetchState(GetCheckTemplates, setErrorsProps, []);
-  const [check] = useFetchState(() => GetCheck(checkId), setErrorsProps, [
-    checkId,
-  ]);
+  const [checkTemplates, , templatesFetchState] = useFetchState<
+    CheckTemplate[]
+  >({
+    initialValue: [],
+    fetch: FetchToIncremental(GetCheckTemplates),
+    setErrorsProps: setErrorsProps,
+    deps: [],
+  });
+  const [check] = useFetchState<Check | null>({
+    initialValue: null,
+    fetch: FetchToIncremental(() => GetCheck(checkId)),
+    setErrorsProps: setErrorsProps,
+    deps: [checkId],
+  });
   const [now, setNow] = useState(new Date());
-  const [allSpans, setAllSpans] = useState<SpanResult | null>(null);
+  const [allSpans, setAllSpans] = useState<SpanResult>(GetEmptySpanResult());
+  const [spansFetchState, setSpansFetchState] = useState<FetchState>("Loading");
   const [durationString, setDurationString] = useState<string>(
     formatDuration(DEFAULT_TELEMETRY_DURATION)
   );
   const telemetryDuration = durationStringToDuration.get(durationString)!;
   useEffect(() => {
     if (check !== null) {
-      CallBackend(
-        () => GetAllSpans(GetSpanFilterParams(check, telemetryDuration, now)),
-        setAllSpans,
+      CallBackend<SpanResult>(
+        (setResult) =>
+          GetAllSpans({
+            getSpansQueryParams: GetSpanFilterParams(
+              check,
+              telemetryDuration,
+              now
+            ),
+            setResult: setResult,
+          }),
+        (spans, fetchState) => {
+          setAllSpans(spans);
+          setSpansFetchState(fetchState);
+        },
         setErrorsProps
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [check, now, telemetryDuration]);
-  if (checkTemplates === null || check === null) {
-    return <Text>{LOADING_STRING}</Text>;
+  if (templatesFetchState === "Loading" || check === null) {
+    return (
+      <div className="flex flex-col gap-4">
+        <Skeleton height="md" width="md" />
+        <Skeleton height="md" />
+      </div>
+    );
   }
 
   return (
@@ -132,7 +163,11 @@ function HealthCheckDetails({
         GetSpanFilterParams(check, telemetryDuration, now)
       )}
       allSpans={allSpans}
-      setAllSpans={setAllSpans}
+      setAllSpans={(spans, fetchState) => {
+        setAllSpans(spans);
+        setSpansFetchState(fetchState);
+      }}
+      spansFetchState={spansFetchState}
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       onCheckUpdate={(_check) => {
         throw new Error("Update is not yet implemented");
@@ -151,8 +186,9 @@ export type CheckDivProps = {
   templates: CheckTemplate[];
   setNow: (now: Date) => void;
   filterParamsDql: string;
-  allSpans: SpanResult | null;
-  setAllSpans: (allSpans: SpanResult | null) => void;
+  allSpans: SpanResult;
+  setAllSpans: SetResultType<SpanResult>;
+  spansFetchState: FetchState;
   onCheckUpdate: (check: Check) => void;
   onCheckRemove: (checkId: CheckId) => void;
   setErrorsProps: SetErrorsPropsType;
@@ -311,6 +347,7 @@ function CheckDiv({
   filterParamsDql,
   allSpans,
   setAllSpans,
+  spansFetchState,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onCheckUpdate,
   onCheckRemove,
@@ -348,7 +385,7 @@ function CheckDiv({
             aria-label="Reload"
             onClick={() => {
               setNow(new Date());
-              setAllSpans(null);
+              setAllSpans(GetEmptySpanResult(), "Loading");
             }}
           >
             <Reload />
@@ -383,7 +420,11 @@ function CheckDiv({
           durationString={durationString}
           setDurationString={setDurationString}
         />
-        <CheckRunsTable checkId={check.id} allSpans={allSpans} />
+        <CheckRunsTable
+          checkId={check.id}
+          allSpans={allSpans}
+          spansFetchState={spansFetchState}
+        />
       </div>
     </>
   );
@@ -415,16 +456,15 @@ function RemoveCheckButton({ onClick }: { onClick: () => void }): JSX.Element {
 
 type CheckRunsTableProps = {
   checkId: string;
-  allSpans: SpanResult | null;
+  allSpans: SpanResult;
+  spansFetchState: FetchState;
 };
 
 function CheckRunsTable({
   checkId,
   allSpans,
+  spansFetchState,
 }: CheckRunsTableProps): JSX.Element {
-  if (allSpans === null) {
-    return <Text>{LOADING_STRING}</Text>;
-  }
   const traceIdToSpans = GetTraceIdToSpans(allSpans);
   return (
     // <TableContainer>
@@ -446,6 +486,15 @@ function CheckRunsTable({
             traceSpans={traceSpans}
           />
         ))}
+        {spansFetchState === "Loading" && (
+          <Tr>
+            <Skeleton as={Td}>
+              <Text>FAIL</Text>
+            </Skeleton>
+            <Skeleton as={Td} />
+            <Skeleton as={Td} />
+          </Tr>
+        )}
       </Tbody>
     </Table>
     // </TableContainer>

@@ -376,6 +376,12 @@ export type SpanResult = {
   }[];
 };
 
+export function GetEmptySpanResult(): SpanResult {
+  return {
+    resourceSpans: [],
+  };
+}
+
 type SpansResponseNextPageToken = {
   next_page_token?: string;
 };
@@ -465,19 +471,6 @@ export async function GetSpans({
     },
   });
   return response.data;
-}
-
-export async function GetAllSpans(
-  getSpansQueryParams: GetSpansQueryParams
-): Promise<SpanResult> {
-  return ReduceSpans<SpanResult>(
-    getSpansQueryParams,
-    (accumulator: SpanResult, currentValue: SpanResult) => {
-      accumulator.resourceSpans.push(...currentValue.resourceSpans);
-      return accumulator;
-    },
-    { resourceSpans: [] }
-  );
 }
 
 export async function ReduceSpans<T>(

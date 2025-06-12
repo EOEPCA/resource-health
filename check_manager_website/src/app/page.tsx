@@ -20,6 +20,7 @@ import {
   IconButton,
   Input,
   Select,
+  Skeleton,
   Table,
   TableContainer,
   Tbody,
@@ -35,10 +36,12 @@ import {
   CallBackend,
   ComputeSpansSummary,
   durationStringToDuration,
+  EmptySpansSummary,
+  FetchState,
+  FetchToIncremental,
   FindCheckTemplate,
   GetAverageDuration,
   GetRelLink,
-  LOADING_STRING,
   SpansSummary,
   useFetchState,
 } from "@/lib/helpers";
@@ -52,6 +55,7 @@ import CustomLink from "@/components/CustomLink";
 import ButtonWithCheckmark from "@/components/ButtonWithCheckmark";
 import { DEFAULT_TELEMETRY_DURATION } from "@/lib/config";
 import { TelemetryDurationTextAndDropdown } from "@/components/TelemetryDurationDropdown";
+import { LoadingText } from "@/components/LoadingText";
 
 const log = (type: string) => console.log.bind(console, type);
 
@@ -74,16 +78,31 @@ function HomeDetails({
 }: {
   setErrorsProps: SetErrorsPropsType;
 }): JSX.Element {
-  const [checkTemplates] = useFetchState(GetCheckTemplates, setErrorsProps, []);
-  const [checks, setChecks] = useFetchState(GetChecks, setErrorsProps, []);
-  if (checkTemplates === null || checks === null) {
-    return <Text>{LOADING_STRING}</Text>;
-  }
+  const [checkTemplates, , templatesFetchState] = useFetchState({
+    initialValue: [],
+    fetch: FetchToIncremental(GetCheckTemplates),
+    setErrorsProps: setErrorsProps,
+    deps: [],
+  });
+  const [checks, setChecks, checksFetchState] = useFetchState({
+    initialValue: [],
+    fetch: FetchToIncremental(GetChecks),
+    setErrorsProps: setErrorsProps,
+    deps: [],
+  });
+  // if (templatesFetchState === "Loading" || checksFetchState === "Loading") {
+  //   return <Spinner />;
+  // }
 
   return (
     <ChecksDiv
       checks={checks}
       templates={checkTemplates}
+      fetchState={
+        templatesFetchState === "Loading" || checksFetchState === "Loading"
+          ? "Loading"
+          : "Completed"
+      }
       onCreateCheck={(check) => setChecks([check, ...checks])}
       setErrorsProps={setErrorsProps}
     />
@@ -97,11 +116,13 @@ type CheckDivCommonProps = {
 function ChecksDiv({
   checks,
   templates,
+  fetchState,
   onCreateCheck,
   ...commonProps
 }: {
   checks: Check[];
   templates: CheckTemplate[];
+  fetchState: FetchState;
   onCreateCheck: (check: Check) => void;
 } & CheckDivCommonProps): JSX.Element {
   // const useTelemetryDuration = useTelemetryDuration();
@@ -116,45 +137,50 @@ function ChecksDiv({
         durationString={durationString}
         setDurationString={setDurationString}
       />
-      <TableContainer>
-        <Table variant="simple">
-          <Thead>
-            <Tr>
-              <Th>Check info</Th>
-              <Th>Actions</Th>
-              <Th>Run count</Th>
-              <Th>Problematic run count</Th>
-              <Th>Average duration</Th>
-              <Th>Total test count</Th>
-            </Tr>
-          </Thead>
-          <Tbody>
-            {/* <SummaryRowDiv spansSummaries={spansSummaries} /> */}
-            <CreateCheckDiv
-              templates={templates}
-              onCreateCheck={onCreateCheck}
-              {...commonProps}
-            />
-            {checks.map((check) => (
-              <CheckSummaryDiv
-                key={check.id}
-                check={check}
-                telemetryDuration={telemetryDuration}
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                setCheckSpansSummary={(checkId, spansSummary) => {
-                  // const newSpansSummaries = {
-                  //   ...spansSummaries,
-                  //   // This is at the end to override the existing value
-                  //   [checkId]: spansSummary,
-                  // };
-                  // setSpansSummaries(newSpansSummaries);
-                }}
+      <Skeleton isLoaded={fetchState === "Completed"}>
+        <TableContainer>
+          <Table variant="simple">
+            <Thead>
+              <Tr>
+                <Th>Check info</Th>
+                <Th>Actions</Th>
+                <Th>Run count</Th>
+                <Th>Problematic run count</Th>
+                <Th>Average duration</Th>
+                <Th>Total test count</Th>
+              </Tr>
+            </Thead>
+
+            <Tbody>
+              {/* <SummaryRowDiv spansSummaries={spansSummaries} /> */}
+              <CreateCheckDiv
+                templates={templates}
+                fetchState={fetchState}
+                onCreateCheck={onCreateCheck}
                 {...commonProps}
               />
-            ))}
-          </Tbody>
-        </Table>
-      </TableContainer>
+
+              {checks.map((check) => (
+                <CheckSummaryDiv
+                  key={check.id}
+                  check={check}
+                  telemetryDuration={telemetryDuration}
+                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                  setCheckSpansSummary={(checkId, spansSummary) => {
+                    // const newSpansSummaries = {
+                    //   ...spansSummaries,
+                    //   // This is at the end to override the existing value
+                    //   [checkId]: spansSummary,
+                    // };
+                    // setSpansSummaries(newSpansSummaries);
+                  }}
+                  {...commonProps}
+                />
+              ))}
+            </Tbody>
+          </Table>
+        </TableContainer>
+      </Skeleton>
     </>
   );
 }
@@ -196,111 +222,127 @@ function ChecksDiv({
 //   );
 // }
 
-function CreateCheckDiv({
-  templates,
-  onCreateCheck,
-  setErrorsProps,
-}: {
+type CreateCheckDivProps = {
   templates: CheckTemplate[];
+
   onCreateCheck: (check: Check) => void;
   setErrorsProps: SetErrorsPropsType;
-}): JSX.Element {
-  const [templateId, setTemplateId] = useState(templates[0].id);
-  // Only used as a hacky way to force clearing of form data
-  const [key, setKey] = useState(0);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [schedule, setSchedule] = useState("");
-  const template = FindCheckTemplate(templates, templateId);
-  const form_id = "create_check";
+};
+
+function CreateCheckDiv({
+  fetchState,
+  ...rest
+}: CreateCheckDivProps & { fetchState: FetchState }): JSX.Element {
+  function CreateCheckDivInternal({
+    templates,
+    onCreateCheck,
+    setErrorsProps,
+  }: CreateCheckDivProps): JSX.Element {
+    const [templateId, setTemplateId] = useState(templates[0].id);
+    // Only used as a hacky way to force clearing of form data
+    const [key, setKey] = useState(0);
+    const [name, setName] = useState("");
+    const [description, setDescription] = useState("");
+    const [schedule, setSchedule] = useState("");
+    const template = FindCheckTemplate(templates, templateId);
+    const form_id = "create_check";
+
+    return (
+      <>
+        <Grid gap={6} marginBottom={6}>
+          <GridItem>
+            <FormLabel>Check Template</FormLabel>
+            <Select
+              form={form_id}
+              value={template.id}
+              onChange={(e) => setTemplateId(e.target.value)}
+            >
+              {templates.map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.attributes.metadata.label || template.id}
+                </option>
+              ))}
+            </Select>
+            <Text>{template.attributes.metadata.description}</Text>
+            <FormLabel>Template ID</FormLabel>
+            <Text>{template.id}</Text>
+          </GridItem>
+          <GridItem>
+            <FormControl isRequired>
+              <FormLabel>Name</FormLabel>
+              <Input
+                form={form_id}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </FormControl>
+            <FormControl isRequired>
+              <FormLabel>Description</FormLabel>
+              <Input
+                form={form_id}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </FormControl>
+            <FormControl isRequired>
+              <FormLabel>Schedule</FormLabel>
+              <Input
+                form={form_id}
+                value={schedule}
+                onChange={(e) => setSchedule(e.target.value)}
+              />
+            </FormControl>
+          </GridItem>
+        </Grid>
+        <Form
+          id={form_id}
+          idPrefix={form_id + "_"}
+          key={key}
+          schema={template.attributes.arguments}
+          validator={validator}
+          onChange={log("changed")}
+          onSubmit={(data) =>
+            CallBackend(
+              FetchToIncremental(() =>
+                CreateCheck({
+                  data: {
+                    type: "check",
+                    attributes: {
+                      metadata: {
+                        name: name,
+                        description: description,
+                        template_id: templateId,
+                        template_args: data.formData,
+                      },
+                      schedule: schedule,
+                    },
+                  },
+                })
+              ),
+              (check: Check) => {
+                setName("");
+                setSchedule("");
+                setDescription("");
+                // A hacky way to force clearing of form data
+                setKey(1 - key);
+                setTemplateId(templates[0].id);
+                onCreateCheck(check);
+              },
+              setErrorsProps
+            )
+          }
+          onError={log("errors")}
+        />
+      </>
+    );
+  }
+
   return (
     <Tr>
       <Td>
         <details>
           <summary>Create new check</summary>
-          <Grid gap={6} marginBottom={6}>
-            <GridItem>
-              <FormLabel>Check Template</FormLabel>
-              <Select
-                form={form_id}
-                value={template.id}
-                onChange={(e) => setTemplateId(e.target.value)}
-              >
-                {templates.map((template) => (
-                  <option key={template.id} value={template.id}>
-                    {template.attributes.metadata.label || template.id}
-                  </option>
-                ))}
-              </Select>
-              <Text>{template.attributes.metadata.description}</Text>
-              <FormLabel>Template ID</FormLabel>
-              <Text>{template.id}</Text>
-            </GridItem>
-            <GridItem>
-              <FormControl isRequired>
-                <FormLabel>Name</FormLabel>
-                <Input
-                  form={form_id}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-              </FormControl>
-              <FormControl isRequired>
-                <FormLabel>Description</FormLabel>
-                <Input
-                  form={form_id}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
-              </FormControl>
-              <FormControl isRequired>
-                <FormLabel>Schedule</FormLabel>
-                <Input
-                  form={form_id}
-                  value={schedule}
-                  onChange={(e) => setSchedule(e.target.value)}
-                />
-              </FormControl>
-            </GridItem>
-          </Grid>
-          <Form
-            id={form_id}
-            idPrefix={form_id + "_"}
-            key={key}
-            schema={template.attributes.arguments}
-            validator={validator}
-            onChange={log("changed")}
-            onSubmit={(data) =>
-              CallBackend(
-                () =>
-                  CreateCheck({
-                    data: {
-                      type: "check",
-                      attributes: {
-                        metadata: {
-                          name: name,
-                          description: description,
-                          template_id: templateId,
-                          template_args: data.formData,
-                        },
-                        schedule: schedule,
-                      },
-                    },
-                  }),
-                (check: Check) => {
-                  setName("");
-                  setSchedule("");
-                  setDescription("");
-                  // A hacky way to force clearing of form data
-                  setKey(1 - key);
-                  setTemplateId(templates[0].id);
-                  onCreateCheck(check);
-                },
-                setErrorsProps
-              )
-            }
-            onError={log("errors")}
-          />
+          {fetchState === "Completed" && <CreateCheckDivInternal {...rest} />}
         </details>
       </Td>
     </Tr>
@@ -325,18 +367,23 @@ function CheckSummaryDiv({
     check.attributes.metadata.description
   );
   const [now, setNow] = useState(new Date());
-  const [spansSummary] = useFetchState(
-    () =>
+  const [spansSummary, , fetchState] = useFetchState<SpansSummary>({
+    initialValue: EmptySpansSummary,
+    fetch: (setResult) =>
       ComputeSpansSummary({
-        fromTime: subDuration(now, telemetryDuration),
-        toTime: now,
-        resourceAttributes: check.attributes.outcome_filter.resource_attributes,
-        scopeAttributes: check.attributes.outcome_filter.scope_attributes,
-        spanAttributes: check.attributes.outcome_filter.span_attributes,
+        getSpansQueryParams: {
+          fromTime: subDuration(now, telemetryDuration),
+          toTime: now,
+          resourceAttributes:
+            check.attributes.outcome_filter.resource_attributes,
+          scopeAttributes: check.attributes.outcome_filter.scope_attributes,
+          spanAttributes: check.attributes.outcome_filter.span_attributes,
+        },
+        setResult: setResult,
       }),
-    setErrorsProps,
-    [now, telemetryDuration, check]
-  );
+    setErrorsProps: setErrorsProps,
+    deps: [now, telemetryDuration, check],
+  });
   const checkLabel =
     check.attributes.metadata.template_args === undefined
       ? check.id
@@ -370,17 +417,33 @@ function CheckSummaryDiv({
           Run Check
         </ButtonWithCheckmark>
       </Td>
-      <Td>{spansSummary?.durationCount ?? LOADING_STRING}</Td>
-      <Td>{spansSummary?.failedTraceIds.size ?? LOADING_STRING}</Td>
       <Td>
-        {spansSummary !== null
-          ? GetAverageDuration(
-              spansSummary.totalDurationSecs,
-              spansSummary.durationCount
-            )
-          : LOADING_STRING}
+        <LoadingText
+          text={spansSummary.durationCount}
+          fetchState={fetchState}
+        />
       </Td>
-      <Td>{spansSummary?.totalTestCount ?? LOADING_STRING}</Td>
+      <Td>
+        <LoadingText
+          text={spansSummary.failedTraceIdsCount}
+          fetchState={fetchState}
+        />
+      </Td>
+      <Td>
+        <LoadingText
+          text={GetAverageDuration(
+            spansSummary.totalDurationSecs,
+            spansSummary.durationCount
+          )}
+          fetchState={fetchState}
+        />
+      </Td>
+      <Td>
+        <LoadingText
+          text={spansSummary.totalTestCount}
+          fetchState={fetchState}
+        />
+      </Td>
     </Tr>
   );
 }
