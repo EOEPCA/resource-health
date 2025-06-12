@@ -55,7 +55,7 @@ import CustomLink from "@/components/CustomLink";
 import ButtonWithCheckmark from "@/components/ButtonWithCheckmark";
 import { DEFAULT_TELEMETRY_DURATION } from "@/lib/config";
 import { TelemetryDurationTextAndDropdown } from "@/components/TelemetryDurationDropdown";
-import { LoadingText } from "@/components/LoadingText";
+import { LoadingDiv } from "@/components/LoadingDiv";
 
 const log = (type: string) => console.log.bind(console, type);
 
@@ -418,31 +418,29 @@ function CheckSummaryDiv({
         </ButtonWithCheckmark>
       </Td>
       <Td>
-        <LoadingText
-          text={spansSummary.durationCount}
-          fetchState={fetchState}
-        />
+        <LoadingDiv fetchState={fetchState}>
+          <Text>{spansSummary.durationCount}</Text>
+        </LoadingDiv>
       </Td>
       <Td>
-        <LoadingText
-          text={spansSummary.failedTraceIdsCount}
-          fetchState={fetchState}
-        />
+        <LoadingDiv fetchState={fetchState}>
+          <Text>{spansSummary.failedTraceIdsCount}</Text>
+        </LoadingDiv>
       </Td>
       <Td>
-        <LoadingText
-          text={GetAverageDuration(
-            spansSummary.totalDurationSecs,
-            spansSummary.durationCount
-          )}
-          fetchState={fetchState}
-        />
+        <LoadingDiv fetchState={fetchState}>
+          <Text>
+            {GetAverageDuration(
+              spansSummary.totalDurationSecs,
+              spansSummary.durationCount
+            )}
+          </Text>
+        </LoadingDiv>
       </Td>
       <Td>
-        <LoadingText
-          text={spansSummary.totalTestCount}
-          fetchState={fetchState}
-        />
+        <LoadingDiv fetchState={fetchState}>
+          <Text>{spansSummary.totalTestCount}</Text>
+        </LoadingDiv>
       </Td>
     </Tr>
   );

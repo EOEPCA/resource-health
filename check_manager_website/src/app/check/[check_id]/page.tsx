@@ -71,6 +71,7 @@ import CustomLink from "@/components/CustomLink";
 import ButtonWithCheckmark from "@/components/ButtonWithCheckmark";
 import { DEFAULT_TELEMETRY_DURATION } from "@/lib/config";
 import { TelemetryDurationTextAndDropdown } from "@/components/TelemetryDurationDropdown";
+import { LoadingDiv } from "@/components/LoadingDiv";
 
 type HealthCheckPageProps = {
   params: { check_id: string };
@@ -477,7 +478,10 @@ function CheckRunsTable({
         </Tr>
       </Thead>
       <Tbody>
-        <CheckRunsSummaryRow traceIdToSpans={traceIdToSpans} />
+        <CheckRunsSummaryRow
+          traceIdToSpans={traceIdToSpans}
+          spansFetchState={spansFetchState}
+        />
         {Object.entries(traceIdToSpans).map(([traceId, traceSpans]) => (
           <CheckRunTableRow
             key={traceId}
@@ -503,8 +507,10 @@ function CheckRunsTable({
 
 function CheckRunsSummaryRow({
   traceIdToSpans,
+  spansFetchState,
 }: {
   traceIdToSpans: Record<string, SpanResult>;
+  spansFetchState: FetchState;
 }): JSX.Element {
   let passedCount = 0;
   let failedCount = 0;
@@ -527,14 +533,14 @@ function CheckRunsSummaryRow({
   }
   return (
     <Tr>
-      <Td
-        className={`whitespace-pre ${
-          failedCount === 0 ? "bg-green-300" : "bg-red-300"
-        }`}
-      >
-        PASS {passedCount}
-        <br />
-        FAIL {failedCount}
+      <Td className={failedCount === 0 ? "bg-green-300" : "bg-red-300"}>
+        <LoadingDiv fetchState={spansFetchState}>
+          <Text className="whitespace-pre">
+            PASS {passedCount}
+            <br />
+            FAIL {failedCount}
+          </Text>
+        </LoadingDiv>
       </Td>
       <Td />
       <Td />
