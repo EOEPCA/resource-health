@@ -3,7 +3,6 @@ import {
   CheckTemplate,
   CheckTemplateId,
   GetEmptySpanResult,
-  GetEnvVarOrThrow,
   GetSpansQueryParams,
   ReduceSpans,
   Span,
@@ -24,7 +23,6 @@ import {
   DefaultErrorHandler,
   SetErrorsPropsType,
 } from "@/components/CheckError";
-import { env } from "next-runtime-env";
 import { useSearchParams } from "next/navigation";
 
 export const durationStringToDuration: Map<string, Duration> = new Map(
@@ -33,20 +31,6 @@ export const durationStringToDuration: Map<string, Duration> = new Map(
     duration,
   ])
 );
-
-export function GetReLoginURL(): string {
-  return GetEnvVarOrThrow("NEXT_PUBLIC_RELOGIN_URL");
-}
-
-export function GetTelemetryDuration(): Duration {
-  const telemetryDurationDays = env("NEXT_PUBLIC_TELEMETRY_DURATION_DAYS");
-  if (telemetryDurationDays) {
-    return {
-      days: Number(telemetryDurationDays),
-    };
-  }
-  return DEFAULT_TELEMETRY_DURATION;
-}
 
 export type FetchState = "Loading" | "Completed";
 

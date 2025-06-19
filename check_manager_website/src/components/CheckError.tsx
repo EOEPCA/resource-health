@@ -1,5 +1,5 @@
 import { APIErrors } from "@/lib/backend-wrapper";
-import { GetReLoginURL } from "@/lib/helpers";
+import { GetReLoginURL } from "@/lib/config";
 import {
   Button,
   Modal,

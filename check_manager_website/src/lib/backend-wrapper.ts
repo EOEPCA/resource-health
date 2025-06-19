@@ -3,7 +3,11 @@
 
 import { StrictRJSFSchema } from "@rjsf/utils";
 import axios, { AxiosError, AxiosResponse } from "axios";
-import { env } from "next-runtime-env";
+import {
+  GetCheckManagerURL,
+  GetSpansQueryPageSize,
+  GetTelemetryURL,
+} from "./config";
 
 export type CheckTemplateId = string;
 export type CheckId = string;
@@ -156,30 +160,12 @@ type InCheck = {
   data: InCheckData;
 };
 
-export function GetEnvVarOrThrow(envVar: string): string {
-  const url = env(envVar);
-  if (!url) {
-    throw new Error(`environment variable ${envVar} must be set`);
-  }
-  return url;
-}
-
-function GetCheckManagerURL(): string {
-  // MUST include /v1 (or some other version) at the end
-  return GetEnvVarOrThrow("NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT");
-}
-
-function GetTelemetryURL(): string {
-  // MUST include /v1 (or some other version) at the end
-  return GetEnvVarOrThrow("NEXT_PUBLIC_TELEMETRY_ENDPOINT");
-}
-
 type MakeRequestParams = {
   method: "GET" | "POST" | "DELETE";
   baseURL: string;
   path: string;
   pathParameters: (string | undefined)[];
-  queryParameters: Record<string, string | string[] | undefined>;
+  queryParameters: Record<string, number | string | string[] | undefined>;
   body?: Record<string, unknown> | undefined;
 };
 
@@ -451,8 +437,12 @@ export async function GetSpans({
   resourceAttributes,
   scopeAttributes,
   spanAttributes,
+  pageSize,
   pageToken,
-}: GetSpansQueryParams & { pageToken?: string }): Promise<SpansResponse> {
+}: GetSpansQueryParams & {
+  pageSize: number;
+  pageToken?: string;
+}): Promise<SpansResponse> {
   if (traceId === undefined && spanId !== undefined) {
     throw new Error("spanId must only be set if traceId is also set");
   }
@@ -466,6 +456,7 @@ export async function GetSpans({
       to_time: toTime?.toISOString(),
       resource_attributes: AttributesDictToList(resourceAttributes),
       scope_attributes: AttributesDictToList(scopeAttributes),
+      page_size: pageSize,
       span_attributes: AttributesDictToList(spanAttributes),
       page_token: pageToken,
     },
@@ -480,8 +471,10 @@ export async function ReduceSpans<T>(
 ): Promise<T> {
   let pageToken: string | undefined = undefined;
   let accumulator: T = initialValue;
+  const pageSize = GetSpansQueryPageSize();
   do {
     const spansResponse = await GetSpans({
+      pageSize: pageSize,
       pageToken: pageToken,
       ...getSpansQueryParams,
     });
