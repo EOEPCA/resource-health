@@ -33,16 +33,16 @@ import {
 import { IoReload as Reload } from "react-icons/io5";
 import { Duration, formatDuration, sub as subDuration } from "date-fns";
 import {
-  CallBackend,
   ComputeSpansSummary,
   durationStringToDuration,
   EmptySpansSummary,
   FetchState,
-  FetchToIncremental,
   FindCheckTemplate,
   GetAverageDuration,
   GetRelLink,
   SpansSummary,
+  useFetchStateIncremental,
+  CallBackend,
   useFetchState,
 } from "@/lib/helpers";
 import {
@@ -80,13 +80,13 @@ function HomeDetails({
 }): JSX.Element {
   const [checkTemplates, , templatesFetchState] = useFetchState({
     initialValue: [],
-    fetch: FetchToIncremental(GetCheckTemplates),
+    fetch: GetCheckTemplates,
     setErrorsProps: setErrorsProps,
     deps: [],
   });
   const [checks, setChecks, checksFetchState] = useFetchState({
     initialValue: [],
-    fetch: FetchToIncremental(GetChecks),
+    fetch: GetChecks,
     setErrorsProps: setErrorsProps,
     deps: [],
   });
@@ -303,7 +303,7 @@ function CreateCheckDiv({
           onChange={log("changed")}
           onSubmit={(data) =>
             CallBackend(
-              FetchToIncremental(() =>
+              () =>
                 CreateCheck({
                   data: {
                     type: "check",
@@ -317,8 +317,7 @@ function CreateCheckDiv({
                       schedule: schedule,
                     },
                   },
-                })
-              ),
+                }),
               (check: Check) => {
                 setName("");
                 setSchedule("");
@@ -367,7 +366,7 @@ function CheckSummaryDiv({
     check.attributes.metadata.description
   );
   const [now, setNow] = useState(new Date());
-  const [spansSummary, , fetchState] = useFetchState<SpansSummary>({
+  const [spansSummary, , fetchState] = useFetchStateIncremental<SpansSummary>({
     initialValue: EmptySpansSummary,
     fetch: (setResult) =>
       ComputeSpansSummary({

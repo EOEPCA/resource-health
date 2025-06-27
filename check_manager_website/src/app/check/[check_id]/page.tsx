@@ -45,10 +45,9 @@ import {
 import { IoReload as Reload } from "react-icons/io5";
 import { formatDuration } from "date-fns";
 import {
-  CallBackend,
+  CallBackendIncremental,
   durationStringToDuration,
   FetchState,
-  FetchToIncremental,
   FindCheckTemplate,
   GetAllSpans,
   GetRelLink,
@@ -58,6 +57,7 @@ import {
   SetResultType,
   SpanFilterParamsToDql,
   StringifyPretty,
+  CallBackend,
   useFetchState,
 } from "@/lib/helpers";
 import {
@@ -106,13 +106,13 @@ function HealthCheckDetails({
     CheckTemplate[]
   >({
     initialValue: [],
-    fetch: FetchToIncremental(GetCheckTemplates),
+    fetch: GetCheckTemplates,
     setErrorsProps: setErrorsProps,
     deps: [],
   });
   const [check] = useFetchState<Check | null>({
     initialValue: null,
-    fetch: FetchToIncremental(() => GetCheck(checkId)),
+    fetch: () => GetCheck(checkId),
     setErrorsProps: setErrorsProps,
     deps: [checkId],
   });
@@ -125,7 +125,7 @@ function HealthCheckDetails({
   const telemetryDuration = durationStringToDuration.get(durationString)!;
   useEffect(() => {
     if (check !== null) {
-      CallBackend<SpanResult>(
+      CallBackendIncremental<SpanResult>(
         (setResult) =>
           GetAllSpans({
             getSpansQueryParams: GetSpanFilterParams(

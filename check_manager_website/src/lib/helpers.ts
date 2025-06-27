@@ -41,59 +41,62 @@ export type IncrementalFetchType<T> = (
 ) => Promise<void>;
 
 // The difference from func().then(...).catch(...) is that it handles errors and retries with setErrorProps
-export function CallBackend<T>(
+export function CallBackendIncremental<T>(
   func: IncrementalFetchType<T>,
   setResult: SetResultType<T>,
   setErrorsProps: SetErrorsPropsType
 ): void {
   func(setResult).catch(
     DefaultErrorHandler(setErrorsProps, () =>
-      CallBackend<T>(func, setResult, setErrorsProps)
+      CallBackendIncremental<T>(func, setResult, setErrorsProps)
     )
   );
 }
 
-// // The difference from func().then(...).catch(...) is that it handles errors and retries with setErrorProps
-// export function CallBackend<T>(
-//   func: () => Promise<void>,
-//   setErrorsProps: SetErrorsPropsType
-// ): void {
-//   func().catch(
-//     DefaultErrorHandler(setErrorsProps, () =>
-//       CallBackend<T>(func, setErrorsProps)
-//     )
-//   );
-// }
+export function CallBackend<T>(
+  func: () => Promise<T>,
+  setResult: SetResultType<T>,
+  setErrorsProps: SetErrorsPropsType
+): void {
+  CallBackendIncremental<T>(
+    AsyncToIncremental(func),
+    setResult,
+    setErrorsProps
+  );
+}
 
-export function FetchToIncremental<T>(
-  fetch: () => Promise<T>
+function AsyncToIncremental<T>(
+  func: () => Promise<T>
 ): IncrementalFetchType<T> {
   return async (setResult) => {
-    const result = await fetch();
+    const result = await func();
     setResult(result, "Completed");
   };
 }
 
-export type UseFetchStateProps<T> = {
+type UseFetchStateCommonProps<T> = {
   initialValue: T;
-  fetch: IncrementalFetchType<T>;
   setErrorsProps: SetErrorsPropsType;
   deps: DependencyList;
 };
 
-export function useFetchState<T>({
+export function useFetchStateIncremental<T>({
   initialValue,
   fetch,
   setErrorsProps,
   deps,
-}: UseFetchStateProps<T>): [T, (value: T) => void, FetchState] {
+}: UseFetchStateCommonProps<T> & { fetch: IncrementalFetchType<T> }): [
+  T,
+  (value: T) => void,
+  FetchState
+] {
   const [value, setValue] = useState<T>(initialValue);
   const [fetchState, setFetchState] = useState<FetchState>("Loading");
   useEffect(
     () => {
       setValue(initialValue);
       setFetchState("Loading");
-      CallBackend(
+      CallBackendIncremental(
         fetch,
         (result, fetchState) => {
           setValue(result);
@@ -106,6 +109,20 @@ export function useFetchState<T>({
     deps
   );
   return [value, setValue, fetchState] as const;
+}
+
+export function useFetchState<T>({
+  fetch,
+  ...rest
+}: UseFetchStateCommonProps<T> & { fetch: () => Promise<T> }): [
+  T,
+  (value: T) => void,
+  FetchState
+] {
+  return useFetchStateIncremental({
+    fetch: AsyncToIncremental(fetch),
+    ...rest,
+  });
 }
 
 const DURATION_QUERY_KEY = "duration";

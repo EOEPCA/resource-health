@@ -19,7 +19,7 @@ import {
   IsSpanError,
   IsStatusError,
   SpanFilterParamsToDql,
-  useFetchState,
+  useFetchStateIncremental,
 } from "@/lib/helpers";
 import CustomLink from "@/components/CustomLink";
 import ButtonWithCheckmark from "@/components/ButtonWithCheckmark";
@@ -64,7 +64,7 @@ function HealthCheckRunPageDetails({
   setErrorsProps: SetErrorsPropsType;
 }): JSX.Element {
   const spanFilterParams = { traceId: traceId };
-  const [allSpans, , fetchState] = useFetchState<SpanResult>({
+  const [allSpans, , fetchState] = useFetchStateIncremental<SpanResult>({
     initialValue: GetEmptySpanResult(),
     fetch: (setResult) =>
       GetAllSpans({
