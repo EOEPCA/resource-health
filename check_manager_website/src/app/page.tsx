@@ -90,9 +90,6 @@ function HomeDetails({
     setErrorsProps: setErrorsProps,
     deps: [],
   });
-  // if (templatesFetchState === "Loading" || checksFetchState === "Loading") {
-  //   return <Spinner />;
-  // }
 
   return (
     <ChecksDiv
@@ -224,7 +221,6 @@ function ChecksDiv({
 
 type CreateCheckDivProps = {
   templates: CheckTemplate[];
-
   onCreateCheck: (check: Check) => void;
   setErrorsProps: SetErrorsPropsType;
 };
@@ -233,118 +229,118 @@ function CreateCheckDiv({
   fetchState,
   ...rest
 }: CreateCheckDivProps & { fetchState: FetchState }): JSX.Element {
-  function CreateCheckDivInternal({
-    templates,
-    onCreateCheck,
-    setErrorsProps,
-  }: CreateCheckDivProps): JSX.Element {
-    const [templateId, setTemplateId] = useState(templates[0].id);
-    // Only used as a hacky way to force clearing of form data
-    const [key, setKey] = useState(0);
-    const [name, setName] = useState("");
-    const [description, setDescription] = useState("");
-    const [schedule, setSchedule] = useState("");
-    const template = FindCheckTemplate(templates, templateId);
-    const form_id = "create_check";
-
-    return (
-      <>
-        <Grid gap={6} marginBottom={6}>
-          <GridItem>
-            <FormLabel>Check Template</FormLabel>
-            <Select
-              form={form_id}
-              value={template.id}
-              onChange={(e) => setTemplateId(e.target.value)}
-            >
-              {templates.map((template) => (
-                <option key={template.id} value={template.id}>
-                  {template.attributes.metadata.label || template.id}
-                </option>
-              ))}
-            </Select>
-            <Text>{template.attributes.metadata.description}</Text>
-            <FormLabel>Template ID</FormLabel>
-            <Text>{template.id}</Text>
-          </GridItem>
-          <GridItem>
-            <FormControl isRequired>
-              <FormLabel>Name</FormLabel>
-              <Input
-                form={form_id}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </FormControl>
-            <FormControl isRequired>
-              <FormLabel>Description</FormLabel>
-              <Input
-                form={form_id}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-            </FormControl>
-            <FormControl isRequired>
-              <FormLabel>Schedule</FormLabel>
-              <Input
-                form={form_id}
-                value={schedule}
-                onChange={(e) => setSchedule(e.target.value)}
-              />
-            </FormControl>
-          </GridItem>
-        </Grid>
-        <Form
-          id={form_id}
-          idPrefix={form_id + "_"}
-          key={key}
-          schema={template.attributes.arguments}
-          validator={validator}
-          onChange={log("changed")}
-          onSubmit={(data) =>
-            CallBackend(
-              () =>
-                CreateCheck({
-                  data: {
-                    type: "check",
-                    attributes: {
-                      metadata: {
-                        name: name,
-                        description: description,
-                        template_id: templateId,
-                        template_args: data.formData,
-                      },
-                      schedule: schedule,
-                    },
-                  },
-                }),
-              (check: Check) => {
-                setName("");
-                setSchedule("");
-                setDescription("");
-                // A hacky way to force clearing of form data
-                setKey(1 - key);
-                setTemplateId(templates[0].id);
-                onCreateCheck(check);
-              },
-              setErrorsProps
-            )
-          }
-          onError={log("errors")}
-        />
-      </>
-    );
-  }
-
   return (
     <Tr>
       <Td>
         <details>
           <summary>Create new check</summary>
-          {fetchState === "Completed" && <CreateCheckDivInternal {...rest} />}
+          {fetchState === "Completed" && <CreateCheckDivDetails {...rest} />}
         </details>
       </Td>
     </Tr>
+  );
+}
+
+function CreateCheckDivDetails({
+  templates,
+  onCreateCheck,
+  setErrorsProps,
+}: CreateCheckDivProps): JSX.Element {
+  const [templateId, setTemplateId] = useState(templates[0].id);
+  // Only used as a hacky way to force clearing of form data
+  const [key, setKey] = useState(0);
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [schedule, setSchedule] = useState("");
+  const template = FindCheckTemplate(templates, templateId);
+  const form_id = "create_check";
+
+  return (
+    <>
+      <Grid gap={6} marginBottom={6}>
+        <GridItem>
+          <FormLabel>Check Template</FormLabel>
+          <Select
+            form={form_id}
+            value={template.id}
+            onChange={(e) => setTemplateId(e.target.value)}
+          >
+            {templates.map((template) => (
+              <option key={template.id} value={template.id}>
+                {template.attributes.metadata.label || template.id}
+              </option>
+            ))}
+          </Select>
+          <Text>{template.attributes.metadata.description}</Text>
+          <FormLabel>Template ID</FormLabel>
+          <Text>{template.id}</Text>
+        </GridItem>
+        <GridItem>
+          <FormControl isRequired>
+            <FormLabel>Name</FormLabel>
+            <Input
+              form={form_id}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </FormControl>
+          <FormControl isRequired>
+            <FormLabel>Description</FormLabel>
+            <Input
+              form={form_id}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </FormControl>
+          <FormControl isRequired>
+            <FormLabel>Schedule</FormLabel>
+            <Input
+              form={form_id}
+              value={schedule}
+              onChange={(e) => setSchedule(e.target.value)}
+            />
+          </FormControl>
+        </GridItem>
+      </Grid>
+      <Form
+        id={form_id}
+        idPrefix={form_id + "_"}
+        key={key}
+        schema={template.attributes.arguments}
+        validator={validator}
+        onChange={log("changed")}
+        onSubmit={(data) =>
+          CallBackend(
+            () =>
+              CreateCheck({
+                data: {
+                  type: "check",
+                  attributes: {
+                    metadata: {
+                      name: name,
+                      description: description,
+                      template_id: templateId,
+                      template_args: data.formData,
+                    },
+                    schedule: schedule,
+                  },
+                },
+              }),
+            (check: Check) => {
+              setName("");
+              setSchedule("");
+              setDescription("");
+              // A hacky way to force clearing of form data
+              setKey(1 - key);
+              setTemplateId(templates[0].id);
+              onCreateCheck(check);
+            },
+            setErrorsProps
+          )
+        }
+        onError={log("errors")}
+      />
+    </>
   );
 }
 
