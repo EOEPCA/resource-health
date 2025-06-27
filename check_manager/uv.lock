@@ -211,12 +211,12 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "eoepca-security", git = "https://github.com/EOEPCA/python-eoepca-security.git" },
+    { name = "eoepca-security", git = "https://github.com/EOEPCA/python-eoepca-security.git?branch=2.0.0-rc2" },
     { name = "fastapi", extras = ["standard"] },
     { name = "httpx", specifier = ">=0.27.2" },
     { name = "jsonschema", specifier = ">=4.23.0" },
     { name = "kubernetes-asyncio", specifier = ">=31.1.0" },
-    { name = "plugin-utils", git = "https://github.com/EOEPCA/resource-health.git?subdirectory=plugin-utils&branch=deploy-develop" },
+    { name = "plugin-utils", git = "https://github.com/EOEPCA/resource-health.git?subdirectory=plugin-utils&branch=2.0.0-rc2" },
     { name = "pydantic", specifier = ">=2.9.2" },
     { name = "pydantic-settings", specifier = ">=2.8.1" },
     { name = "pyyaml", specifier = ">=6.0.0" },
@@ -355,7 +355,7 @@ wheels = [
 [[package]]
 name = "eoepca-security"
 version = "0.2.0"
-source = { git = "https://github.com/EOEPCA/python-eoepca-security.git#6b6a039a79d98fc67387b95a47745796c463697f" }
+source = { git = "https://github.com/EOEPCA/python-eoepca-security.git?branch=2.0.0-rc2#6b6a039a79d98fc67387b95a47745796c463697f" }
 dependencies = [
     { name = "cryptography" },
     { name = "fastapi", extra = ["standard"] },
@@ -781,7 +781,7 @@ wheels = [
 [[package]]
 name = "plugin-utils"
 version = "0.1.0"
-source = { git = "https://github.com/EOEPCA/resource-health.git?subdirectory=plugin-utils&branch=deploy-develop#055c3c40e99ea23d2ed2fba382ad322085f73aa7" }
+source = { git = "https://github.com/EOEPCA/resource-health.git?subdirectory=plugin-utils&branch=2.0.0-rc2#23f4ff7d7f6c45c9abfc5e01b7f30c56219e099f" }
 
 [[package]]
 name = "propcache"
