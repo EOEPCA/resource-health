@@ -7,7 +7,7 @@ global:
   defaultHealthCheckImage:
     repository: docker.io/eoepca/healthcheck_runner
     pullPolicy: IfNotPresent
-    tag: "v0.3.0-internal7-ccd84f1"
+    tag: "2.0.0-rc2"
 
   ## TODO: Remove this default and make sure it is set or unused
   defaultOTLPEndpoint: https://resource-health-opentelemetry-collector:4317
@@ -19,7 +19,7 @@ mock_api:
   image:
     repository: docker.io/eoepca/mock_service
     pullPolicy: IfNotPresent
-    tag: "2.0.0-rc1"
+    tag: "2.0.0-rc2"
   serviceType: ClusterIP
   containerPort: 5000
   servicePort: 5000
@@ -71,7 +71,7 @@ check_api:
   image:
     repository: docker.io/eoepca/resourcehealth_check_api
     pullPolicy: IfNotPresent
-    tag: "v0.3.0-internal19-9e4a6a2"
+    tag: "2.0.0-rc2"
   serviceType: ClusterIP
   containerPort: 8000
   servicePort: 8000
@@ -100,7 +100,7 @@ telemetry_api:
   image:
     repository: docker.io/eoepca/resourcehealth_telemetry_api
     pullPolicy: IfNotPresent
-    tag: "v0.3.0-internal21-88b3c77"
+    tag: "2.0.0-rc2"
   serviceType: ClusterIP
   containerPort: 8080
   servicePort: 8080
@@ -125,7 +125,7 @@ web:
   image:
     repository: docker.io/eoepca/resourcehealth_web
     pullPolicy: IfNotPresent
-    tag: "v0.3.0-internal20-b7761ef"
+    tag: "2.0.0-rc2"
   serviceType: ClusterIP
   containerPort: 3000
   servicePort: 80
