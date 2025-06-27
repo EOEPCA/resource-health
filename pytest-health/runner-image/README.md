@@ -32,7 +32,7 @@ The image includes the OpenTelemety instrumentation for PyTest. If you have an O
 docker run --network host --rm --env RH_RUNNER_REQUIREMENTS="https://raw.githubusercontent.com/EOEPCA/resource-health/a04ea5211fc60340656a20f45dcc0e9fa40eeee9/pytest-health/lib/other-examples/test_arxiv_api/requirements.txt" --env RH_RUNNER_SCRIPT="https://raw.githubusercontent.com/EOEPCA/resource-health/a04ea5211fc60340656a20f45dcc0e9fa40eeee9/pytest-health/lib/other-examples/test_arxiv_api/test_arxiv_api.py" temporary_runner_image:v0.0.1
 ```
 
-It is currently published as `docker.io/eoepca/healthcheck_runner:v0.3.0-internal7-ccd84f1`.
+It is currently published as `docker.io/eoepca/healthcheck_runner:2.0.0-rc2`.
 
 ## Pre and post commands
 
