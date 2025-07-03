@@ -20,27 +20,28 @@ You should follow along the following steps to get used to how things work.
 1. Go to the Health Check website [https://resource-health.apx.develop.eoepca.org/](https://resource-health.apx.develop.eoepca.org/). As noted above, you should log in as one of the standard users.
 2. Click on `Create new check`.
    ![Create new check](./img/basic-user-tutorial/01-Create-new-check.png)
-   Platform operators configure what kinds of checks you can create. You choose the check kind by picking a check template. For example, in the reference deployment you can choose `Generic script template`, and the check will by a Python script you provide (we will take a look at that later in an advanced guide). For now, we will choose `simple ping template`, which will create a check which pings an endpoint that we specify, and checks that the return code is as specified.  
+   Platform operators configure what kinds of checks you can create. You choose the check kind by picking a check template. For example, in the reference deployment you can choose `Generic script template`, and the check will be a Python script you provide (we will take a look at that later in an advanced guide). For now, we will choose `simple ping template`, which will create a check which pings an endpoint that we specify, and checks that the return code is as specified.
+
    From the dropdown shown below choose `simple ping template` check template (keep in mind that the platform might be configured to not have a check template exactly like this - the name of check template might be different, or it might not even exist, for example)
    ![Choose check template](./img/basic-user-tutorial/02-Choose-check-template.png)
    Enter the values as you see below
    ![Submit a simple check](./img/basic-user-tutorial/03-Submit-a-simple-check.png)
    Note that `https://example.om/` deliberately contains a typo for us to see how to debug errors.  
    `schedule` is a CRON-style schedule specifying when the health check is to be executed. The schedule `0 0 1,15 * *` means the check will run `At 00:00 on day-of-month 1 and 15`. See [Cron Schedule](#cron-schedule) for more detailed information.
-   Then click sumbit.
-3. After submitting the check, click on `Create new check` again (to hide the check creation form).  
-   Your new check `Ping example.com` (or however you named it) should appear somewhere in the list, usually near the top.  
-   Since the new check hasn't executed yet, all the stats in the table show empty values for it.  
-   Click `Run Check`. The check should now run in the background, and you can click reload (**&#10227;**) button next to it to refresh the telemetry for this check. Once run information appears (the run should have failed, as indicated by `problematic run count` being non-zero), click on the check to get more details on the check runs.
+   Then click submit.
+3. After submitting the check, click on `Create new check` again, to hide the check creation form.  
+   `Ping example.com` (or however you named it) should now be visible somewhere in the list, usually near the top.
+
+   Since the new check hasn't executed yet, all the stats in the table show empty values for it. By clicking `Run Check`, the check will be executed in the background. Pressing the reload button (**&#10227;**) refreshes the telemetry for this check, updating the displayed statistics. Once `Run count` indicates that the check executed, we should also see `problematic run count` indicating the something went wrong. This is to be expected, as we deliberately introduced a typo. Click on the check to get more details on its executions.
    ![Checks list](./img/basic-user-tutorial/04-Show-non-zero-run-count.png)
-4. A page for a single check should open. Scroll to the bottom of the page. It should look something like below.
+4. When a check name is pressed, a page describing that particular check should open. Scroll to the bottom of the page. It should look something like below.
    ![Check error messages](./img/basic-user-tutorial/05-Check-error-messages.png)
    In particular, you can see the error message, the end of which is
    ```
    Failed to resolve 'example.om' ([Errno -2] Name or service not known)"))
    ```
    We see that it couldn't ping `example.om` as no such domain exists.
-5. We conclude that we defined the check incorrectly. We will remove it, and create a new one without the typo. Click on `Remove Check`. Confirm check removal when the popup appears.
+5. We conclude that we defined the check incorrectly. We will remove it, and create a new one without the typo. Click on `Remove Check`. Confirm check removal when the pop-up appears.
    ![Remove check](./img/basic-user-tutorial/06-Remove-check.png)
 6. Now go create the check using step 2. but without the typo, of course. Then go do step 3. and 4., the check should now run successfully.
    Below is how the website home page should look when the check run succeeds, and after that how the individual check page should look.
@@ -191,7 +192,7 @@ See [Raw Health Check Telemetry](#raw-health-check-telemetry). In particular, yo
    ```
    in the `Script` field.  
    Click `Submit`
-5. So that this check has more data to inspect, run the previous check a few times manually (you don't need to wait for one run to finish to run the check again). Then run the current check once. As the `random_outcome`, `random_outcome1`, `random_outcome2` are random, the aggregate check might or might not succeed, but the more times the original check runs, the more likely the aggregate check to succeed. That's it!
+5. So that this check has more data to inspect, run the previous check a few times manually (you don't need to wait for one run to finish running the check again). Then run the current check once. As the quantities `random_outcome`, `random_outcome1`, `random_outcome2` are randomised, the aggregate check might or might not succeed, but the more times the original check runs, the more likely the aggregate check to succeed. That's it!
 
 ## Tutorial for platform administrators
 
@@ -211,7 +212,7 @@ Hooks are Python functions which define API backend and authentication configura
 
 Here is how you would forbid some user (eric in this case) to create a ping-an-endpoint check. Your deployment might differ from the development cluster which is referenced below, but the steps should translate well to your deployment:
 
-1. If we can, we should first check that eric can create a ping-an-endpoint check right now. So that when we're done and eric can't create a ping-an-endpoint check anymore, we know it's because of what we did, and not some unrelated reason.
+1. If we can, we should first check that eric can create a ping-an-endpoint check right now. So that when we're done and eric can't create a ping-an-endpoint check any more, we know it's because of what we did, and not some unrelated reason.
 2. We first need to figure out what hook to implement. Since we want to configure something about check management (as opposed to telemetry management), we'll need to update the Health Check API configuration. Then we take a look at [Health Check Hooks Example Implementation](https://github.com/EOEPCA/resource-health/blob/58087ff26eca34e6aeaf58216fd87b18b745e36b/check_manager/example_hooks/oidc_auth/auth_hooks.py) to see what hooks are available, and example implementations for each of them. Check lifecycle hooks are named `on_template_...` or `on_check_...`. We see that `on_check_create` hook is what we can use for this. As the name suggests, it's called before any check is created, so it's a good place to forbid check creation when conditions of our choosing aren't met.
 
     !!! note
@@ -219,15 +220,22 @@ Here is how you would forbid some user (eric in this case) to create a ping-an-e
         Also he couldn't inspect an existing ping-an-endpoint check in the web UI, as it relies on having access to the check templates from which the check was created.
 
 3. We now need to figure out what the check template id is from which ping-an-endpoint checks are created. We go to where the current deployment check templates are synced from. For the development cluster, it is [here](https://github.com/EOEPCA/eoepca-plus/blob/549c1d6ff43ce442cc88c56125f6fb9468854e0e/argocd/eoepca/resource-health/resource-health.yaml#L342) (where `templates:` is). We see [here](https://github.com/EOEPCA/eoepca-plus/blob/549c1d6ff43ce442cc88c56125f6fb9468854e0e/argocd/eoepca/resource-health/resource-health.yaml#L368) that the template id is `simple_ping`.
+
 4. Now we go to where the current deployment hooks are synced from. For the development cluster, it is [here](https://github.com/EOEPCA/eoepca-plus/blob/549c1d6ff43ce442cc88c56125f6fb9468854e0e/argocd/eoepca/resource-health/resource-health.yaml#L187) (we just look at the `hooks:` part of the `check_api`).
+
 5. To actually code the hook changes it is recommended that you clone [Resource Health repo](https://github.com/EOEPCA/resource-health), open `check-manager` directory, and set up your development environment in by following [Setting Up a Development Environment](#setting-up-a-development-environment) section to have the IDE and type checking support. Then copy the existing hooks we've found in the step above to a Python file here. We fill edit this file, and when we're satisfied with the changes, we'll copy them (or otherwise sync them) to where the actual hooks are defined.
-6. We will now update (or create) `on_check_create` hook to disalow eric to create a health check from the `simple_ping` template.
-We are looking for a function named `on_check_create`. We want to modify (or create one if it doesn't exist) `on_check_create` function so that it contains our new condition
+
+6. We will now update (or create) `on_check_create` hook to disallow eric to create a health check from the `simple_ping` template.
+
+    Depending on whether `on_check_create` is already defined, we either modify or create it. Then, in the implementation of the `on_check_create` function we implement the additional condition
+
     ```python
     if userinfo["username"] == "eric" and check.metadata.template_id == "simple_ping":
         return False
     ```
+    
     So the final `on_check_create` would look something like this
+    
     ```python
     def on_check_create(userinfo: UserInfo, check: hu.InCheckAttributes) -> bool:
         
@@ -238,14 +246,18 @@ We are looking for a function named `on_check_create`. We want to modify (or cre
 
         return True
     ```
+
+    The `userinfo` argument is whatever info is produced by the `on_auth` hook.
+
 7. Push the updated hooks. Then we either manually sync the changes or wait for automatic syncing. When you see that your changes are visible in the resource health deployment manifest, restart the `resource-health-check-api` **service** (the icon should be as in the image below). ![Restart resource-health-check-api](./img/hooks/restart-health-check-api.png).
+
 8. Now we're done! If possible, we should check that eric can no longer create a ping-an-endpoint check (he should get an error like `Check creation disallowed (code 403): You are not authorized to create this check`), and that other users still can.
 
 ## Appendix
 
 ### Cron Schedule
 
-`schedule` is a CRON-style schedule specifying when the health check is to be executed. The schedule `0 0 1,15 * *` means the check will run `At 00:00 on day-of-month 1 and 15`. You can go to [https://www.baeldung.com/cron-expressions](https://www.baeldung.com/cron-expressions#cron-expression) to learn about Cron expression syntax, and to [https://crontab.guru](https://crontab.guru/#0_0_1,15_*_*) to see an explanation for your own schedule expression.  
+`schedule` is a CRON-style schedule specifying when the health check is to be executed. The schedule `0 0 1,15 * *` means the check will run `At 00:00 on day-of-month 1 and 15`. You can go to [https://www.baeldung.com/cron-expressions](https://www.baeldung.com/cron-expressions#cron-expression) to learn about Cron expression syntax, and to [https://crontab.guru](https://crontab.guru/#0_0_1,15_*_*) to see an explanation for your own schedule expression.
 !!! warning
     Not all tools which support CRON schedule expressions support exactly the same syntax. Some tools support more than the 5 standard parts of the expression, for example.
 
@@ -254,14 +266,15 @@ We are looking for a function named `on_check_create`. We want to modify (or cre
 1. [Install uv](https://docs.astral.sh/uv/#installation).
 2. Go to the subdirectory where the project is (as [Resource Health repo](https://github.com/EOEPCA/resource-health) is a monorepo, with each subdirectory generally being a separate project). It should have a `pyproject.toml` file, which specifies the dependencies.
 3. Run `uv sync`. This installs all dependencies and a suitable Python version in a virtual environment `.venv` placed in the current working directory.
-4. If you IDE support, you should point you IDE to use the Python from the virtual environment. For example, in vscode should do that automatically, or give a popup ![Python environment prompt](./img/dev-environment/python-environment-prompt.png) where you should select `Yes`.
+4. If you IDE support, you should point your IDE to use the Python from the virtual environment. For example, in vscode should do that automatically, or give a popup ![Python environment prompt](./img/dev-environment/python-environment-prompt.png) where you should select `Yes`.
 
     !!! note
         Some vscode extensions (such as Ruff) need to be reloaded for them to pick up a newly created virtual environment
 
-5. You should also consider enabling mypy type checking in your IDE. For example, in vscode install [Mypy extension](https://marketplace.visualstudio.com/items?itemName=matangover.mypy), and set `mypy.runUsingActiveInterpreter` setting to `true`. This will mean that mypy uses the virtual environment to run, just like Python, and will be able to see all the installed dependencies properly.
+5. You should also consider enabling mypy type checking in your IDE. For example, in vs code/ium install [Mypy extension](https://marketplace.visualstudio.com/items?itemName=matangover.mypy), and set `mypy.runUsingActiveInterpreter` setting to `true`. This will mean that mypy uses the virtual environment to run, just like Python, and will be able to see all the installed dependencies properly.
 6. You can now run code with `uv run <the-usual-command>`, e.g. `uv run python my_file.py` or `uv run pytest .`
-In particular, you can type check using mypy by running `uv run mypy my_file.py`.
+
+    In particular, you can type check using mypy by running `uv run mypy my_file.py`.
 
 ### Health Check Script
 
