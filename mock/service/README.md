@@ -26,4 +26,4 @@ so that you can run a server on the host network with something like
 docker run -p 5000:5000 -it mock_service
 ```
 
-The image is currently published as `docker.io/eoepca/mock_service:2.0.0-rc1`.
+The image is currently published as `docker.io/eoepca/mock_service:2.0.0-rc2`.

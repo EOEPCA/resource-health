@@ -2,6 +2,7 @@ import {
   Check,
   CheckTemplate,
   CheckTemplateId,
+  GetEmptySpanResult,
   GetSpansQueryParams,
   ReduceSpans,
   Span,
@@ -9,11 +10,131 @@ import {
   SpanStatus,
   TelemetryAttributes,
 } from "./backend-wrapper";
-import { Dispatch, SetStateAction, useEffect, useState } from "react";
-import { sub as subDuration } from "date-fns";
-import { TELEMETRY_DURATION } from "./config";
+import {
+  DependencyList,
+  Dispatch,
+  SetStateAction,
+  useEffect,
+  useState,
+} from "react";
+import { Duration, formatDuration, sub as subDuration } from "date-fns";
+import { DEFAULT_TELEMETRY_DURATION, telemetryDurationOptions } from "./config";
+import {
+  DefaultErrorHandler,
+  SetErrorsPropsType,
+} from "@/components/CheckError";
+import { useSearchParams } from "next/navigation";
 
-export const LOADING_STRING = "Loading ...";
+export const durationStringToDuration: Map<string, Duration> = new Map(
+  telemetryDurationOptions.map((duration) => [
+    formatDuration(duration),
+    duration,
+  ])
+);
+
+export type FetchState = "Loading" | "Completed";
+
+export type SetResultType<T> = (result: T, fetchState: FetchState) => void;
+
+export type IncrementalFetchType<T> = (
+  setResult: SetResultType<T>
+) => Promise<void>;
+
+// The difference from func().then(...).catch(...) is that it handles errors and retries with setErrorProps
+export function CallBackendIncremental<T>(
+  func: IncrementalFetchType<T>,
+  setResult: SetResultType<T>,
+  setErrorsProps: SetErrorsPropsType
+): void {
+  func(setResult).catch(
+    DefaultErrorHandler(setErrorsProps, () =>
+      CallBackendIncremental<T>(func, setResult, setErrorsProps)
+    )
+  );
+}
+
+export function CallBackend<T>(
+  func: () => Promise<T>,
+  setResult: SetResultType<T>,
+  setErrorsProps: SetErrorsPropsType
+): void {
+  CallBackendIncremental<T>(
+    AsyncToIncremental(func),
+    setResult,
+    setErrorsProps
+  );
+}
+
+function AsyncToIncremental<T>(
+  func: () => Promise<T>
+): IncrementalFetchType<T> {
+  return async (setResult) => {
+    const result = await func();
+    setResult(result, "Completed");
+  };
+}
+
+type UseFetchStateCommonProps<T> = {
+  initialValue: T;
+  setErrorsProps: SetErrorsPropsType;
+  deps: DependencyList;
+};
+
+export function useFetchStateIncremental<T>({
+  initialValue,
+  fetch,
+  setErrorsProps,
+  deps,
+}: UseFetchStateCommonProps<T> & { fetch: IncrementalFetchType<T> }): [
+  T,
+  (value: T) => void,
+  FetchState
+] {
+  const [value, setValue] = useState<T>(initialValue);
+  const [fetchState, setFetchState] = useState<FetchState>("Loading");
+  useEffect(
+    () => {
+      setValue(initialValue);
+      setFetchState("Loading");
+      CallBackendIncremental(
+        fetch,
+        (result, fetchState) => {
+          setValue(result);
+          setFetchState(fetchState);
+        },
+        setErrorsProps
+      );
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    deps
+  );
+  return [value, setValue, fetchState] as const;
+}
+
+export function useFetchState<T>({
+  fetch,
+  ...rest
+}: UseFetchStateCommonProps<T> & { fetch: () => Promise<T> }): [
+  T,
+  (value: T) => void,
+  FetchState
+] {
+  return useFetchStateIncremental({
+    fetch: AsyncToIncremental(fetch),
+    ...rest,
+  });
+}
+
+const DURATION_QUERY_KEY = "duration";
+
+// Gets from query parameter, and if doesn't exist, uses a default
+export function useTelemetryDuration(): string {
+  const searchParams = useSearchParams();
+  return (
+    searchParams.get(DURATION_QUERY_KEY) ??
+    formatDuration(DEFAULT_TELEMETRY_DURATION)
+  );
+}
 
 export function GetRelLink({
   checkId,
@@ -31,16 +152,42 @@ export function GetRelLink({
   return `/check/${checkId}/trace/${traceId}`;
 }
 
+// export function GetRelLink({
+//   checkId,
+//   traceId,
+//   telemetryDuration,
+// }: {
+//   checkId?: string;
+//   traceId?: string;
+//   telemetryDuration?: Duration;
+// }) {
+//   let path: string;
+//   if (checkId === undefined) {
+//     path = "/";
+//   } else {
+//     if (traceId === undefined) {
+//       path = `/check/${checkId}`;
+//     } else {
+//       path = `/check/${checkId}/trace/${traceId}`;
+//     }
+//   }
+//   const query = telemetryDuration
+//     ? `?${DURATION_QUERY_KEY}=${formatDuration(telemetryDuration)}`
+//     : "";
+//   return path + query;
+// }
+
 export function StringifyPretty(json: object): string {
   return JSON.stringify(json, null, 2);
 }
 
 export function GetSpanFilterParams(
   check: Check,
+  delemetryDuration: Duration,
   now: Date
 ): GetSpansQueryParams {
   return {
-    fromTime: subDuration(now, TELEMETRY_DURATION),
+    fromTime: subDuration(now, delemetryDuration),
     toTime: now,
     resourceAttributes: check.attributes.outcome_filter.resource_attributes,
     scopeAttributes: check.attributes.outcome_filter.scope_attributes,
@@ -137,7 +284,7 @@ export function GetTraceIdToSpans(
       for (const span of scopeSpans.spans) {
         const traceId = span.traceId;
         if (!(traceId in traceIdToSpans)) {
-          traceIdToSpans[traceId] = { resourceSpans: [] };
+          traceIdToSpans[traceId] = GetEmptySpanResult();
         }
         const traceResourceSpans = traceIdToSpans[traceId].resourceSpans;
         // This also correctly deals with empty arrays, as at(-1) will return undefined in that case
@@ -197,12 +344,38 @@ export function FindCheckTemplate(
 }
 
 export type SpansSummary = {
+  traceIdsCount: number;
+  failedTraceIdsCount: number;
+  totalDurationSecs: number;
+  durationCount: number;
+  totalTestCount: number;
+};
+
+export const EmptySpansSummary: SpansSummary = {
+  traceIdsCount: 0,
+  failedTraceIdsCount: 0,
+  totalDurationSecs: 0,
+  durationCount: 0,
+  totalTestCount: 0,
+};
+
+type DetailedSpansSummary = {
   traceIds: Set<string>;
   failedTraceIds: Set<string>;
   totalDurationSecs: number;
   durationCount: number;
   totalTestCount: number;
 };
+
+function SimplifySummary(detailedSummary: DetailedSpansSummary): SpansSummary {
+  return {
+    traceIdsCount: detailedSummary.traceIds.size,
+    failedTraceIdsCount: detailedSummary.failedTraceIds.size,
+    totalDurationSecs: detailedSummary.totalDurationSecs,
+    durationCount: detailedSummary.durationCount,
+    totalTestCount: detailedSummary.totalTestCount,
+  };
+}
 
 export function GetAverageDuration(
   totalDurationSecs: number,
@@ -213,49 +386,42 @@ export function GetAverageDuration(
     : (totalDurationSecs / durationCount).toLocaleString() + " s";
 }
 
-export async function ComputeSpansSummary(
-  getSpansQueryParams: GetSpansQueryParams
-): Promise<SpansSummary> {
-  return ReduceSpans<SpansSummary>(
+export type ComputeSpansSummaryProps = {
+  getSpansQueryParams: GetSpansQueryParams;
+  setResult: SetResultType<SpansSummary>;
+};
+
+export async function ComputeSpansSummary({
+  getSpansQueryParams,
+  setResult,
+}: ComputeSpansSummaryProps): Promise<void> {
+  // const [spansSummary, setSpansSummary] = useState<SpansSummary>(null);
+  const detailedSummary = await ReduceSpans<DetailedSpansSummary>(
     getSpansQueryParams,
-    (
-      {
-        traceIds,
-        failedTraceIds,
-        totalDurationSecs,
-        durationCount,
-        totalTestCount,
-      },
-      spanResult
-    ) => {
+    (detailedSummary, spanResult) => {
       for (const resourceSpans of spanResult.resourceSpans) {
         for (const scopeSpans of resourceSpans.scopeSpans) {
           for (const span of scopeSpans.spans) {
-            traceIds.add(span.traceId);
+            detailedSummary.traceIds.add(span.traceId);
             if (IsSpanError(span)) {
-              failedTraceIds.add(span.traceId);
+              detailedSummary.failedTraceIds.add(span.traceId);
             }
             if (span.parentSpanId === "") {
-              totalDurationSecs +=
+              detailedSummary.totalDurationSecs +=
                 (span.endTimeUnixNano - span.startTimeUnixNano) / 1_000_000_000;
-              durationCount++;
+              detailedSummary.durationCount++;
             }
             for (const attribute of span.attributes) {
               if (attribute.key === "test.case.result.status") {
-                totalTestCount++;
+                detailedSummary.totalTestCount++;
                 break;
               }
             }
           }
         }
       }
-      return {
-        traceIds,
-        failedTraceIds,
-        totalDurationSecs,
-        durationCount,
-        totalTestCount,
-      };
+      setResult(SimplifySummary(detailedSummary), "Loading");
+      return detailedSummary;
     },
     {
       traceIds: new Set<string>(),
@@ -265,8 +431,38 @@ export async function ComputeSpansSummary(
       totalTestCount: 0,
     }
   );
+
+  setResult(SimplifySummary(detailedSummary), "Completed");
+}
+
+export type GetAllSpansProps = {
+  getSpansQueryParams: GetSpansQueryParams;
+  setResult: SetResultType<SpanResult>;
+};
+
+export async function GetAllSpans({
+  getSpansQueryParams,
+  setResult,
+}: GetAllSpansProps): Promise<void> {
+  setResult(GetEmptySpanResult(), "Loading");
+  const allSpans = await ReduceSpans<SpanResult>(
+    getSpansQueryParams,
+    ({ resourceSpans }: SpanResult, currentValue: SpanResult) => {
+      resourceSpans.push(...currentValue.resourceSpans);
+      // Important that the first argument to setResult is always a different object
+      // so that React picks up when it changes
+      setResult({ resourceSpans }, "Loading");
+      return { resourceSpans };
+    },
+    GetEmptySpanResult()
+  );
+  setResult(allSpans, "Completed");
+}
+
+export function IsStatusError(status: SpanStatus): boolean {
+  return status?.code === SpanStatus.ERROR;
 }
 
 export function IsSpanError(span: Span): boolean {
-  return span.status?.code === SpanStatus.ERROR;
+  return IsStatusError(span.status);
 }

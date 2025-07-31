@@ -2,8 +2,12 @@
 "use client";
 
 import { StrictRJSFSchema } from "@rjsf/utils";
-import axios, { AxiosResponse } from "axios";
-import { env } from "next-runtime-env";
+import axios, { AxiosError, AxiosResponse } from "axios";
+import {
+  GetCheckManagerURL,
+  GetSpansQueryPageSize,
+  GetTelemetryURL,
+} from "./config";
 
 export type CheckTemplateId = string;
 export type CheckId = string;
@@ -56,7 +60,7 @@ type ErrorSource =
   | ErrorSourceParameter
   | ErrorSourceHeader;
 
-type Error = {
+export type APIError = {
   status: string;
   code: string;
   title: string;
@@ -77,9 +81,18 @@ type APIOKResponseList<T, U> = {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-type APIErrorResponse = {
-  errors: Error[];
+export type APIErrorResponse = {
+  errors: APIError[];
 };
+
+export class APIErrors extends Error {
+  errors: APIError[];
+  constructor(errors: APIError[]) {
+    super(errors[0].detail);
+    this.name = "APIErrors";
+    this.errors = errors;
+  }
+}
 
 export type CheckTemplateMetadata = object & {
   label?: string;
@@ -147,33 +160,12 @@ type InCheck = {
   data: InCheckData;
 };
 
-function GetCheckManagerURL(): string {
-  const url = env("NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT");
-  if (!url) {
-    throw new Error(
-      `environment variable NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT must be set`
-    );
-  }
-  return url;
-}
-
-function GetTelemetryURL(): string {
-  // MUST include /v1 (or some other version) at the end
-  const url = env("NEXT_PUBLIC_TELEMETRY_ENDPOINT");
-  if (!url) {
-    throw new Error(
-      `environment variable NEXT_PUBLIC_TELEMETRY_ENDPOINT must be set`
-    );
-  }
-  return url;
-}
-
 type MakeRequestParams = {
   method: "GET" | "POST" | "DELETE";
   baseURL: string;
   path: string;
   pathParameters: (string | undefined)[];
-  queryParameters: Record<string, string | string[] | undefined>;
+  queryParameters: Record<string, number | string | string[] | undefined>;
   body?: Record<string, unknown> | undefined;
 };
 
@@ -194,20 +186,32 @@ async function MakeRequest<T>({
   if (!path.endsWith("/") && pathParamsConcat) {
     pathParamsConcat = "/" + pathParamsConcat;
   }
-  return await axios.request<unknown, AxiosResponse<T, unknown>, unknown>({
-    url: path + pathParamsConcat,
-    method: method,
-    baseURL: baseURL,
-    params: queryParameters,
-    data: body,
-    headers: { "content-type": "application/vnd.api+json" },
-    withCredentials: true,
-    paramsSerializer: {
-      // Omit brackets when serialize array into the URL.
-      // Based on https://stackoverflow.com/a/76517213
-      indexes: null,
-    },
-  });
+  try {
+    return await axios.request<unknown, AxiosResponse<T, unknown>, unknown>({
+      url: path + pathParamsConcat,
+      method: method,
+      baseURL: baseURL,
+      params: queryParameters,
+      data: body,
+      headers: { "content-type": "application/vnd.api+json" },
+      withCredentials: true,
+      paramsSerializer: {
+        // Omit brackets when serialize array into the URL.
+        // Based on https://stackoverflow.com/a/76517213
+        indexes: null,
+      },
+    });
+  } catch (error) {
+    if (
+      error instanceof AxiosError &&
+      error.response &&
+      error.response.data instanceof Object &&
+      "errors" in error.response.data
+    ) {
+      throw new APIErrors(error.response.data.errors as APIError[]);
+    }
+    throw error;
+  }
 }
 
 export async function GetCheckTemplates(
@@ -317,20 +321,22 @@ export const SpanStatus = {
   ERROR: 2,
 };
 
+export type SpanStatus = {
+  // UNSET = 0
+  // OK = 1
+  // ERROR = 2
+  // According to https://opentelemetry-python.readthedocs.io/en/latest/api/trace.status.html
+  code?: 0 | 1 | 2;
+  message?: string;
+};
+
 export type Span = {
   traceId: string;
   spanId: string;
   parentSpanId: string;
   startTimeUnixNano: number;
   endTimeUnixNano: number;
-  status: {
-    // UNSET = 0
-    // OK = 1
-    // ERROR = 2
-    // According to https://opentelemetry-python.readthedocs.io/en/latest/api/trace.status.html
-    code?: 0 | 1 | 2;
-    message?: string;
-  };
+  status: SpanStatus;
   attributes: {
     key: string;
     value:
@@ -355,6 +361,12 @@ export type SpanResult = {
     }[];
   }[];
 };
+
+export function GetEmptySpanResult(): SpanResult {
+  return {
+    resourceSpans: [],
+  };
+}
 
 type SpansResponseNextPageToken = {
   next_page_token?: string;
@@ -425,8 +437,12 @@ export async function GetSpans({
   resourceAttributes,
   scopeAttributes,
   spanAttributes,
+  pageSize,
   pageToken,
-}: GetSpansQueryParams & { pageToken?: string }): Promise<SpansResponse> {
+}: GetSpansQueryParams & {
+  pageSize: number;
+  pageToken?: string;
+}): Promise<SpansResponse> {
   if (traceId === undefined && spanId !== undefined) {
     throw new Error("spanId must only be set if traceId is also set");
   }
@@ -440,24 +456,12 @@ export async function GetSpans({
       to_time: toTime?.toISOString(),
       resource_attributes: AttributesDictToList(resourceAttributes),
       scope_attributes: AttributesDictToList(scopeAttributes),
+      page_size: pageSize,
       span_attributes: AttributesDictToList(spanAttributes),
       page_token: pageToken,
     },
   });
   return response.data;
-}
-
-export async function GetAllSpans(
-  getSpansQueryParams: GetSpansQueryParams
-): Promise<SpanResult> {
-  return ReduceSpans<SpanResult>(
-    getSpansQueryParams,
-    (accumulator: SpanResult, currentValue: SpanResult) => {
-      accumulator.resourceSpans.push(...currentValue.resourceSpans);
-      return accumulator;
-    },
-    { resourceSpans: [] }
-  );
 }
 
 export async function ReduceSpans<T>(
@@ -467,8 +471,10 @@ export async function ReduceSpans<T>(
 ): Promise<T> {
   let pageToken: string | undefined = undefined;
   let accumulator: T = initialValue;
+  const pageSize = GetSpansQueryPageSize();
   do {
     const spansResponse = await GetSpans({
+      pageSize: pageSize,
       pageToken: pageToken,
       ...getSpansQueryParams,
     });

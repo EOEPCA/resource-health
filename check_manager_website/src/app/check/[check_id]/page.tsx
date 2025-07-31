@@ -1,6 +1,6 @@
 "use client";
 
-import { JSX, useState } from "react";
+import { JSX, useEffect, useState } from "react";
 import Form from "@rjsf/chakra-ui";
 import {
   RemoveCheck,
@@ -11,7 +11,7 @@ import {
   CheckTemplate,
   CheckId,
   SpanResult,
-  GetAllSpans,
+  GetEmptySpanResult,
 } from "@/lib/backend-wrapper";
 import validator from "@rjsf/validator-ajv8";
 import {
@@ -31,6 +31,7 @@ import {
   ModalHeader,
   ModalOverlay,
   Select,
+  Skeleton,
   Table,
   Tbody,
   Td,
@@ -42,23 +43,35 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { IoReload as Reload } from "react-icons/io5";
-import { Duration, formatDuration } from "date-fns";
+import { formatDuration } from "date-fns";
 import {
+  CallBackendIncremental,
+  durationStringToDuration,
+  FetchState,
   FindCheckTemplate,
+  GetAllSpans,
   GetRelLink,
   GetSpanFilterParams,
   GetTraceIdToSpans,
   IsSpanError,
-  LOADING_STRING,
+  SetResultType,
   SpanFilterParamsToDql,
   StringifyPretty,
+  CallBackend,
+  useFetchState,
 } from "@/lib/helpers";
-import { CheckError } from "@/components/CheckError";
-import { TELEMETRY_DURATION } from "@/lib/config";
+import {
+  CheckErrorPopup,
+  SetErrorsPropsType,
+  useError,
+} from "@/components/CheckError";
 import { useRouter } from "next/navigation";
 import DefaultLayout from "@/layouts/DefaultLayout";
 import CustomLink from "@/components/CustomLink";
 import ButtonWithCheckmark from "@/components/ButtonWithCheckmark";
+import { DEFAULT_TELEMETRY_DURATION } from "@/lib/config";
+import { TelemetryDurationTextAndDropdown } from "@/components/TelemetryDurationDropdown";
+import { LoadingDiv } from "@/components/LoadingDiv";
 
 type HealthCheckPageProps = {
   params: { check_id: string };
@@ -67,85 +80,128 @@ type HealthCheckPageProps = {
 export default function HealthCheckPage({
   params: { check_id },
 }: HealthCheckPageProps): JSX.Element {
+  const { errorsProps, setErrorsProps, isErrorOpen } = useError();
   return (
     <DefaultLayout>
+      <CheckErrorPopup
+        errorsProps={errorsProps}
+        setErrorsProps={setErrorsProps}
+        isOpen={isErrorOpen}
+      />
       <CustomLink href={GetRelLink({})}>Home</CustomLink>
-      <HealthCheckDetails checkId={check_id} />
+      <HealthCheckDetails checkId={check_id} setErrorsProps={setErrorsProps} />
     </DefaultLayout>
   );
 }
 
-function HealthCheckDetails({ checkId }: { checkId: string }): JSX.Element {
+function HealthCheckDetails({
+  checkId,
+  setErrorsProps,
+}: {
+  checkId: string;
+  setErrorsProps: SetErrorsPropsType;
+}): JSX.Element {
   const router = useRouter();
-  const [error, setError] = useState<Error | null>(null);
-  const [checkTemplates, setCheckTemplates] = useState<CheckTemplate[] | null>(
-    null
-  );
-  const [check, setCheck] = useState<Check | null>(null);
+  const [checkTemplates, , templatesFetchState] = useFetchState<
+    CheckTemplate[]
+  >({
+    initialValue: [],
+    fetch: GetCheckTemplates,
+    setErrorsProps: setErrorsProps,
+    deps: [],
+  });
+  const [check] = useFetchState<Check | null>({
+    initialValue: null,
+    fetch: () => GetCheck(checkId),
+    setErrorsProps: setErrorsProps,
+    deps: [checkId],
+  });
   const [now, setNow] = useState(new Date());
-  const [allSpans, setAllSpans] = useState<SpanResult | null>(null);
-  if (error !== null) {
-    return <CheckError {...error} />;
-  }
-  if (checkTemplates === null) {
-    GetCheckTemplates().then(setCheckTemplates).catch(setError);
-  }
-  if (check === null) {
-    GetCheck(checkId).then(setCheck).catch(setError);
-  }
-  if (checkTemplates === null || check === null) {
-    return <Text>{LOADING_STRING}</Text>;
-  }
-  const spanFilterParams = GetSpanFilterParams(check, now);
-  if (allSpans === null) {
-    GetAllSpans(spanFilterParams).then(setAllSpans).catch(setError);
+  const [allSpans, setAllSpans] = useState<SpanResult>(GetEmptySpanResult());
+  const [spansFetchState, setSpansFetchState] = useState<FetchState>("Loading");
+  const [durationString, setDurationString] = useState<string>(
+    formatDuration(DEFAULT_TELEMETRY_DURATION)
+  );
+  const telemetryDuration = durationStringToDuration.get(durationString)!;
+  useEffect(() => {
+    if (check !== null) {
+      CallBackendIncremental<SpanResult>(
+        (setResult) =>
+          GetAllSpans({
+            getSpansQueryParams: GetSpanFilterParams(
+              check,
+              telemetryDuration,
+              now
+            ),
+            setResult: setResult,
+          }),
+        (spans, fetchState) => {
+          setAllSpans(spans);
+          setSpansFetchState(fetchState);
+        },
+        setErrorsProps
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [check, now, telemetryDuration]);
+  if (templatesFetchState === "Loading" || check === null) {
+    return (
+      <div className="flex flex-col gap-4">
+        <Skeleton height="md" width="md" />
+        <Skeleton height="md" />
+      </div>
+    );
   }
 
   return (
     <CheckDiv
       check={check}
-      telemetryDuration={TELEMETRY_DURATION}
+      durationString={durationString}
+      setDurationString={setDurationString}
       templates={checkTemplates}
       setNow={setNow}
-      filterParamsDql={SpanFilterParamsToDql(spanFilterParams)}
+      filterParamsDql={SpanFilterParamsToDql(
+        GetSpanFilterParams(check, telemetryDuration, now)
+      )}
       allSpans={allSpans}
-      setAllSpans={setAllSpans}
+      setAllSpans={(spans, fetchState) => {
+        setAllSpans(spans);
+        setSpansFetchState(fetchState);
+      }}
+      spansFetchState={spansFetchState}
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       onCheckUpdate={(_check) => {
         throw new Error("Update is not yet implemented");
       }}
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       onCheckRemove={(_checkId) => router.push("/")}
-      setError={setError}
+      setErrorsProps={setErrorsProps}
     />
   );
 }
 
 export type CheckDivProps = {
   check: Check;
-  telemetryDuration: Duration;
+  durationString: string;
+  setDurationString: (duration: string) => void;
   templates: CheckTemplate[];
   setNow: (now: Date) => void;
   filterParamsDql: string;
-  allSpans: SpanResult | null;
-  setAllSpans: (allSpans: SpanResult | null) => void;
+  allSpans: SpanResult;
+  setAllSpans: SetResultType<SpanResult>;
+  spansFetchState: FetchState;
   onCheckUpdate: (check: Check) => void;
   onCheckRemove: (checkId: CheckId) => void;
-  setError: (error: Error) => void;
+  setErrorsProps: SetErrorsPropsType;
 };
 
-function CheckDiv({
+function CheckTemplateDiv({
   check,
   templates,
-  setNow,
-  filterParamsDql,
-  allSpans,
-  setAllSpans,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  onCheckUpdate,
-  onCheckRemove,
-  setError,
-}: CheckDivProps): JSX.Element {
+}: {
+  check: Check;
+  templates: CheckTemplate[];
+}): JSX.Element {
   const [templateId, setTemplateId] = useState(
     check.attributes.metadata.template_id
   );
@@ -157,15 +213,10 @@ function CheckDiv({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isDisabled, setIsDisabled] = useState(true);
 
-  const check_label =
-    check.attributes.metadata.template_args === undefined
-      ? check.id
-      : check.attributes.metadata.name ?? check.id;
-  let checkDiv;
   if (templateId) {
     const template = FindCheckTemplate(templates, templateId);
     const form_id = "existing_check_" + check.id;
-    checkDiv = (
+    return (
       <>
         {/* Use isDisabled here instead of isReadonly, as the latter does nothing for the select, option, and button HTML tags,
             as discussed in this answer https://stackoverflow.com/a/7730719
@@ -252,7 +303,7 @@ function CheckDiv({
     );
   } else {
     const template_args = check.attributes.metadata.template_args!;
-    checkDiv = (
+    return (
       <>
         <FormControl isDisabled={isDisabled}>
           <Grid gap={6} marginBottom={6}>
@@ -286,6 +337,27 @@ function CheckDiv({
       </>
     );
   }
+}
+
+function CheckDiv({
+  check,
+  durationString,
+  setDurationString,
+  templates,
+  setNow,
+  filterParamsDql,
+  allSpans,
+  setAllSpans,
+  spansFetchState,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onCheckUpdate,
+  onCheckRemove,
+  setErrorsProps,
+}: CheckDivProps): JSX.Element {
+  const check_label =
+    check.attributes.metadata.template_args === undefined
+      ? check.id
+      : check.attributes.metadata.name ?? check.id;
   return (
     <>
       <Heading>{check_label}</Heading>
@@ -307,14 +379,14 @@ function CheckDiv({
               </div>
             </Grid>
           </FormControl>
-          {checkDiv}
+          <CheckTemplateDiv check={check} templates={templates} />
         </div>
         <div className="flex flex-row gap-6">
           <IconButton
             aria-label="Reload"
             onClick={() => {
               setNow(new Date());
-              setAllSpans(null);
+              setAllSpans(GetEmptySpanResult(), "Loading");
             }}
           >
             <Reload />
@@ -325,22 +397,35 @@ function CheckDiv({
             Copy filter parameters in DQL
           </ButtonWithCheckmark>
           <ButtonWithCheckmark
-            onClick={() => RunCheck(check.id).catch(setError)}
+            onClick={() =>
+              CallBackend(
+                () => RunCheck(check.id),
+                () => {},
+                setErrorsProps
+              )
+            }
           >
             Run Check
           </ButtonWithCheckmark>
           <RemoveCheckButton
-            onClick={() => {
-              RemoveCheck(check.id)
-                .then(() => onCheckRemove(check.id))
-                .catch(setError);
-            }}
+            onClick={() =>
+              CallBackend(
+                () => RemoveCheck(check.id),
+                () => onCheckRemove(check.id),
+                setErrorsProps
+              )
+            }
           />
         </div>
-        <Text>
-          Displaying data from the last {formatDuration(TELEMETRY_DURATION)}
-        </Text>
-        <CheckRunsTable checkId={check.id} allSpans={allSpans} />
+        <TelemetryDurationTextAndDropdown
+          durationString={durationString}
+          setDurationString={setDurationString}
+        />
+        <CheckRunsTable
+          checkId={check.id}
+          allSpans={allSpans}
+          spansFetchState={spansFetchState}
+        />
       </div>
     </>
   );
@@ -372,16 +457,15 @@ function RemoveCheckButton({ onClick }: { onClick: () => void }): JSX.Element {
 
 type CheckRunsTableProps = {
   checkId: string;
-  allSpans: SpanResult | null;
+  allSpans: SpanResult;
+  spansFetchState: FetchState;
 };
 
 function CheckRunsTable({
   checkId,
   allSpans,
+  spansFetchState,
 }: CheckRunsTableProps): JSX.Element {
-  if (allSpans === null) {
-    return <Text>{LOADING_STRING}</Text>;
-  }
   const traceIdToSpans = GetTraceIdToSpans(allSpans);
   return (
     // <TableContainer>
@@ -394,7 +478,10 @@ function CheckRunsTable({
         </Tr>
       </Thead>
       <Tbody>
-        <CheckRunsSummaryRow traceIdToSpans={traceIdToSpans} />
+        <CheckRunsSummaryRow
+          traceIdToSpans={traceIdToSpans}
+          spansFetchState={spansFetchState}
+        />
         {Object.entries(traceIdToSpans).map(([traceId, traceSpans]) => (
           <CheckRunTableRow
             key={traceId}
@@ -403,6 +490,15 @@ function CheckRunsTable({
             traceSpans={traceSpans}
           />
         ))}
+        {spansFetchState === "Loading" && (
+          <Tr>
+            <Skeleton as={Td}>
+              <Text>FAIL</Text>
+            </Skeleton>
+            <Skeleton as={Td} />
+            <Skeleton as={Td} />
+          </Tr>
+        )}
       </Tbody>
     </Table>
     // </TableContainer>
@@ -411,8 +507,10 @@ function CheckRunsTable({
 
 function CheckRunsSummaryRow({
   traceIdToSpans,
+  spansFetchState,
 }: {
   traceIdToSpans: Record<string, SpanResult>;
+  spansFetchState: FetchState;
 }): JSX.Element {
   let passedCount = 0;
   let failedCount = 0;
@@ -435,14 +533,14 @@ function CheckRunsSummaryRow({
   }
   return (
     <Tr>
-      <Td
-        className={`whitespace-pre ${
-          failedCount === 0 ? "bg-green-300" : "bg-red-300"
-        }`}
-      >
-        PASS {passedCount}
-        <br />
-        FAIL {failedCount}
+      <Td className={failedCount === 0 ? "bg-green-300" : "bg-red-300"}>
+        <LoadingDiv fetchState={spansFetchState}>
+          <Text className="whitespace-pre">
+            PASS {passedCount}
+            <br />
+            FAIL {failedCount}
+          </Text>
+        </LoadingDiv>
       </Td>
       <Td />
       <Td />

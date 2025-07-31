@@ -14,7 +14,7 @@ const Link = defineStyleConfig({
 export default function DefaultLayout({
   children,
 }: {
-  children: JSX.Element | JSX.Element[];
+  children: React.ReactNode;
 }): JSX.Element {
   return (
     <ThemeProvider
@@ -25,8 +25,7 @@ export default function DefaultLayout({
       })}
     >
       <CSSReset />
-      <main className="flex min-h-screen flex-col items-start p-24">
-        {/* <p>Hello there</p> */}
+      <main className="flex min-h-screen flex-col items-start p-24 gap-2">
         {children}
       </main>
     </ThemeProvider>

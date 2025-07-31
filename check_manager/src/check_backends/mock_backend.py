@@ -122,9 +122,13 @@ class MockBackend(CheckBackend[AuthenticationObject]):
         check_id: CheckId,
     ) -> OutCheckAttributes | None:
         if GET_MOCK_USERNAME_HOOK_NAME not in self._hooks:
-            raise ValueError(f"Must set hook {GET_MOCK_USERNAME_HOOK_NAME} ($GET_MOCK_USERNAME_HOOK_NAME) when using the k8s backend")
-        
-        username = await wait_if_async(self._hooks[GET_MOCK_USERNAME_HOOK_NAME](auth_obj))
+            raise ValueError(
+                f"Must set hook {GET_MOCK_USERNAME_HOOK_NAME} ($GET_MOCK_USERNAME_HOOK_NAME) when using the mock backend"
+            )
+
+        username = await wait_if_async(
+            self._hooks[GET_MOCK_USERNAME_HOOK_NAME](auth_obj)
+        )
 
         check_id_to_attributes = self._auth_to_check_id_to_attributes[username]
         if check_id not in check_id_to_attributes:
@@ -154,9 +158,13 @@ class MockBackend(CheckBackend[AuthenticationObject]):
         self: Self, auth_obj: AuthenticationObject, attributes: InCheckAttributes
     ) -> OutCheck:
         if GET_MOCK_USERNAME_HOOK_NAME not in self._hooks:
-            raise ValueError(f"Must set hook {GET_MOCK_USERNAME_HOOK_NAME} ($GET_MOCK_USERNAME_HOOK_NAME) when using the k8s backend")
-        
-        username = await wait_if_async(self._hooks[GET_MOCK_USERNAME_HOOK_NAME](auth_obj))
+            raise ValueError(
+                f"Must set hook {GET_MOCK_USERNAME_HOOK_NAME} ($GET_MOCK_USERNAME_HOOK_NAME) when using the mock backend"
+            )
+
+        username = await wait_if_async(
+            self._hooks[GET_MOCK_USERNAME_HOOK_NAME](auth_obj)
+        )
 
         check_template_attributes = self._get_check_template_attributes(
             attributes.metadata.template_id
@@ -214,7 +222,10 @@ class MockBackend(CheckBackend[AuthenticationObject]):
     async def remove_check(
         self: Self, auth_obj: AuthenticationObject, check_id: CheckId
     ) -> None:
-        id_to_check = self._auth_to_check_id_to_attributes[auth_obj]
+        username = await wait_if_async(
+            self._hooks[GET_MOCK_USERNAME_HOOK_NAME](auth_obj)
+        )
+        id_to_check = self._auth_to_check_id_to_attributes[username]
         if check_id not in id_to_check:
             raise CheckIdError.create(check_id)
         id_to_check.pop(check_id)
@@ -226,9 +237,13 @@ class MockBackend(CheckBackend[AuthenticationObject]):
         ids: list[CheckId] | None = None,
     ) -> AsyncIterable[OutCheck]:
         if GET_MOCK_USERNAME_HOOK_NAME not in self._hooks:
-            raise ValueError(f"Must set hook {GET_MOCK_USERNAME_HOOK_NAME} ($GET_MOCK_USERNAME_HOOK_NAME) when using the k8s backend")
-        
-        username = await wait_if_async(self._hooks[GET_MOCK_USERNAME_HOOK_NAME](auth_obj))
+            raise ValueError(
+                f"Must set hook {GET_MOCK_USERNAME_HOOK_NAME} ($GET_MOCK_USERNAME_HOOK_NAME) when using the mock backend"
+            )
+
+        username = await wait_if_async(
+            self._hooks[GET_MOCK_USERNAME_HOOK_NAME](auth_obj)
+        )
 
         if ids is None:
             for check_id, attributes in self._auth_to_check_id_to_attributes[
@@ -246,9 +261,13 @@ class MockBackend(CheckBackend[AuthenticationObject]):
         self: Self, auth_obj: AuthenticationObject, check_id: CheckId
     ) -> None:
         if GET_MOCK_USERNAME_HOOK_NAME not in self._hooks:
-            raise ValueError(f"Must set hook {GET_MOCK_USERNAME_HOOK_NAME} ($GET_MOCK_USERNAME_HOOK_NAME) when using the k8s backend")
-        
-        username = await wait_if_async(self._hooks[GET_MOCK_USERNAME_HOOK_NAME](auth_obj))
+            raise ValueError(
+                f"Must set hook {GET_MOCK_USERNAME_HOOK_NAME} ($GET_MOCK_USERNAME_HOOK_NAME) when using the mock backend"
+            )
+
+        username = await wait_if_async(
+            self._hooks[GET_MOCK_USERNAME_HOOK_NAME](auth_obj)
+        )
 
         id_to_check = self._auth_to_check_id_to_attributes[username]
         if check_id not in id_to_check:

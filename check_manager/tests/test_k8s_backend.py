@@ -1,6 +1,7 @@
 import contextlib
 import json
-from typing import NewType
+import os
+from typing import Callable, NewType
 from unittest.mock import AsyncMock, Mock, patch
 
 import aiohttp
@@ -14,7 +15,7 @@ from kubernetes_asyncio.client.rest import ApiException
 import pytest
 
 from api_utils.exceptions import APIInternalError
-from check_backends.k8s_backend import K8sBackend  # , load_config
+from check_backends.k8s_backend import K8sBackend
 from check_backends.check_backend import (
     CheckId,
     CheckIdError,
@@ -24,23 +25,21 @@ from check_backends.check_backend import (
     InCheckAttributes,
     InCheckMetadata,
 )
+from check_hooks.hook_utils import k8s_config
 from exceptions import CheckConnectionError
 
-AuthenticationObject = NewType("AuthenticationObject", str)
+AuthenticationObject = NewType("AuthenticationObject", dict[str, str])
 
 NAMESPACE: str = "resource-health"
-TEMPLATES: list[str] = [
-    # "templates",
-    "src/check_backends/k8s_backend/template_examples",
-]
-test_auth = "test-auth"
+TEMPLATES: list[str] = ["example_k8s_templates"]
+test_auth = {"username": "Test User"}
 check_name = "Dummy name"
 check_description = "Dummy description"
 template_id = "simple_ping"
 bad_template_id = "simply_ping"
 template_args: dict[str, object] = {
-    "health_check.name": "test-check",
     "endpoint": "www.example.com",
+    "expected_status_code": 200,
 }
 schedule = "* * * * *"
 
@@ -92,32 +91,30 @@ cronjob_3 = V1CronJob(
 )
 
 
+@pytest.fixture(autouse=True)
+def setup_template_env() -> None:
+    # Needed for telemetry_access_template to initialize without raising exceptions
+    os.environ["OPEN_ID_CONNECT_URL"] = "DYMMY_TEST_URL"
+
+
 @pytest.fixture
-def mock_api_client():
+def mock_api_client() -> Mock:
     api_client = Mock()
     api_client.return_value.__aenter__ = AsyncMock(return_value=None)
     api_client.return_value.__aexit__ = AsyncMock(return_value=None)
     return api_client
 
 
-def make_authentication(api_client) -> dict:
+def make_hooks(api_client) -> dict[str, Callable]:
     async def get_client(token):
         return api_client
+
     return {
         "on_auth": (
-            lambda auth: auth
-            if auth == AuthenticationObject(test_auth)
-            else None
+            lambda auth: auth if auth == AuthenticationObject(test_auth) else None
         ),
-        "get_check_templates_client": get_client,
-        "create_check_client": get_client,
-        "remove_check_client": get_client,
-        "run_check_client": get_client,
-        "get_checks_client": get_client,
-        "get_namespace": (lambda _: NAMESPACE),
-        "template_access": (lambda auth, x: True),
-        "cronjob_access": (lambda auth, x: True),
-        "tag_cronjob": (lambda auth, x: x),
+        "get_k8s_config": (lambda _: k8s_config()),
+        "get_k8s_namespace": (lambda _: NAMESPACE),
     }
 
 
@@ -125,7 +122,7 @@ async def test_aclose(mock_api_client) -> None:
     try:
         k8s_backend = K8sBackend[AuthenticationObject](
             template_dirs=TEMPLATES,
-            authentication=make_authentication(mock_api_client),
+            hooks=make_hooks(mock_api_client),
         )
     finally:
         await k8s_backend.aclose()
@@ -159,9 +156,7 @@ async def test_aclose(mock_api_client) -> None:
     "template_ids, expected",
     [
         (["simple_ping"], ["simple_ping"]),
-        (["simply_ping"], []),
-        (["default_k8s_template", "simply_ping"], ["default_k8s_template"]),
-        (None, ["default_k8s_template", "simple_ping"]),
+        (None, ["generic_script_template", "simple_ping", "telemetry_access_template", "collection_check"]),
     ],
 )
 @patch("test_k8s_backend.client.BatchV1Api")
@@ -173,17 +168,47 @@ async def test_get_check_templates(
     mock_api_client = AsyncMock()
     k8s_backend = K8sBackend[AuthenticationObject](
         template_dirs=TEMPLATES,
-        authentication=make_authentication(mock_api_client),
+        hooks=make_hooks(mock_api_client),
     )
     template_async_iterator = k8s_backend.get_check_templates(
-        AuthenticationObject(test_auth),
-        template_ids
+        AuthenticationObject(test_auth), template_ids
     )
     template_list: list[CheckTemplateId] = []
     async for template in template_async_iterator:
         template_list.append(template.id)
 
-    assert template_list == expected
+    assert sorted(template_list) == sorted(expected)
+
+    mock_batch_v1_api.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "template_ids, expected_error_id",
+    [
+        (["simply_ping"], "simply_ping"),
+        (["generic_script_template", "simply_ping"], "simply_ping"),
+    ],
+)
+@patch("test_k8s_backend.client.BatchV1Api")
+async def test_get_check_templates_raises(
+    mock_batch_v1_api: Mock,
+    template_ids: list[CheckTemplateId],
+    expected_error_id: CheckTemplateId,
+) -> None:
+    mock_api_client = AsyncMock()
+    k8s_backend = K8sBackend[AuthenticationObject](
+        template_dirs=TEMPLATES,
+        hooks=make_hooks(mock_api_client),
+    )
+    template_async_iterator = k8s_backend.get_check_templates(
+        AuthenticationObject(test_auth), template_ids
+    )
+    template_list: list[CheckTemplateId] = []
+    with pytest.raises(KeyError) as error_info:
+        async for template in template_async_iterator:
+            template_list.append(template.id)
+
+    assert expected_error_id in repr(error_info.value)
 
     mock_batch_v1_api.assert_not_called()
 
@@ -238,7 +263,7 @@ async def test_create_check(
 
     k8s_backend = K8sBackend[AuthenticationObject](
         template_dirs=TEMPLATES,
-        authentication=make_authentication(mock_api_client),
+        hooks=make_hooks(mock_api_client),
     )
 
     with expectation:
@@ -265,25 +290,17 @@ async def test_create_check(
         mock_batch_v1_api.assert_called_once()
         mock_batch_v1_api.return_value.create_namespaced_cron_job.assert_called_once()
         call_kwargs = (
-            mock_batch_v1_api
-            .return_value.create_namespaced_cron_job
-            .call_args
-            .kwargs
+            mock_batch_v1_api.return_value.create_namespaced_cron_job.call_args.kwargs
         )
         assert call_kwargs["namespace"] == NAMESPACE
         assert call_kwargs["body"].metadata.annotations["name"] == check_name
         assert (
-            call_kwargs["body"].metadata.annotations["description"]
-            == check_description
+            call_kwargs["body"].metadata.annotations["description"] == check_description
         )
+        assert call_kwargs["body"].metadata.annotations["template_id"] == template_id
         assert (
-            call_kwargs["body"].metadata.annotations["template_id"]
-            == template_id
-        )
-        assert (
-            json.loads(
-                call_kwargs["body"].metadata.annotations["template_args"]
-            ) == template_args
+            json.loads(call_kwargs["body"].metadata.annotations["template_args"])
+            == template_args
         )
 
 
@@ -313,7 +330,7 @@ async def test_remove_check(
 
     k8s_backend = K8sBackend[AuthenticationObject](
         template_dirs=TEMPLATES,
-        authentication=make_authentication(mock_api_client),
+        hooks=make_hooks(mock_api_client),
     )
 
     with expectation:
@@ -325,11 +342,7 @@ async def test_remove_check(
         mock_batch_v1_api.assert_called_once()
         mock_batch_v1_api.return_value.delete_namespaced_cron_job.assert_called_once()
         call_kwargs = (
-            mock_batch_v1_api
-            .return_value
-            .delete_namespaced_cron_job
-            .call_args
-            .kwargs
+            mock_batch_v1_api.return_value.delete_namespaced_cron_job.call_args.kwargs
         )
         assert call_kwargs["name"] == check_id_1
         assert call_kwargs["namespace"] == NAMESPACE
@@ -416,7 +429,7 @@ async def test_get_checks(
 
     k8s_backend = K8sBackend[AuthenticationObject](
         template_dirs=TEMPLATES,
-        authentication=make_authentication(mock_api_client),
+        hooks=make_hooks(mock_api_client),
     )
 
     with expectation:
@@ -506,7 +519,7 @@ async def test_run_check(
 
     k8s_backend = K8sBackend[AuthenticationObject](
         template_dirs=TEMPLATES,
-        authentication=make_authentication(mock_api_client),
+        hooks=make_hooks(mock_api_client),
     )
 
     with expectation:
@@ -518,28 +531,18 @@ async def test_run_check(
         mock_batch_v1_api.assert_called_once()
         mock_batch_v1_api.return_value.read_namespaced_cron_job.assert_called_once()
         call_kwargs_read = (
-            mock_batch_v1_api
-            .return_value
-            .read_namespaced_cron_job
-            .call_args
-            .kwargs
+            mock_batch_v1_api.return_value.read_namespaced_cron_job.call_args.kwargs
         )
         assert call_kwargs_read["name"] == check_id_1
         assert call_kwargs_read["namespace"] == NAMESPACE
         mock_batch_v1_api.return_value.create_namespaced_job.assert_called_once()
         call_kwargs_create = (
-            mock_batch_v1_api
-            .return_value
-            .create_namespaced_job
-            .call_args
-            .kwargs
+            mock_batch_v1_api.return_value.create_namespaced_job.call_args.kwargs
         )
         assert call_kwargs_create["namespace"] == NAMESPACE
         assert (
-            call_kwargs_create["body"].metadata.owner_references[0].name
-            == check_id_1
+            call_kwargs_create["body"].metadata.owner_references[0].name == check_id_1
         )
         assert (
-            call_kwargs_create["body"].metadata.owner_references[0].uid
-            == check_uuid_1
+            call_kwargs_create["body"].metadata.owner_references[0].uid == check_uuid_1
         )
