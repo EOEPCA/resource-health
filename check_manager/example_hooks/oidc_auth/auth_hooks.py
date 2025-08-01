@@ -1,5 +1,5 @@
+from fastapi import Request
 import check_hooks.hook_utils as hu
-
 from eoepca_security import OIDCProxyScheme, Tokens
 from typing import TypedDict
 import os
@@ -12,30 +12,29 @@ class UserInfo(TypedDict):
     refresh_token: str | None
 
 
-def get_fastapi_security() -> OIDCProxyScheme:
-    return OIDCProxyScheme(
-        openIdConnectUrl=os.environ["OPEN_ID_CONNECT_URL"],
-        audience=os.environ["OPEN_ID_CONNECT_AUDIENCE"],
-        id_token_header="x-id-token",
-        refresh_token_header="x-refresh-token",
-        auth_token_header="Authorization",
-        auth_token_in_authorization=True,
-        auto_error=True,  ## Set False to allow unauthenticated access!
-        scheme_name="OIDC behind auth proxy",
-    )
+oidc_proxy_scheme = OIDCProxyScheme(
+    openIdConnectUrl=os.environ["OPEN_ID_CONNECT_URL"],
+    audience=os.environ["OPEN_ID_CONNECT_AUDIENCE"],
+    id_token_header="x-id-token",
+    refresh_token_header="x-refresh-token",
+    auth_token_header="Authorization",
+    auth_token_in_authorization=True,
+    auto_error=True,  ## Set False to allow unauthenticated access!
+    scheme_name="OIDC behind auth proxy",
+)
+
+
+async def get_fastapi_security(request: Request) -> Tokens | None:
+    return await oidc_proxy_scheme(request)
 
 
 def on_auth(tokens: Tokens | None) -> UserInfo:
     print("ON AUTH")
 
     if tokens is None or tokens["auth"] is None:  # or tokens['id'] is None:
-        raise hu.APIException(
-            hu.Error(
-                status="403",
-                code="MissingTokens",
-                title="Missing authentication or ID token",
-                detail="Potentially missing authenticating proxy",
-            )
+        raise hu.APIForbiddenError(
+            title="Missing authentication or ID token",
+            detail="Potentially missing authenticating proxy",
         )
 
     claims = {}
@@ -51,13 +50,9 @@ def on_auth(tokens: Tokens | None) -> UserInfo:
 
     if user_id is None or username is None:
         print(claims)
-        raise hu.APIException(
-            hu.Error(
-                status="401",
-                code="Missing user id/name",
-                title="Missing user identification",
-                detail="Username or user id missing",
-            )
+        raise hu.APIUnauthorizedError(
+            title="Missing user identification",
+            detail="Username or user id missing",
         )
 
     return UserInfo(
@@ -68,43 +63,51 @@ def on_auth(tokens: Tokens | None) -> UserInfo:
     )
 
 
-def on_template_access(userinfo: UserInfo, template: hu.CheckTemplate) -> bool:
+def on_template_access(userinfo: UserInfo, template: hu.CheckTemplate) -> None:
     print("ON TEMPLATE_ACCESS")
 
     if template.id == "default_k8s_template" and userinfo["username"] != "bob":
-        return False
-
-    return True
+        raise hu.CheckTemplateIdError(template.id)
 
 
-def on_check_create(userinfo: UserInfo, check: hu.InCheckAttributes) -> bool:
+def on_check_create(userinfo: UserInfo, check: hu.InCheckAttributes) -> None:
     print("ON CHECK CREATE")
 
     if userinfo["username"] not in ["alice", "bob"]:
-        return False
+        raise hu.APIForbiddenError(
+            title="Check creation disallowed",
+            detail="You are not authorized to create this check",
+        )
 
-    return True
 
-
-def on_check_remove(userinfo: UserInfo, check: hu.OutCheck) -> bool:
+def on_check_remove(userinfo: UserInfo, check: hu.OutCheck) -> None:
     print("ON CHECK REMOVE")
 
     if userinfo["username"] not in ["alice", "bob"]:
-        return False
+        raise hu.APIForbiddenError(
+            title="Unauthorized check remove",
+            detail=f"You are not authorized to remove check with id {check.id}",
+        )
 
-    return True
 
-
-def on_check_access(userinfo: UserInfo, check: hu.OutCheck) -> bool:
+def on_check_access(userinfo: UserInfo, check: hu.OutCheck) -> None:
     print("ON CHECK ACCESS")
 
-    return True
+    # raise CheckIdError(check_id)
+
+    # raise hu.APIForbidden(
+    #     title="Check created but access denied",
+    #     detail="The check was created, but access to the resulting check was denied",
+    # )
 
 
-def on_check_run(userinfo: UserInfo, check: hu.OutCheck) -> bool:
+def on_check_run(userinfo: UserInfo, check: hu.OutCheck) -> None:
     print("ON CHECK RUN")
 
-    return True
+    # raise hu.APIForbidden(
+    #     title="Unauthorized run check",
+    #     detail=f"You are not authorized to run check with id {check.id}",
+    # )
 
 
 ## For the k8s backend
@@ -126,16 +129,20 @@ def get_k8s_namespace(userinfo: UserInfo) -> str:
 
 
 async def on_k8s_cronjob_access(
-    userinfo: UserInfo, client: hu.K8sClient, cronjob: hu.K8sCronJob
-) -> bool:
+    userinfo: UserInfo,
+    check_id: hu.CheckId,
+    client: hu.K8sClient,
+    cronjob: hu.K8sCronJob,
+) -> None:
     print("on_k8s_cronjob_access")
 
-    return cronjob.metadata.annotations.get("owner") == userinfo["username"]
+    if cronjob.metadata.annotations.get("owner") != userinfo["username"]:
+        raise hu.CheckIdError(check_id)
 
 
 async def on_k8s_cronjob_create(
     userinfo: UserInfo, client: hu.K8sClient, cronjob: hu.K8sCronJob
-) -> bool:
+) -> None:
     print("on_k8s_cronjob_create")
 
     ## Ensure cronjob is tagged with correct owner
@@ -144,7 +151,10 @@ async def on_k8s_cronjob_create(
         "owner" in cronjob.metadata.annotations
         and cronjob.metadata.annotations["owner"] != userinfo["username"]
     ):
-        return False
+        raise hu.APIForbiddenError(
+            title="Unauthorized check create",
+            detail="Permission denied to create health check cronjob",
+        )
 
     cronjob.metadata.annotations["owner"] = userinfo["username"]
 
@@ -154,46 +164,48 @@ async def on_k8s_cronjob_create(
     secret_namespace = get_k8s_namespace(userinfo)
 
     offline_secret = await hu.lookup_k8s_secret(
-        client=client,
-        namespace=secret_namespace,
-        name=secret_name
+        client=client, namespace=secret_namespace, name=secret_name
     )
 
     if offline_secret is None:
-        if userinfo['refresh_token'] is None:
-            raise hu.APIException(hu.Error(
+        if userinfo["refresh_token"] is None:
+            raise hu.APIException(
                 status="404",
                 code="MissingOfflineToken",
                 title="Missing offline token, please create at least one check using the website",
-            ))
+            )
         await hu.create_k8s_secret(
             client=client,
             name=secret_name,
             namespace=secret_namespace,
-            string_data={
-                "offline_token": userinfo['refresh_token']
-            }
+            string_data={"offline_token": userinfo["refresh_token"]},
         )
-
-    return True
 
 
 def on_k8s_cronjob_remove(
     userinfo: UserInfo, client: hu.K8sClient, cronjob: hu.K8sCronJob
-) -> bool:
+) -> None:
     print("on_k8s_cronjob_remove")
 
     ## Access already checked as part of on_k8s_cronjob_access
 
-    return True
+    # raise hu.APIForbidden(
+    #     title="Unauthorized check remove",
+    #     detail="Permission denied to remove health check cronjob",
+    # )
 
 
-def on_k8s_cronjob_run(userinfo: UserInfo, client: hu.K8sClient, cronjob: hu.K8sCronJob) -> bool:
+def on_k8s_cronjob_run(
+    userinfo: UserInfo, client: hu.K8sClient, cronjob: hu.K8sCronJob
+) -> None:
     print("on_k8s_cronjob_run")
 
     ## Access already checked as part of on_k8s_cronjob_access
 
-    return True
+    # raise hu.APIForbidden(
+    #     title="Unauthorized run check",
+    #     detail="Permission denied to run health check cronjob",
+    # )
 
 
 ## For the mock backend

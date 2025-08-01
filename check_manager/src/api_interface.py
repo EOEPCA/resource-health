@@ -1,6 +1,12 @@
 from typing import Any, Final
 
-from api_utils.exceptions import APIExceptions, APIInternalError, get_exceptions
+from api_utils.exceptions import (
+    APIExceptions,
+    APIForbiddenError,
+    APIInternalError,
+    APIUnauthorizedError,
+    get_exceptions,
+)
 from check_backends.check_backend import (
     CheckIdError,
     CheckIdNonUniqueError,
@@ -37,18 +43,22 @@ def get_check_exceptions(
 def _get_exception(error: Error) -> APIException:
     match error.code:
         case JsonValidationError.__name__:
-            return JsonValidationError(error)
+            return JsonValidationError.create(error)
         case CronExpressionValidationError.__name__:
-            return CronExpressionValidationError(error)
+            return CronExpressionValidationError.create(error)
         case APIInternalError.__name__:
-            return APIInternalError(error)
+            return APIInternalError.create(error)
+        case APIForbiddenError.__name__:
+            return APIForbiddenError.create(error)
+        case APIUnauthorizedError.__name__:
+            return APIUnauthorizedError.create(error)
         case CheckTemplateIdError.__name__:
-            return CheckTemplateIdError(error)
+            return CheckTemplateIdError.create(error)
         case CheckIdError.__name__:
-            return CheckIdError(error)
+            return CheckIdError.create(error)
         case CheckIdNonUniqueError.__name__:
-            return CheckIdNonUniqueError(error)
+            return CheckIdNonUniqueError.create(error)
         case CheckConnectionError.__name__:
-            return CheckConnectionError(error)
+            return CheckConnectionError.create(error)
         case _:
-            return APIException(error)
+            return APIException.create(error)

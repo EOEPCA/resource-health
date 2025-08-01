@@ -53,7 +53,7 @@ class RestBackend(CheckBackend[AuthenticationObject]):
                 params={"ids": ids} if ids is not None else {},
             )
         except httpx.HTTPError as e:
-            raise CheckConnectionError.create(str(e))
+            raise CheckConnectionError(str(e))
         if response.is_success:
             for check_template in (
                 APIOKResponseList[CheckTemplateAttributes, None]
@@ -81,7 +81,7 @@ class RestBackend(CheckBackend[AuthenticationObject]):
                 ),
             )
         except httpx.HTTPError as e:
-            raise CheckConnectionError.create(str(e))
+            raise CheckConnectionError(str(e))
         if response.is_success:
             structured_response = APIOKResponse[OutCheckAttributes].model_validate(
                 response.json()
@@ -114,7 +114,7 @@ class RestBackend(CheckBackend[AuthenticationObject]):
     #             },
     #         )
     #     except httpx.HTTPError as e:
-    #         raise CheckConnectionError.create(str(e))
+    #         raise CheckConnectionError(str(e))
     #     if response.is_success:
     #         return Check.model_validate(response.json())
     #     raise get_exception(status_code=response.status_code, content=response.json())
@@ -130,7 +130,7 @@ class RestBackend(CheckBackend[AuthenticationObject]):
                 )
             )
         except httpx.HTTPError as e:
-            raise CheckConnectionError.create(str(e))
+            raise CheckConnectionError(str(e))
         if response.is_success:
             return None
         raise get_check_exceptions(
@@ -149,7 +149,7 @@ class RestBackend(CheckBackend[AuthenticationObject]):
                 params={"ids": ids} if ids is not None else {},
             )
         except httpx.HTTPError as e:
-            raise CheckConnectionError.create(str(e))
+            raise CheckConnectionError(str(e))
         # TODO: stream this instead of accumulating everything first
         if response.is_success:
             for check in (
@@ -174,7 +174,7 @@ class RestBackend(CheckBackend[AuthenticationObject]):
                 )
             )
         except httpx.HTTPError as e:
-            raise CheckConnectionError.create(str(e))
+            raise CheckConnectionError(str(e))
         if response.is_success:
             return None
         raise get_check_exceptions(
