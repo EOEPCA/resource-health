@@ -148,7 +148,7 @@ async def test_call_hooks_until_not_none(args: HooksArgs) -> None:
 async def test_call_hooks_ignore_results(args: HooksArgs) -> None:
     with args.expectation:
         assert (
-            await call_hooks_ignore_results(args.funcs, *args.args, **args.kwargs)
+            await call_hooks_ignore_results(args.funcs, *args.args, **args.kwargs)  # type: ignore
             is None
         )
 

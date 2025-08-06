@@ -291,6 +291,7 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
                     await call_hooks_ignore_results(
                         self._hooks[ON_K8S_CRONJOB_ACCESS_HOOK_NAME],
                         auth_obj,
+                        check_id,
                         api_client,
                         cronjob,
                     )
@@ -357,11 +358,13 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
             template_id: str | None
 
             for cronjob in cronjobs.items:
+                check_id = cronjob.metadata.name
                 if (ids is None or cronjob.metadata.name in ids) and (
                     ON_K8S_CRONJOB_ACCESS_HOOK_NAME not in self._hooks
                     or await call_hooks_check_if_allow(
                         self._hooks[ON_K8S_CRONJOB_ACCESS_HOOK_NAME],
                         auth_obj,
+                        check_id,
                         api_client,
                         cronjob,
                     )
@@ -410,6 +413,7 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
                     await call_hooks_ignore_results(
                         self._hooks[ON_K8S_CRONJOB_ACCESS_HOOK_NAME],
                         auth_obj,
+                        check_id,
                         api_client,
                         cronjob,
                     )
