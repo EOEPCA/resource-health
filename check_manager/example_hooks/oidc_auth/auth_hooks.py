@@ -76,7 +76,7 @@ def on_template_access(userinfo: UserInfo, template: hu.CheckTemplate) -> None:
 def raise_error_if_schedule_too_frequent(
     cron_schedule: str, min_allowed_days_between_runs: int, error_detail: str
 ) -> None:
-    error = hu.APIUserInputError(title="Schedule too Frequent", detail=error_detail)
+    error = hu.APIUserInputError(title="Schedule Too Frequent", detail=error_detail)
     cron_instance = Cron(cron_schedule)
     [minutes, hours, days, months, weekdays] = cron_instance.to_list()
     if len(minutes) > 1:
@@ -115,7 +115,7 @@ def on_check_create(userinfo: UserInfo, check: hu.InCheckAttributes) -> None:
         raise_error_if_schedule_too_frequent(
             check.schedule,
             min_allowed_days_between_runs=3,
-            error_detail=f"Cannot create a check from template {check.metadata.template_id} with schedule which executes twice in {min_allowed_days_between_runs} day period at any point.",
+            error_detail=f"Check from template {check.metadata.template_id} must run at most once in {min_allowed_days_between_runs} day period.",
         )
 
 

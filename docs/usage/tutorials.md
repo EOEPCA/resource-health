@@ -231,20 +231,24 @@ Here is how you would forbid some user (eric in this case) to create a ping-an-e
 
     ```python
     if userinfo["username"] == "eric" and check.metadata.template_id == "simple_ping":
-        return False
+        raise hu.APIForbiddenError(
+            title="Check creation disallowed",
+            detail="You are not authorized to create this check",
+        )
     ```
     
     So the final `on_check_create` would look something like this
     
     ```python
-    def on_check_create(userinfo: UserInfo, check: hu.InCheckAttributes) -> bool:
+    def on_check_create(userinfo: UserInfo, check: hu.InCheckAttributes) -> None:
         
         # The previous if-statements go here
 
         if userinfo["username"] == "eric" and check.metadata.template_id == "simple_ping":
-            return False
-
-        return True
+            raise hu.APIForbiddenError(
+                title="Check creation disallowed",
+                detail="You are not authorized to create this check",
+            )
     ```
 
     The `userinfo` argument is whatever info is produced by the `on_auth` hook.
@@ -499,13 +503,9 @@ Hooks are Python functions which define API backend and authentication configura
     ```python
     def on_auth(tokens: Tokens | None) -> UserInfo:
         if tokens is None or tokens["auth"] is None:
-            raise hu.APIException(
-                hu.Error(
-                    status="403",
-                    code="MissingTokens",
-                    title="Missing authentication token",
-                    detail="Potentially missing authenticating proxy",
-                )
+            raise hu.APIForbiddenError(
+                title="Missing authentication or ID token",
+                detail="Potentially missing authenticating proxy",
             )
 
         username_claim = (
@@ -541,17 +541,16 @@ Hooks script parts specific to Health Check API:
 
         ## Only bob can use/access unsafe templates
         if userinfo["username"] != "bob" and template.id != "simple_ping":
-            return False
+            raise hu.CheckTemplateIdError(template.id)
 
         ## Only bob, alice, and eric can access the templates
         if userinfo["username"] not in ["bob", "alice", "eric"]:
-            return False
-
-        return True
+            raise hu.CheckTemplateIdError(template.id)
     ```
 
     !!! info
-        The access/usage is denied *only* if the hook returns `False`. If the hook doesn't exist, or returns other falsey values like `None`, the access/usage is allowed.
+        The access/usage is denied *only* if the hook raise an exception. If the hook doesn't exist, or if it doesn't raise an exception, the access/usage is allowed.  
+        Also if the `Exception` is `APIException` or any derived class (such as `CheckTemplateIdError`), the exception message will be shown to the user. Otherwise a "500 Internal Server Error" will be shown.
         <!-- TODO: write about multiple hooks here, I think such is possible. -->
 
 3. Kubernetes configuration and authorization hooks:
@@ -574,7 +573,10 @@ Hooks script parts specific to Health Check API:
                 "owner" in cronjob.metadata.annotations
                 and cronjob.metadata.annotations["owner"] != userinfo["username"]
             ):
-                return False
+            raise hu.APIForbiddenError(
+                title="Unauthorized check create",
+                detail="Permission denied to create health check cronjob",
+            )
 
             cronjob.metadata.annotations["owner"] = userinfo["username"]
 
@@ -591,11 +593,12 @@ Hooks script parts specific to Health Check API:
 
             if offline_secret is None:
                 if userinfo['refresh_token'] is None:
-                    raise hu.APIException(hu.Error(
+                    raise hu.APIException(
                         status="404",
                         code="MissingOfflineToken",
-                        title="Missing offline token, please create at least one check using the website",
-                    ))
+                        title="Missing Offline Token",
+                        detail="Missing offline token, please create at least one check using the website",
+                    )
                 await hu.create_k8s_secret(
                     client=client,
                     name=secret_name,
@@ -604,8 +607,6 @@ Hooks script parts specific to Health Check API:
                         "offline_token": userinfo['refresh_token']
                     }
                 )
-
-            return True
         ```
 
     4. The remaining K8s backend hooks give you a chance to forbid certain K8s operations for certain users. Such authorization decisions can also take the `K8sClient` and `K8sCronJob` into account when making such decisions.
