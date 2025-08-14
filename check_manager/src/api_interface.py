@@ -5,6 +5,7 @@ from api_utils.exceptions import (
     APIForbiddenError,
     APIInternalError,
     APIUnauthorizedError,
+    APIUserInputError,
     get_exceptions,
 )
 from check_backends.check_backend import (
@@ -52,6 +53,8 @@ def _get_exception(error: Error) -> APIException:
             return APIForbiddenError.create(error)
         case APIUnauthorizedError.__name__:
             return APIUnauthorizedError.create(error)
+        case APIUserInputError.__name__:
+            return APIUserInputError.create(error)
         case CheckTemplateIdError.__name__:
             return CheckTemplateIdError.create(error)
         case CheckIdError.__name__:

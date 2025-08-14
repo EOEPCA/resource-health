@@ -1,5 +1,9 @@
 from jsonschema import ValidationError
-from api_utils.exceptions import APIException, APIForbiddenError
+from api_utils.exceptions import (
+    APIException,
+    APIForbiddenError,
+    APIUserInputError,
+)
 from api_utils.json_api_types import ErrorSourcePointer
 
 
@@ -28,12 +32,11 @@ class JsonValidationError(APIException):
         )
 
 
-class CronExpressionValidationError(APIException):
+class CronExpressionValidationError(APIUserInputError):
     """Cron expression is invalid"""
 
     def __init__(self, detail: str) -> None:
         super().__init__(
-            status="422",
             title=CronExpressionValidationError._create_title_from_doc(),
             detail=detail,
         )

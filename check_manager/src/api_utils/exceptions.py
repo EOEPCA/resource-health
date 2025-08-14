@@ -76,6 +76,11 @@ class APIUnauthorizedError(APIException):
         )
 
 
+class APIUserInputError(APIException):
+    def __init__(self, title: str, detail: str) -> None:
+        super().__init__(status="422", title=title, detail=detail)
+
+
 def get_status_code_and_errors(exception: Exception) -> tuple[int, list[Error]]:
     match exception:
         case APIExceptions():

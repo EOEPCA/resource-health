@@ -1,5 +1,9 @@
 from exceptions import APIException  # noqa: F401 used by hooks which import this
-from api_utils.exceptions import APIForbiddenError, APIUnauthorizedError  # noqa: F401 used by hooks which import this
+from api_utils.exceptions import (
+    APIForbiddenError,  # noqa: F401 used by hooks which import this
+    APIUnauthorizedError,  # noqa: F401 used by hooks which import this
+    APIUserInputError,  # noqa: F401 used by hooks which import this
+)
 import typing
 from check_backends.check_backend import (
     CheckTemplate,  # noqa: F401 used by hooks which import this
