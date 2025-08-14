@@ -71,6 +71,7 @@ def on_template_access(userinfo: UserInfo, template: hu.CheckTemplate) -> None:
     if template.id == "generic_script_template" and userinfo["username"] != "bob":
         raise hu.CheckTemplateIdError(template.id)
 
+
 # This is not a hook
 def raise_error_if_schedule_too_frequent(
     cron_schedule: str, min_allowed_days_between_runs: int, error_detail: str
@@ -210,7 +211,8 @@ async def on_k8s_cronjob_create(
             raise hu.APIException(
                 status="404",
                 code="MissingOfflineToken",
-                title="Missing offline token, please create at least one check using the website",
+                title="Missing Offline Token",
+                detail="Missing offline token, please create at least one check using the website",
             )
         await hu.create_k8s_secret(
             client=client,

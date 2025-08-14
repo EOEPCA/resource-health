@@ -24,8 +24,8 @@ class APIException(Exception):
         self,
         status: str,
         title: str,
+        detail: str,
         code: str | None = None,
-        detail: str | None = None,
         source: ErrorSource | None = None,
         meta: Json | None = None,
     ) -> None:
@@ -39,9 +39,13 @@ class APIException(Exception):
             meta=meta,
         )
 
-    @classmethod
-    def _create_title_from_doc(cls) -> str:
-        return cls.__doc__ or ""
+    # This is used when exception is printed
+    def __str__(self: Self) -> str:
+        if self.error.detail:
+            return self.error.detail
+        if self.error.title:
+            return self.error.title
+        return self.error.code
 
 
 @dataclass
@@ -52,12 +56,10 @@ class APIExceptions(Exception):
 
 
 class APIInternalError(APIException):
-    """API internal error"""
-
     def __init__(self, detail: str) -> None:
         super().__init__(
             status="500",
-            title=APIInternalError._create_title_from_doc(),
+            title="API internal error",
             detail=detail,
         )
 

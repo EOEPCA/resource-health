@@ -8,13 +8,11 @@ from api_utils.json_api_types import ErrorSourcePointer
 
 
 class JsonValidationError(APIException):
-    """Json is not valid for this schema"""
-
     def __init__(self, path_start: str, e: ValidationError) -> None:
         """path_start is json pointer start to prepend"""
         super().__init__(
             status="422",
-            title=JsonValidationError._create_title_from_doc(),
+            title="Json is not valid for this schema",
             source=ErrorSourcePointer(
                 pointer=path_start + "/".join([str(name) for name in e.path])
             ),
@@ -33,31 +31,25 @@ class JsonValidationError(APIException):
 
 
 class CronExpressionValidationError(APIUserInputError):
-    """Cron expression is invalid"""
-
     def __init__(self, detail: str) -> None:
         super().__init__(
-            title=CronExpressionValidationError._create_title_from_doc(),
+            title="Cron expression is invalid",
             detail=detail,
         )
 
 
 class NewCheckClientSpecifiedId(APIForbiddenError):
-    """Client must not specify new check id"""
-
     def __init__(self) -> None:
         super().__init__(
-            title=NewCheckClientSpecifiedId._create_title_from_doc(),
+            title="Client must not specify new check id",
             detail="Client must not specify new check id",
         )
 
 
 class CheckConnectionError(APIException, ConnectionError):
-    """HTTP request failed"""
-
     def __init__(self, detail: str) -> None:
         super().__init__(
             status="500",
-            title=CheckConnectionError._create_title_from_doc(),
+            title="HTTP request failed",
             detail=detail,
         )

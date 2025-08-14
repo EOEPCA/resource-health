@@ -35,7 +35,7 @@ async def hookC(a: str) -> Any:
         case "c":
             raise CheckIdError(CheckId(""))
         case "d":
-            raise APIException(status="", title="")
+            raise APIException(status="", title="", detail="")
 
 
 def hookD(a: str) -> Any:

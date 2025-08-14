@@ -25,34 +25,28 @@ CheckId = NewType("CheckId", str)
 
 
 class CheckTemplateIdError(APIException, KeyError):
-    """Template Id not found"""
-
     def __init__(self, check_template_id: CheckTemplateId) -> None:
         super().__init__(
             status="404",
-            title=CheckTemplateIdError._create_title_from_doc(),
+            title="Template Id not found",
             detail=f"Check template id {check_template_id} not found",
         )
 
 
 class CheckIdError(APIException, KeyError):
-    """Check Id not found"""
-
     def __init__(self, check_id: CheckId) -> None:
         super().__init__(
             status="404",
-            title=CheckIdError._create_title_from_doc(),
+            title="Check Id not found",
             detail=f"Check id {check_id} not found",
         )
 
 
 class CheckIdNonUniqueError(APIException, KeyError):
-    """Check Id is not unique"""
-
     def __init__(self, detail: str) -> None:
         super().__init__(
             status="400",
-            title=CheckIdNonUniqueError._create_title_from_doc(),
+            title="Check Id is not unique",
             detail=detail,
         )
 
