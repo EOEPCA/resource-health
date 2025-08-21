@@ -208,9 +208,9 @@ In this tutorial we will learn:
 
 * How to configure authorization for Health Check API using hooks
 
-Hooks are Python functions which define API backend and authentication configuration. See [Hooks Documentation](#hooks-documentation), [Health Check API Backend](#health-check-api-backend), and [Telemetry API Backend/Proxy](#telemetry-api-backendproxy).
+Hooks are Python functions which are called by the APIs and by their backends to get the configuration information and to ask if a certain action is allowed. See [Hooks Documentation](#hooks-documentation), [Health Check API Backend](#health-check-api-backend), and [Telemetry API Backend/Proxy](#telemetry-api-backendproxy).
 
-Here is how you would forbid some user (eric in this case) to create a ping-an-endpoint check. Your deployment might differ from the development cluster which is referenced below, but the steps should translate well to your deployment:
+Here is how you would forbid some user (eric in this case) from creating a ping-an-endpoint check. Your deployment might differ from the development cluster which is referenced below, but the steps should translate well to your deployment:
 
 1. If we can, we should first check that eric can create a ping-an-endpoint check right now. So that when we're done and eric can't create a ping-an-endpoint check any more, we know it's because of what we did, and not some unrelated reason.
 2. We first need to figure out what hook to implement. Since we want to configure something about check management (as opposed to telemetry management), we'll need to update the Health Check API configuration. Then we take a look at [Health Check Hooks Example Implementation](https://github.com/EOEPCA/resource-health/blob/58087ff26eca34e6aeaf58216fd87b18b745e36b/check_manager/example_hooks/oidc_auth/auth_hooks.py) to see what hooks are available, and example implementations for each of them. Check lifecycle hooks are named `on_template_...` or `on_check_...`. We see that `on_check_create` hook is what we can use for this. As the name suggests, it's called before any check is created, so it's a good place to forbid check creation when conditions of our choosing aren't met.
@@ -468,8 +468,12 @@ Here we will learn:
 
 * How to configure Health Check API and Telemetry API backends using hooks
 * How to configure Health Check API and Telemetry API authentication using hooks
+* How to make authorization decisions for Health Check API and Telemetry API
+* How to disallow actions for any other reason, e.g. disallow creating checks with too frequent schedules
 
-Hooks are Python functions which define API backend and authentication configuration. For more about API backends, see [Health Check API Backend](#health-check-api-backend) and [Telemetry API Backend/Proxy](#telemetry-api-backendproxy). The following hook parts are common for both Health Check API and Telemetry API hooks:
+Hooks are Python functions which are called by the APIs and by their backends to get the configuration information and to ask if a certain action is allowed. For more about API backends, see [Health Check API Backend](#health-check-api-backend) and [Telemetry API Backend/Proxy](#telemetry-api-backendproxy).
+
+The following hook parts are common for both Health Check API and Telemetry API hooks:
 
 1. `UserInfo` type definition. You will produce a value of this type upon inspecting the user authentication data, and you will use it later on to make authentication decisions such as "Bob gets to use this check template and Alice does not".  
     Note that Python is dynamically typed, so you don't have to do this, but it shows your tooling what you expect, and thus the tooling (such as mypy) can point to your mistakes before executing the code.
@@ -520,7 +524,14 @@ Hooks are Python functions which define API backend and authentication configura
         )
     ```
 
-Keep in mind, that hooks are just Python functions, so you're free to do any other actions in them than what's described here. You could log user access instances, or emit notifications upon check creation and removal, for example. You could even modify the arguments provided to those functions.
+        !!! info
+            Each hook can be defined in multiple files. The files with earlier alphanumeric names will have their hooks called earlier. For a hook like `on_auth` which produce a value, each implementation will be called one by one until one of them produces a value that's not `None`, and that value will be considered the overall result of the hook.
+
+!!! info
+    Functions which return a list of items, such as `get_check_templates` and `get_checks` call hooks for each item. If a hook raises `APIForbiddenError` or `CheckTemplateIdError` or `CheckIdError`, then it is excluded from the final list. Any other exception will make the whole request return an error. If the `Exception` is `APIException` or any derived class (not counting `APIForbiddenError`, `CheckTemplateIdError`, and `CheckIdError`), the exception message will be shown to the user. Otherwise a “500 Internal Server Error” will be shown.
+
+!!! info
+    Hooks are just Python functions, so you're free to do any other actions in them than what's described here. You could log user access instances, or emit notifications upon check creation and removal, for example. You could even modify the arguments provided to those functions.
 
 #### Health Check API hooks
 
@@ -534,9 +545,9 @@ In particular, [OIDC auth hooks](https://github.com/EOEPCA/resource-health/blob/
 Hooks script parts specific to Health Check API:
 
 1. Imports. `import check_hooks.hook_utils as hu` (or equivalent) should be included every time - it contains K8s config and secret helper functions. In addition import authentication stuff from `eoepca_security`.
-2. Backend-agnostic authorization hooks, such as `on_template_access`, `on_check_create`, `on_check_run`, etc. give you an opportunity to forbid certain API functionality for certain users. Such authorization decisions can also take the data to be accessed/created/modified/deleted into account. Each of these hooks is optional, and not implementing it wouldn't impact any other hooks. See example below
+2. Backend-agnostic hooks, such as `on_template_access`, `on_check_create`, `on_check_run`, etc. give you an opportunity to forbid certain API functionality for certain users, or for any other reason, e.g. because the schedule is too frequent. Such decisions can also take the data to be accessed/created/modified/deleted into account. Each of these hooks is optional, and not implementing it wouldn't impact any other hooks. See example below
     ```python
-    def on_template_access(userinfo: UserInfo, template: hu.CheckTemplate) -> bool:
+    def on_template_access(userinfo: UserInfo, template: hu.CheckTemplate) -> None:
         print("ON TEMPLATE_ACCESS")
 
         ## Only bob can use/access unsafe templates
@@ -551,7 +562,6 @@ Hooks script parts specific to Health Check API:
     !!! info
         The access/usage is denied *only* if the hook raise an exception. If the hook doesn't exist, or if it doesn't raise an exception, the access/usage is allowed.  
         Also if the `Exception` is `APIException` or any derived class (such as `CheckTemplateIdError`), the exception message will be shown to the user. Otherwise a "500 Internal Server Error" will be shown.
-        <!-- TODO: write about multiple hooks here, I think such is possible. -->
 
 3. Kubernetes configuration and authorization hooks:
     1. `get_k8s_config`. Takes `UserInfo` and returns `K8sConfiguration`. `check_hooks.hook_utils` has a few helper functions to help with this. You must implement this function to use the K8s backend.
@@ -564,7 +574,7 @@ Hooks script parts specific to Health Check API:
         ```python
         async def on_k8s_cronjob_create(
             userinfo: UserInfo, client: hu.K8sClient, cronjob: hu.K8sCronJob
-        ) -> bool:
+        ) -> None:
             print("on_k8s_cronjob_create")
 
             ## Ensure cronjob is tagged with correct owner

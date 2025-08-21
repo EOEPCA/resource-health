@@ -1,30 +1,19 @@
-# How-Tos
+from datetime import datetime, timedelta
+from typing import TYPE_CHECKING, Any
+from cron_converter import Cron
 
-How-tos to communicate usage by example.
+import check_hooks.hook_utils as hu
 
-## Hooks
+# The hooks are loaded one file at a time, so importing things from one file to another will not work.
+# This trick ensures that UserInfo is imported only for type checking - and it can only be used for that
+if TYPE_CHECKING:
+    from auth_hooks import UserInfo
+else:
+    type UserInfo = Any
 
-[OIDC auth hooks](https://github.com/EOEPCA/resource-health/blob/58087ff26eca34e6aeaf58216fd87b18b745e36b/check_manager/example_hooks/oidc_auth) is an example Health Check API hooks implementation for authentication with OpenID Connect protocol, and implements examples for all available Health Check API hooks.
 
-### Authorization
-
-Here is how to forbid some user (eric in this case) from creating a ping-an-endpoint check.
-
-```python
 def on_check_create(userinfo: UserInfo, check: hu.InCheckAttributes) -> None:
-    if userinfo["username"] == "eric" and check.metadata.template_id == "simple_ping":
-        raise hu.APIForbiddenError(
-            title="Check creation disallowed",
-            detail="You are not authorized to create this check",
-        )
-```
-
-### Disallow too frequent schedule
-
-Here is how to forbid creating checks from a certain template if they're scheduled to run more than once in any 3 days. This is useful to ensure that any expensive computation is not executed too frequently.
-
-```python
-def on_check_create(userinfo: UserInfo, check: hu.InCheckAttributes) -> None:
+    print("ON CHECK CREATE from disallow_frequent_check_hooks.py")
     min_allowed_days_between_runs = 3
     if check.metadata.template_id == "telemetry_access_template":
         raise_error_if_schedule_too_frequent(
@@ -32,6 +21,7 @@ def on_check_create(userinfo: UserInfo, check: hu.InCheckAttributes) -> None:
             min_allowed_days_between_runs=3,
             error_detail=f"Check from template {check.metadata.template_id} must run at most once in {min_allowed_days_between_runs} day period.",
         )
+
 
 # This is not a hook
 def raise_error_if_schedule_too_frequent(
@@ -60,4 +50,3 @@ def raise_error_if_schedule_too_frequent(
             # Haven't found too frequent scheduled times in a year from now, that's enough
             return
         prev_date = date
-```
