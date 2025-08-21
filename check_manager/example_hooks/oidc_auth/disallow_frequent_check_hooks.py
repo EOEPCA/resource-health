@@ -27,8 +27,16 @@ def on_check_create(userinfo: UserInfo, check: hu.InCheckAttributes) -> None:
 def raise_error_if_schedule_too_frequent(
     cron_schedule: str, min_allowed_days_between_runs: int, error_detail: str
 ) -> None:
+    # For now we don't know if the cron_schedule is valid
+    # We need to raise something derived from APIException as otherwise user will see
+    # "500 Internal Server Error"
+    try:
+        cron_instance = Cron(cron_schedule)
+    except ValueError:
+        raise hu.APIUserInputError(
+            title="Invalid schedule", detail="Invalid cron expression"
+        )
     error = hu.APIUserInputError(title="Schedule Too Frequent", detail=error_detail)
-    cron_instance = Cron(cron_schedule)
     [minutes, hours, days, months, weekdays] = cron_instance.to_list()
     if len(minutes) > 1:
         # Means this will sometimes run at twice or more in one hour, which is too frequent

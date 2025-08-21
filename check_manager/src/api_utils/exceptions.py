@@ -32,7 +32,7 @@ class APIException(Exception):
         super().__init__(detail)
         self.error = Error(
             status=status,
-            code=type(code).__name__ if code is None else code,
+            code=type(self).__name__ if code is None else code,
             title=title,
             detail=detail,
             source=source,

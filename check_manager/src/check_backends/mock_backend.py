@@ -1,4 +1,5 @@
 from collections import defaultdict
+import re
 from typing import AsyncIterable, Self, override, TypeVar, Callable
 import uuid
 import os
@@ -21,7 +22,7 @@ from check_backends.check_backend import (
     OutcomeFilter,
 )
 from check_hooks import call_hooks_until_not_none
-from exceptions import JsonValidationError
+from exceptions import CronExpressionValidationError, JsonValidationError
 
 AuthenticationObject = TypeVar("AuthenticationObject")
 
@@ -29,6 +30,30 @@ MOCK_USERNAME = os.environ.get("RH_CHECK_MOCK_USERNAME") or "eric"
 GET_MOCK_USERNAME_HOOK_NAME = (
     os.environ.get("RH_CHECK_GET_MOCK_USERNAME_HOOK_NAME") or "get_mock_username"
 )
+
+# copied from K8s_backend
+# this is not moved to a common location, as at least in principle different backend could
+# support (slightly) different cron expressions
+minute_pattern = r"(\*|[0-5]?\d)(/\d+)?([-,][0-5]?\d)*"
+hour_pattern = r"(\*|[01]?\d|2[0-3])(/\d+)?([-,]([01]?\d|2[0-3]))*"
+day_of_month_pattern = r"(\*|[1-9]|[12]\d|3[01])(/\d+)?([-,]([1-9]|[12]\d|3[01]))*"
+month_pattern = r"(\*|1[0-2]|0?[1-9])(/\d+)?([-,](1[0-2]|0?[1-9]))*"
+day_of_week_pattern = r"(\*|[0-7])(/\d+)?([-,][0-7])*"
+
+cron_pattern = " ".join(
+    [
+        minute_pattern,
+        hour_pattern,
+        day_of_month_pattern,
+        month_pattern,
+        day_of_week_pattern,
+    ]
+)
+
+
+def validate_kubernetes_cron(cron_expr: str) -> None:
+    if not re.match(cron_pattern, cron_expr):
+        raise CronExpressionValidationError("Invalid cron expression")
 
 
 class MockBackend(CheckBackend[AuthenticationObject]):
@@ -153,6 +178,8 @@ class MockBackend(CheckBackend[AuthenticationObject]):
         username = await call_hooks_until_not_none(
             self._hooks[GET_MOCK_USERNAME_HOOK_NAME], auth_obj
         )
+
+        validate_kubernetes_cron(attributes.schedule)
 
         check_template_attributes = self._get_check_template_attributes(
             attributes.metadata.template_id
