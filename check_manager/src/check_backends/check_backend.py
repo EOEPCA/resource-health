@@ -15,7 +15,7 @@ from pydantic import BaseModel, TypeAdapter
 from referencing.jsonschema import Schema
 
 from exceptions import APIException
-from api_utils.json_api_types import Error, Json
+from api_utils.json_api_types import Json
 
 AuthenticationObject = TypeVar("AuthenticationObject")
 
@@ -25,51 +25,29 @@ CheckId = NewType("CheckId", str)
 
 
 class CheckTemplateIdError(APIException, KeyError):
-    """Template Id not found"""
-
-    @classmethod
-    def create(cls, check_template_id: CheckTemplateId) -> Self:
-        return cls(
-            Error(
-                status="404",
-                code=cls._create_code(),
-                title=cls._create_title_from_doc(),
-                detail=f"Check template id {check_template_id} not found",
-            )
+    def __init__(self, check_template_id: CheckTemplateId) -> None:
+        super().__init__(
+            status="404",
+            title="Template Id not found",
+            detail=f"Check template id {check_template_id} not found",
         )
 
 
 class CheckIdError(APIException, KeyError):
-    """Check Id not found"""
-
-    @classmethod
-    def create(cls, check_id: CheckId) -> Self:
-        return cls(
-            Error(
-                status="404",
-                code=cls._create_code(),
-                title=cls._create_title_from_doc(),
-                detail=f"Check id {check_id} not found",
-            )
+    def __init__(self, check_id: CheckId) -> None:
+        super().__init__(
+            status="404",
+            title="Check Id not found",
+            detail=f"Check id {check_id} not found",
         )
 
 
 class CheckIdNonUniqueError(APIException, KeyError):
-    """Check Id is not unique"""
-
-    @classmethod
-    def create(cls, check_id: CheckId) -> Self:
-        return cls.create_with_detail(f"Check id {check_id} is not unique")
-
-    @classmethod
-    def create_with_detail(cls, detail: str) -> Self:
-        return cls(
-            Error(
-                status="400",
-                code=cls._create_code(),
-                title=cls._create_title_from_doc(),
-                detail=detail,
-            )
+    def __init__(self, detail: str) -> None:
+        super().__init__(
+            status="400",
+            title="Check Id is not unique",
+            detail=detail,
         )
 
 
@@ -236,7 +214,7 @@ class AggregationBackend(CheckBackend[AuthenticationObject]):
             case ([success], _):
                 return success
             case ([_, _, *_], _):
-                raise CheckIdNonUniqueError.create_with_detail(non_unique_id_message)
+                raise CheckIdNonUniqueError(non_unique_id_message)
             case ([], [failure, *_]):
                 raise failure
             case ([], []):

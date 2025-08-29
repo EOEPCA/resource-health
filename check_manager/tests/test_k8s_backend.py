@@ -105,16 +105,16 @@ def mock_api_client() -> Mock:
     return api_client
 
 
-def make_hooks(api_client) -> dict[str, Callable]:
+def make_hooks(api_client) -> dict[str, list[Callable]]:
     async def get_client(token):
         return api_client
 
     return {
-        "on_auth": (
+        "on_auth": [
             lambda auth: auth if auth == AuthenticationObject(test_auth) else None
-        ),
-        "get_k8s_config": (lambda _: k8s_config()),
-        "get_k8s_namespace": (lambda _: NAMESPACE),
+        ],
+        "get_k8s_config": [lambda _: k8s_config()],
+        "get_k8s_namespace": [lambda _: NAMESPACE],
     }
 
 
@@ -156,7 +156,15 @@ async def test_aclose(mock_api_client) -> None:
     "template_ids, expected",
     [
         (["simple_ping"], ["simple_ping"]),
-        (None, ["generic_script_template", "simple_ping", "telemetry_access_template", "collection_check"]),
+        (
+            None,
+            [
+                "generic_script_template",
+                "simple_ping",
+                "telemetry_access_template",
+                "collection_check",
+            ],
+        ),
     ],
 )
 @patch("test_k8s_backend.client.BatchV1Api")

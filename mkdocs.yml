@@ -20,7 +20,7 @@ nav:
       - Automated scheduling: design/3-automated-scheduling.md
     - Usage:
       - usage/tutorials.md
-    #   - usage/howtos.md
+      - usage/howtos.md
     # - Administration:
     #   - admin/configuration.md
     #   - admin/maintenance.md

@@ -15,7 +15,7 @@ def load_python_module(path: pathlib.Path) -> ModuleType | None:
         path (pathlib.Path): The path to the Python file to be loaded.
 
     Returns:
-       ModuleType | None: The loaded Python module, or `None` if the
+        ModuleType | None: The loaded Python module, or `None` if the
         file is not a Python file.
 
     Raises:

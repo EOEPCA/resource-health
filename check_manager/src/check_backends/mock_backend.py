@@ -1,14 +1,7 @@
 from collections import defaultdict
-from typing import (
-    AsyncIterable,
-    NewType,
-    Self,
-    override,
-    TypeVar,
-    Callable
-)
+import re
+from typing import AsyncIterable, Self, override, TypeVar, Callable
 import uuid
-import inspect
 import os
 from jsonschema import ValidationError, validate
 
@@ -28,26 +21,47 @@ from check_backends.check_backend import (
     CheckTemplateAttributes,
     OutcomeFilter,
 )
-from exceptions import JsonValidationError
+from check_hooks import call_hooks_until_not_none
+from exceptions import CronExpressionValidationError, JsonValidationError
 
 AuthenticationObject = TypeVar("AuthenticationObject")
 
 MOCK_USERNAME = os.environ.get("RH_CHECK_MOCK_USERNAME") or "eric"
-GET_MOCK_USERNAME_HOOK_NAME = os.environ.get("RH_CHECK_GET_MOCK_USERNAME_HOOK_NAME") or "get_mock_username"
+GET_MOCK_USERNAME_HOOK_NAME = (
+    os.environ.get("RH_CHECK_GET_MOCK_USERNAME_HOOK_NAME") or "get_mock_username"
+)
 
-# type: ignore
-async def wait_if_async(x):
-    if inspect.isawaitable(x):
-        return await x
-    
-    return x
+# copied from K8s_backend
+# this is not moved to a common location, as at least in principle different backend could
+# support (slightly) different cron expressions
+minute_pattern = r"(\*|[0-5]?\d)(/\d+)?([-,][0-5]?\d)*"
+hour_pattern = r"(\*|[01]?\d|2[0-3])(/\d+)?([-,]([01]?\d|2[0-3]))*"
+day_of_month_pattern = r"(\*|[1-9]|[12]\d|3[01])(/\d+)?([-,]([1-9]|[12]\d|3[01]))*"
+month_pattern = r"(\*|1[0-2]|0?[1-9])(/\d+)?([-,](1[0-2]|0?[1-9]))*"
+day_of_week_pattern = r"(\*|[0-7])(/\d+)?([-,][0-7])*"
+
+cron_pattern = " ".join(
+    [
+        minute_pattern,
+        hour_pattern,
+        day_of_month_pattern,
+        month_pattern,
+        day_of_week_pattern,
+    ]
+)
+
+
+def validate_kubernetes_cron(cron_expr: str) -> None:
+    if not re.match(cron_pattern, cron_expr):
+        raise CronExpressionValidationError("Invalid cron expression")
+
 
 class MockBackend(CheckBackend[AuthenticationObject]):
     def __init__(
         self: Self,
         template_id_prefix: str = "",
         *,
-        hooks: dict[str, Callable],
+        hooks: dict[str, list[Callable]],
     ) -> None:
         self._hooks = hooks
 
@@ -100,9 +114,8 @@ class MockBackend(CheckBackend[AuthenticationObject]):
         self._auth_to_check_id_to_attributes: defaultdict[
             str, dict[CheckId, OutCheckAttributes]
         ] = defaultdict(dict)
-        self._auth_to_check_id_to_attributes[MOCK_USERNAME] = dict(
-            checks
-        )
+        self._auth_to_check_id_to_attributes[MOCK_USERNAME] = dict(checks)
+        # self._auth_to_check_id_to_attributes["unauthorized_user"] = dict(checks)
 
     @override
     async def aclose(self: Self) -> None:
@@ -126,8 +139,8 @@ class MockBackend(CheckBackend[AuthenticationObject]):
                 f"Must set hook {GET_MOCK_USERNAME_HOOK_NAME} ($GET_MOCK_USERNAME_HOOK_NAME) when using the mock backend"
             )
 
-        username = await wait_if_async(
-            self._hooks[GET_MOCK_USERNAME_HOOK_NAME](auth_obj)
+        username = await call_hooks_until_not_none(
+            self._hooks[GET_MOCK_USERNAME_HOOK_NAME], auth_obj
         )
 
         check_id_to_attributes = self._auth_to_check_id_to_attributes[username]
@@ -162,23 +175,23 @@ class MockBackend(CheckBackend[AuthenticationObject]):
                 f"Must set hook {GET_MOCK_USERNAME_HOOK_NAME} ($GET_MOCK_USERNAME_HOOK_NAME) when using the mock backend"
             )
 
-        username = await wait_if_async(
-            self._hooks[GET_MOCK_USERNAME_HOOK_NAME](auth_obj)
+        username = await call_hooks_until_not_none(
+            self._hooks[GET_MOCK_USERNAME_HOOK_NAME], auth_obj
         )
+
+        validate_kubernetes_cron(attributes.schedule)
 
         check_template_attributes = self._get_check_template_attributes(
             attributes.metadata.template_id
         )
         if check_template_attributes is None:
-            raise CheckTemplateIdError.create(attributes.metadata.template_id)
+            raise CheckTemplateIdError(attributes.metadata.template_id)
         try:
             validate(
                 attributes.metadata.template_args, check_template_attributes.arguments
             )
         except ValidationError as e:
-            raise JsonValidationError.create(
-                "/data/attributes/metadata/template_args/", e
-            )
+            raise JsonValidationError("/data/attributes/metadata/template_args/", e)
 
         check_id = CheckId(str(uuid.uuid4()))
         out_attributes = OutCheckAttributes(
@@ -222,12 +235,12 @@ class MockBackend(CheckBackend[AuthenticationObject]):
     async def remove_check(
         self: Self, auth_obj: AuthenticationObject, check_id: CheckId
     ) -> None:
-        username = await wait_if_async(
-            self._hooks[GET_MOCK_USERNAME_HOOK_NAME](auth_obj)
+        username = await call_hooks_until_not_none(
+            self._hooks[GET_MOCK_USERNAME_HOOK_NAME], auth_obj
         )
         id_to_check = self._auth_to_check_id_to_attributes[username]
         if check_id not in id_to_check:
-            raise CheckIdError.create(check_id)
+            raise CheckIdError(check_id)
         id_to_check.pop(check_id)
 
     @override
@@ -241,8 +254,8 @@ class MockBackend(CheckBackend[AuthenticationObject]):
                 f"Must set hook {GET_MOCK_USERNAME_HOOK_NAME} ($GET_MOCK_USERNAME_HOOK_NAME) when using the mock backend"
             )
 
-        username = await wait_if_async(
-            self._hooks[GET_MOCK_USERNAME_HOOK_NAME](auth_obj)
+        username = await call_hooks_until_not_none(
+            self._hooks[GET_MOCK_USERNAME_HOOK_NAME], auth_obj
         )
 
         if ids is None:
@@ -265,10 +278,10 @@ class MockBackend(CheckBackend[AuthenticationObject]):
                 f"Must set hook {GET_MOCK_USERNAME_HOOK_NAME} ($GET_MOCK_USERNAME_HOOK_NAME) when using the mock backend"
             )
 
-        username = await wait_if_async(
-            self._hooks[GET_MOCK_USERNAME_HOOK_NAME](auth_obj)
+        username = await call_hooks_until_not_none(
+            self._hooks[GET_MOCK_USERNAME_HOOK_NAME], auth_obj
         )
 
         id_to_check = self._auth_to_check_id_to_attributes[username]
         if check_id not in id_to_check:
-            raise CheckIdError.create(check_id)
+            raise CheckIdError(check_id)

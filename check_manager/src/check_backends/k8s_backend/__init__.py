@@ -3,7 +3,6 @@ import re
 from typing import AsyncIterable, Callable, Self, override
 import uuid
 import os
-import inspect
 
 from jsonschema import validate
 import aiohttp
@@ -32,6 +31,11 @@ from check_backends.k8s_backend.templates import (
     load_templates,
     default_make_check,
 )
+from check_hooks import (
+    call_hooks_check_if_allow,
+    call_hooks_ignore_results,
+    call_hooks_until_not_none,
+)
 from exceptions import (
     CheckConnectionError,
     CronExpressionValidationError,
@@ -47,18 +51,20 @@ day_of_month_pattern = r"(\*|[1-9]|[12]\d|3[01])(/\d+)?([-,]([1-9]|[12]\d|3[01])
 month_pattern = r"(\*|1[0-2]|0?[1-9])(/\d+)?([-,](1[0-2]|0?[1-9]))*"
 day_of_week_pattern = r"(\*|[0-7])(/\d+)?([-,][0-7])*"
 
-cron_pattern = " ".join([
-    minute_pattern,
-    hour_pattern,
-    day_of_month_pattern,
-    month_pattern,
-    day_of_week_pattern,
-])
+cron_pattern = " ".join(
+    [
+        minute_pattern,
+        hour_pattern,
+        day_of_month_pattern,
+        month_pattern,
+        day_of_week_pattern,
+    ]
+)
 
 
 def validate_kubernetes_cron(cron_expr: str) -> None:
     if not re.match(cron_pattern, cron_expr):
-        raise CronExpressionValidationError.create(
+        raise CronExpressionValidationError(
             "Invalid cron expression for use with Kubernetes"
         )
 
@@ -77,32 +83,40 @@ def job_from(cronjob: V1CronJob):
                     uid=cronjob.metadata.uid,
                 ),
             ],
-        )
+        ),
     )
 
-GET_K8S_CONFIG_HOOK_NAME = os.environ.get("RH_CHECK_GET_K8S_CONFIG_HOOK_NAME") or "get_k8s_config"
-GET_K8S_NAMESPACE_HOOK_NAME = os.environ.get("RH_CHECK_GET_K8S_NAMESPACE_HOOK_NAME") or "get_k8s_namespace"
-ON_K8S_CRONJOB_ACCESS_HOOK_NAME = os.environ.get("RH_CHECK_ON_K8S_CRONJOB_ACCESS_HOOK_NAME") or "on_k8s_cronjob_access"
-ON_K8S_CRONJOB_CREATE_HOOK_NAME = os.environ.get("RH_CHECK_ON_K8S_CRONJOB_CREATE_HOOK_NAME") or "on_k8s_cronjob_create"
-ON_K8S_CRONJOB_REMOVE_HOOK_NAME = os.environ.get("RH_CHECK_ON_K8S_CRONJOB_REMOVE_HOOK_NAME") or "on_k8s_cronjob_remove"
-ON_K8S_CRONJOB_RUN_HOOK_NAME = os.environ.get("RH_CHECK_ON_K8S_CRONJOB_RUN_HOOK_NAME") or "on_k8s_cronjob_run"
 
-# type: ignore
-async def wait_if_async(x):
-    if inspect.isawaitable(x):
-        return await x
-    
-    return x
+GET_K8S_CONFIG_HOOK_NAME = (
+    os.environ.get("RH_CHECK_GET_K8S_CONFIG_HOOK_NAME") or "get_k8s_config"
+)
+GET_K8S_NAMESPACE_HOOK_NAME = (
+    os.environ.get("RH_CHECK_GET_K8S_NAMESPACE_HOOK_NAME") or "get_k8s_namespace"
+)
+ON_K8S_CRONJOB_ACCESS_HOOK_NAME = (
+    os.environ.get("RH_CHECK_ON_K8S_CRONJOB_ACCESS_HOOK_NAME")
+    or "on_k8s_cronjob_access"
+)
+ON_K8S_CRONJOB_CREATE_HOOK_NAME = (
+    os.environ.get("RH_CHECK_ON_K8S_CRONJOB_CREATE_HOOK_NAME")
+    or "on_k8s_cronjob_create"
+)
+ON_K8S_CRONJOB_REMOVE_HOOK_NAME = (
+    os.environ.get("RH_CHECK_ON_K8S_CRONJOB_REMOVE_HOOK_NAME")
+    or "on_k8s_cronjob_remove"
+)
+ON_K8S_CRONJOB_RUN_HOOK_NAME = (
+    os.environ.get("RH_CHECK_ON_K8S_CRONJOB_RUN_HOOK_NAME") or "on_k8s_cronjob_run"
+)
+
 
 class K8sBackend(CheckBackend[AuthenticationObject]):
     def __init__(
         self: Self,
         template_dirs: list[str],
-        hooks: dict[str, Callable],
+        hooks: dict[str, list[Callable]],
     ) -> None:
-        self._templates: dict[str, CronjobMaker] = load_templates(
-            template_dirs
-        )
+        self._templates: dict[str, CronjobMaker] = load_templates(template_dirs)
         self._hooks = hooks
 
     @override
@@ -133,19 +147,27 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
         attributes: InCheckAttributes,
     ) -> OutCheck:
         if GET_K8S_CONFIG_HOOK_NAME not in self._hooks:
-            raise ValueError(f"Must set hook {GET_K8S_CONFIG_HOOK_NAME} ($RH_CHECK_GET_K8S_CONFIG) when using the k8s backend")
-        
+            raise ValueError(
+                f"Must set hook {GET_K8S_CONFIG_HOOK_NAME} ($RH_CHECK_GET_K8S_CONFIG) when using the k8s backend"
+            )
+
         if GET_K8S_NAMESPACE_HOOK_NAME not in self._hooks:
-            raise ValueError(f"Must set hook {GET_K8S_NAMESPACE_HOOK_NAME} ($RH_CHECK_GET_K8S_NAMESPACE_HOOK_NAME) when using the k8s backend")
-        
-        configuration = await wait_if_async(self._hooks[GET_K8S_CONFIG_HOOK_NAME](auth_obj))
-        namespace = await wait_if_async(self._hooks[GET_K8S_NAMESPACE_HOOK_NAME](auth_obj))
+            raise ValueError(
+                f"Must set hook {GET_K8S_NAMESPACE_HOOK_NAME} ($RH_CHECK_GET_K8S_NAMESPACE_HOOK_NAME) when using the k8s backend"
+            )
+
+        configuration = await call_hooks_until_not_none(
+            self._hooks[GET_K8S_CONFIG_HOOK_NAME], auth_obj
+        )
+        namespace = await call_hooks_until_not_none(
+            self._hooks[GET_K8S_NAMESPACE_HOOK_NAME], auth_obj
+        )
 
         template_id = attributes.metadata.template_id
         template = self._templates.get(template_id)
 
         if template is None:
-            raise CheckTemplateIdError.create(template_id)
+            raise CheckTemplateIdError(template_id)
 
         check_template = template.get_check_template()
         validate(
@@ -162,14 +184,13 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
             )
 
             if ON_K8S_CRONJOB_CREATE_HOOK_NAME in self._hooks:
-                if (
-                    await wait_if_async(self._hooks[ON_K8S_CRONJOB_CREATE_HOOK_NAME](auth_obj, api_client, cronjob)) == False
-                ):
-                    raise ApiException(
-                        status="403",
-                        reason="Permission denied to create health check cronjob"
-                    )
-            
+                await call_hooks_ignore_results(
+                    self._hooks[ON_K8S_CRONJOB_CREATE_HOOK_NAME],
+                    auth_obj,
+                    api_client,
+                    cronjob,
+                )
+
             api_instance = client.BatchV1Api(api_client)
             try:
                 api_response = await api_instance.create_namespaced_cron_job(
@@ -180,11 +201,11 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
             except ApiException as e:
                 logger.error(f"Failed to create new cron job: {e}")
                 if e.status == 422:
-                    raise APIInternalError.create("Unprocessable content")
+                    raise APIInternalError("Unprocessable content")
                 raise e
             except aiohttp.ClientConnectionError as e:
                 logger.error(f"Failed to create new cron job: {e}")
-                raise CheckConnectionError.create("Cannot connect to cluster")
+                raise CheckConnectionError("Cannot connect to cluster")
             check = template.make_check(api_response)
         return check
 
@@ -242,13 +263,21 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
         check_id: CheckId,
     ) -> None:
         if GET_K8S_CONFIG_HOOK_NAME not in self._hooks:
-            raise ValueError(f"Must set hook {GET_K8S_CONFIG_HOOK_NAME} ($RH_CHECK_GET_K8S_CONFIG) when using the k8s backend")
-        
-        if GET_K8S_NAMESPACE_HOOK_NAME not in self._hooks:
-            raise ValueError(f"Must set hook {GET_K8S_NAMESPACE_HOOK_NAME} ($RH_CHECK_GET_K8S_NAMESPACE_HOOK_NAME) when using the k8s backend")
+            raise ValueError(
+                f"Must set hook {GET_K8S_CONFIG_HOOK_NAME} ($RH_CHECK_GET_K8S_CONFIG) when using the k8s backend"
+            )
 
-        configuration = await wait_if_async(self._hooks[GET_K8S_CONFIG_HOOK_NAME](auth_obj))
-        namespace = await wait_if_async(self._hooks[GET_K8S_NAMESPACE_HOOK_NAME](auth_obj))
+        if GET_K8S_NAMESPACE_HOOK_NAME not in self._hooks:
+            raise ValueError(
+                f"Must set hook {GET_K8S_NAMESPACE_HOOK_NAME} ($RH_CHECK_GET_K8S_NAMESPACE_HOOK_NAME) when using the k8s backend"
+            )
+
+        configuration = await call_hooks_until_not_none(
+            self._hooks[GET_K8S_CONFIG_HOOK_NAME], auth_obj
+        )
+        namespace = await call_hooks_until_not_none(
+            self._hooks[GET_K8S_NAMESPACE_HOOK_NAME], auth_obj
+        )
 
         async with ApiClient(configuration) as api_client:
             api_instance = client.BatchV1Api(api_client)
@@ -257,21 +286,23 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
                     name=check_id,
                     namespace=namespace,
                 )
-                
+
                 if ON_K8S_CRONJOB_ACCESS_HOOK_NAME in self._hooks:
-                    if (
-                        await wait_if_async(self._hooks[ON_K8S_CRONJOB_ACCESS_HOOK_NAME](auth_obj, api_client, cronjob)) == False
-                    ):
-                        raise CheckIdError.create(check_id)
+                    await call_hooks_ignore_results(
+                        self._hooks[ON_K8S_CRONJOB_ACCESS_HOOK_NAME],
+                        auth_obj,
+                        check_id,
+                        api_client,
+                        cronjob,
+                    )
 
                 if ON_K8S_CRONJOB_REMOVE_HOOK_NAME in self._hooks:
-                    if (
-                        await wait_if_async(self._hooks[ON_K8S_CRONJOB_REMOVE_HOOK_NAME](auth_obj, api_client, cronjob)) == False
-                    ):
-                        raise ApiException(
-                            status="403",
-                            reason="Permission denied to remove health check cronjob"
-                        )
+                    await call_hooks_ignore_results(
+                        self._hooks[ON_K8S_CRONJOB_REMOVE_HOOK_NAME],
+                        auth_obj,
+                        api_client,
+                        cronjob,
+                    )
 
                 api_response = await api_instance.delete_namespaced_cron_job(
                     name=check_id,
@@ -280,11 +311,11 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
                 logger.info(f"Succesfully deleted cron job: {api_response}")
             except aiohttp.ClientConnectionError as e:
                 logger.error(f"Failed to delete cron job: {e}")
-                raise CheckConnectionError.create("Cannot connect to cluster")
+                raise CheckConnectionError("Cannot connect to cluster")
             except ApiException as e:
                 logger.info(f"Failed to delete check with id '{check_id}': {e}")
                 if e.status == 404:
-                    raise CheckIdError.create(check_id)
+                    raise CheckIdError(check_id)
                 else:
                     raise e
         return None
@@ -296,13 +327,21 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
         ids: list[CheckId] | None = None,
     ) -> AsyncIterable[OutCheck]:
         if GET_K8S_CONFIG_HOOK_NAME not in self._hooks:
-            raise ValueError(f"Must set hook {GET_K8S_CONFIG_HOOK_NAME} ($RH_CHECK_GET_K8S_CONFIG) when using the k8s backend")
-        
+            raise ValueError(
+                f"Must set hook {GET_K8S_CONFIG_HOOK_NAME} ($RH_CHECK_GET_K8S_CONFIG) when using the k8s backend"
+            )
+
         if GET_K8S_NAMESPACE_HOOK_NAME not in self._hooks:
-            raise ValueError(f"Must set hook {GET_K8S_NAMESPACE_HOOK_NAME} ($RH_CHECK_GET_K8S_NAMESPACE_HOOK_NAME) when using the k8s backend")
-        
-        configuration = await wait_if_async(self._hooks[GET_K8S_CONFIG_HOOK_NAME](auth_obj))
-        namespace = await wait_if_async(self._hooks[GET_K8S_NAMESPACE_HOOK_NAME](auth_obj))
+            raise ValueError(
+                f"Must set hook {GET_K8S_NAMESPACE_HOOK_NAME} ($RH_CHECK_GET_K8S_NAMESPACE_HOOK_NAME) when using the k8s backend"
+            )
+
+        configuration = await call_hooks_until_not_none(
+            self._hooks[GET_K8S_CONFIG_HOOK_NAME], auth_obj
+        )
+        namespace = await call_hooks_until_not_none(
+            self._hooks[GET_K8S_NAMESPACE_HOOK_NAME], auth_obj
+        )
 
         async with ApiClient(configuration) as api_client:
             api_instance = client.BatchV1Api(api_client)
@@ -315,15 +354,19 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
                 raise e
             except aiohttp.ClientConnectionError as e:
                 logger.error(f"Failed to list cron jobs: {e}")
-                raise CheckConnectionError.create("Cannot connect to cluster")
+                raise CheckConnectionError("Cannot connect to cluster")
             template_id: str | None
 
             for cronjob in cronjobs.items:
-                if (
-                    (ids is None or cronjob.metadata.name in ids) and
-                    (
-                        ON_K8S_CRONJOB_ACCESS_HOOK_NAME not in self._hooks or
-                        await wait_if_async(self._hooks[ON_K8S_CRONJOB_ACCESS_HOOK_NAME](auth_obj, api_client, cronjob)) != False
+                check_id = cronjob.metadata.name
+                if (ids is None or cronjob.metadata.name in ids) and (
+                    ON_K8S_CRONJOB_ACCESS_HOOK_NAME not in self._hooks
+                    or await call_hooks_check_if_allow(
+                        self._hooks[ON_K8S_CRONJOB_ACCESS_HOOK_NAME],
+                        auth_obj,
+                        check_id,
+                        api_client,
+                        cronjob,
                     )
                 ):
                     template_id = None
@@ -342,13 +385,21 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
         check_id: CheckId,
     ) -> None:
         if GET_K8S_CONFIG_HOOK_NAME not in self._hooks:
-            raise ValueError(f"Must set hook {GET_K8S_CONFIG_HOOK_NAME} ($RH_CHECK_GET_K8S_CONFIG) when using the k8s backend")
-        
+            raise ValueError(
+                f"Must set hook {GET_K8S_CONFIG_HOOK_NAME} ($RH_CHECK_GET_K8S_CONFIG) when using the k8s backend"
+            )
+
         if GET_K8S_NAMESPACE_HOOK_NAME not in self._hooks:
-            raise ValueError(f"Must set hook {GET_K8S_NAMESPACE_HOOK_NAME} ($RH_CHECK_GET_K8S_NAMESPACE_HOOK_NAME) when using the k8s backend")
-        
-        configuration = await wait_if_async(self._hooks[GET_K8S_CONFIG_HOOK_NAME](auth_obj))
-        namespace = await wait_if_async(self._hooks[GET_K8S_NAMESPACE_HOOK_NAME](auth_obj))
+            raise ValueError(
+                f"Must set hook {GET_K8S_NAMESPACE_HOOK_NAME} ($RH_CHECK_GET_K8S_NAMESPACE_HOOK_NAME) when using the k8s backend"
+            )
+
+        configuration = await call_hooks_until_not_none(
+            self._hooks[GET_K8S_CONFIG_HOOK_NAME], auth_obj
+        )
+        namespace = await call_hooks_until_not_none(
+            self._hooks[GET_K8S_NAMESPACE_HOOK_NAME], auth_obj
+        )
 
         async with ApiClient(configuration) as api_client:
             api_instance = client.BatchV1Api(api_client)
@@ -357,21 +408,23 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
                     name=check_id,
                     namespace=namespace,
                 )
-                
+
                 if ON_K8S_CRONJOB_ACCESS_HOOK_NAME in self._hooks:
-                    if (
-                        await wait_if_async(self._hooks[ON_K8S_CRONJOB_ACCESS_HOOK_NAME](auth_obj, api_client, cronjob)) == False
-                    ):
-                        raise CheckIdError.create(check_id)
+                    await call_hooks_ignore_results(
+                        self._hooks[ON_K8S_CRONJOB_ACCESS_HOOK_NAME],
+                        auth_obj,
+                        check_id,
+                        api_client,
+                        cronjob,
+                    )
 
                 if ON_K8S_CRONJOB_RUN_HOOK_NAME in self._hooks:
-                    if (
-                        await wait_if_async(self._hooks[ON_K8S_CRONJOB_RUN_HOOK_NAME](auth_obj, api_client, cronjob)) == False
-                    ):
-                        raise ApiException(
-                            status="403",
-                            reason="Permission denied to run health check cronjob"
-                        )
+                    await call_hooks_ignore_results(
+                        self._hooks[ON_K8S_CRONJOB_RUN_HOOK_NAME],
+                        auth_obj,
+                        api_client,
+                        cronjob,
+                    )
 
                 api_response = await api_instance.create_namespaced_job(
                     namespace=namespace,
@@ -380,11 +433,11 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
                 logger.info(f"Succesfully created new job: {api_response}")
             except aiohttp.ClientConnectionError as e:
                 logger.error(f"Failed to delete cron job: {e}")
-                raise CheckConnectionError.create("Cannot connect to cluster")
+                raise CheckConnectionError("Cannot connect to cluster")
             except ApiException as e:
                 logger.info(f"Failed to delete check with id '{check_id}': {e}")
                 if e.status == 404:
-                    raise CheckIdError.create(check_id)
+                    raise CheckIdError(check_id)
                 else:
                     raise e
         return None
