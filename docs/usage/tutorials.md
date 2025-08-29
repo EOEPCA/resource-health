@@ -525,7 +525,7 @@ The following hook parts are common for both Health Check API and Telemetry API 
     ```
 
         !!! info
-            Each hook can be defined in multiple files. The files with earlier alphanumeric names will have their hooks called earlier. For a hook like `on_auth` which produce a value, each implementation will be called one by one until one of them produces a value that's not `None`, and that value will be considered the overall result of the hook.
+            Each hook can be defined in multiple files, and all of them will be called one after the other. The files with earlier alphanumeric names will have their hooks called earlier. For a hook like `on_auth` which produce a value, each implementation will be called one by one until one of them produces a value that's not `None`, and that value will be considered the overall result of the hook.
 
 !!! info
     Functions which return a list of items, such as `get_check_templates` and `get_checks` call hooks for each item. If a hook raises `APIForbiddenError` or `CheckTemplateIdError` or `CheckIdError`, then it is excluded from the final list. Any other exception will make the whole request return an error. If the `Exception` is `APIException` or any derived class (not counting `APIForbiddenError`, `CheckTemplateIdError`, and `CheckIdError`), the exception message will be shown to the user. Otherwise a “500 Internal Server Error” will be shown.
