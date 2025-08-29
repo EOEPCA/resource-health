@@ -1,8 +1,9 @@
 from functools import cache
 from inspect import isfunction
+import inspect
 import logging
 import pathlib
-from typing import Any, Callable, Optional, Tuple, Type
+from typing import Any, Awaitable, Callable
 import os
 
 # from pydantic import Field
@@ -14,6 +15,8 @@ import os
 # )
 
 from plugin_utils.loader import load_plugins
+from api_utils.exceptions import APIForbiddenError
+from check_backends.check_backend import CheckIdError, CheckTemplateIdError
 
 logger = logging.getLogger("HEALTH_CHECK")
 
@@ -38,19 +41,85 @@ logger = logging.getLogger("HEALTH_CHECK")
 #     ) -> Tuple[PydanticBaseSettingsSource, ...]:
 #         return (env_settings, JsonConfigSettingsSource(settings_cls),)
 
+async def call_hooks_until_not_none(funcs: list[Callable], *args, **kwargs) -> Any:
+    """
+    Calls functions one by one until a function returns a result that is not None, in which case that result is returned.
+    """
+    for func in funcs:
+        result = await _wait_if_async(func(*args, **kwargs))
+        if result is not None:
+            return result
+    return None
+
+
+async def call_hooks_ignore_results(funcs: list[Callable], *args, **kwargs) -> None:
+    """
+    Calls functions one by one and ignores the returned values
+    """
+    for func in funcs:
+        await _wait_if_async(func(*args, **kwargs))
+
+
+async def call_hooks_check_if_allow(funcs: list[Callable], *args, **kwargs) -> bool:
+    """
+    Calls functions one by one and if catch APIForbiddenError or CheckTemplateIdError or CheckIdError, return that it's not allowed (false)
+    All other exceptions are not caught
+    """
+    for func in funcs:
+        try:
+            await _wait_if_async(func(*args, **kwargs))
+        except (APIForbiddenError, CheckTemplateIdError, CheckIdError):
+            return False
+    return True
+
+
+async def _wait_if_async[T](x: T | Awaitable[T]) -> T:
+    if inspect.isawaitable(x):
+        return await x
+
+    return x
+
+
+def _convert_file_based_hooks_to_name_based_hooks(
+    file_to_hooks: dict[str, dict[str, Callable]],
+) -> dict[str, list[Callable]]:
+    file_names: list[str] = sorted(file_to_hooks.keys())
+    hooks_by_files: list[dict[str, Callable]] = [
+        file_to_hooks[name] for name in file_names
+    ]
+    hook_names = [
+        hook_name for file_hooks in hooks_by_files for hook_name in file_hooks.keys()
+    ]
+    return {
+        hook_name: [
+            file_hooks[hook_name]
+            for file_hooks in hooks_by_files
+            if hook_name in file_hooks
+        ]
+        for hook_name in hook_names
+    }
+
+
 @cache
-def load_hooks(hooks_dir : pathlib.Path|str|None = None) -> dict[str, Callable]:
+def load_hooks(
+    hooks_dir: pathlib.Path | str | None = None,
+) -> dict[str, list[Callable]]:
+    """
+    Each hook might have multiple functions. The files with earlier alphanumeric names
+    will have their hooks called earlier.
+    """
     hooks_dir = hooks_dir or os.environ.get("RH_CHECK_HOOK_DIR_PATH")
 
     if hooks_dir is None:
         return {}
 
-    return load_plugins(
+    file_to_hooks: dict[str, dict[str, Callable]] = load_plugins(
         pathlib.Path(hooks_dir),
         value=(lambda x: x if isfunction(x) else None),
         logger=logger,
-        perfile=False,
+        perfile=True,
     )
+    return _convert_file_based_hooks_to_name_based_hooks(file_to_hooks)
 
 
 # @cache
