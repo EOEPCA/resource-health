@@ -279,7 +279,7 @@ Here is how you would forbid some user (eric in this case) from creating a ping-
 
 5. You should also consider enabling mypy type checking in your IDE. For example, in vs code(ium) install [Mypy extension](https://marketplace.visualstudio.com/items?itemName=matangover.mypy), and set `mypy.runUsingActiveInterpreter` setting to `true`. This will mean that mypy uses the virtual environment to run, just like Python, and will be able to see all the installed dependencies properly.
     1. If you're in `pytest-health`, you also need to install mypy into the virtual environment by running `uv pip install mypy`
-6. You can now run code with `uv run <the-usual-command>`, e.g. `uv run python my_file.py` or `uv run pytest .`
+6. You can now run code with `uv run <the-usual-command>`, e.g. to run a health check use `uv run pytest <path-to-check.py>`
 
     In particular, you can type check using mypy by running `uv run mypy my_file.py`.
 
