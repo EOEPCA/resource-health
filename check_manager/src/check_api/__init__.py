@@ -13,13 +13,12 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from os import environ
+
 from check_hooks import (
     call_hooks_check_if_allow,
-    call_hooks_ignore_results,
-    call_hooks_until_not_none,
     load_hooks,
 )
-
+from plugin_utils.runner import call_hooks_until_not_none, call_hooks_ignore_results
 from api_interface import (
     GET_CHECK_PATH,
     GET_CHECK_TEMPLATE_PATH,

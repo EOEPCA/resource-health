@@ -145,3 +145,22 @@ def load_plugins(
             logger.exception(f"Unexpected error while processing {file}: {e}")
 
     return plugins
+
+def convert_file_based_hooks_to_name_based_hooks(
+    file_to_hooks: dict[str, dict[str, Callable]],
+) -> dict[str, list[Callable]]:
+    file_names: list[str] = sorted(file_to_hooks.keys())
+    hooks_by_files: list[dict[str, Callable]] = [
+        file_to_hooks[name] for name in file_names
+    ]
+    hook_names = [
+        hook_name for file_hooks in hooks_by_files for hook_name in file_hooks.keys()
+    ]
+    return {
+        hook_name: [
+            file_hooks[hook_name]
+            for file_hooks in hooks_by_files
+            if hook_name in file_hooks
+        ]
+        for hook_name in hook_names
+    }

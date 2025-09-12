@@ -5,6 +5,7 @@ import uuid
 import os
 from jsonschema import ValidationError, validate
 
+from plugin_utils.runner import call_hooks_until_not_none
 from check_backends.check_backend import (
     CheckIdError,
     CheckTemplate,
@@ -21,7 +22,6 @@ from check_backends.check_backend import (
     CheckTemplateAttributes,
     OutcomeFilter,
 )
-from check_hooks import call_hooks_until_not_none
 from exceptions import CronExpressionValidationError, JsonValidationError
 
 AuthenticationObject = TypeVar("AuthenticationObject")

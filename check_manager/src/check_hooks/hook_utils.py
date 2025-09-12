@@ -1,5 +1,5 @@
-from exceptions import APIException  # noqa: F401 used by hooks which import this
 from api_utils.exceptions import (
+    APIException,  # noqa: F401 used by hooks which import this
     APIForbiddenError,  # noqa: F401 used by hooks which import this
     APIUnauthorizedError,  # noqa: F401 used by hooks which import this
     APIUserInputError,  # noqa: F401 used by hooks which import this
