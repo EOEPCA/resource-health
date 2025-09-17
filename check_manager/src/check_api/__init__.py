@@ -28,7 +28,7 @@ from api_interface import (
     REMOVE_CHECK_PATH,
     RUN_CHECK_PATH,
 )
-from api_utils.api_utils import (
+from eoepca_api_utils.api_utils import (
     JSONAPIResponse,
     add_exception_handlers,
     get_api_router_with_defaults,
@@ -58,7 +58,7 @@ from exceptions import (
     APIException,
     NewCheckClientSpecifiedId,
 )
-from api_utils.json_api_types import (
+from eoepca_api_utils.json_api_types import (
     APIOKResponse,
     APIOKResponseList,
     Link,

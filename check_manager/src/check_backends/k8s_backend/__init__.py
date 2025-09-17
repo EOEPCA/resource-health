@@ -15,7 +15,7 @@ from kubernetes_asyncio.client.models.v1_object_meta import V1ObjectMeta
 from kubernetes_asyncio.client.models.v1_owner_reference import V1OwnerReference
 
 from plugin_utils.runner import call_hooks_until_not_none, call_hooks_ignore_results
-from api_utils.exceptions import APIInternalError
+from eoepca_api_utils.exceptions import APIInternalError
 from check_backends.check_backend import (
     AuthenticationObject,
     CheckBackend,

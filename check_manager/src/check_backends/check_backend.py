@@ -15,7 +15,7 @@ from pydantic import BaseModel, TypeAdapter
 from referencing.jsonschema import Schema
 
 from exceptions import APIException
-from api_utils.json_api_types import Json
+from eoepca_api_utils.json_api_types import Json
 
 AuthenticationObject = TypeVar("AuthenticationObject")
 

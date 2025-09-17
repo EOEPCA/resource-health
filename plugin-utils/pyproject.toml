@@ -25,7 +25,6 @@ testpaths = ["tests"]
 
 [tool.mypy]
 python_version = "3.12"
-packages = "plugin_utils"
 disallow_untyped_defs = true
 show_error_context = true
 pretty = true

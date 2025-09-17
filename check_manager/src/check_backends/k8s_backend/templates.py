@@ -16,7 +16,7 @@ from pydantic import TypeAdapter
 from typing import Any, Protocol, runtime_checkable
 import uuid
 
-from api_utils.json_api_types import Json
+from eoepca_api_utils.json_api_types import Json
 from check_backends.check_backend import (
     CheckId,
     CheckTemplate,

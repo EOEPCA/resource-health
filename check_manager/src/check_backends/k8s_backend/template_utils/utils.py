@@ -16,7 +16,7 @@ from kubernetes_asyncio.client.models.v1_volume_mount import V1VolumeMount
 
 import pydantic
 from ..templates import CronExpression, CronjobTemplate
-from api_utils.json_api_types import Json
+from eoepca_api_utils.json_api_types import Json
 from check_backends.check_backend import (
     CheckId,
     CheckTemplate,

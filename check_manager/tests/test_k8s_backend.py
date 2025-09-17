@@ -14,7 +14,7 @@ from kubernetes_asyncio.client.models.v1_object_meta import V1ObjectMeta
 from kubernetes_asyncio.client.rest import ApiException
 import pytest
 
-from api_utils.exceptions import APIInternalError
+from eoepca_api_utils.exceptions import APIInternalError
 from check_backends.k8s_backend import K8sBackend
 from check_backends.check_backend import (
     CheckId,

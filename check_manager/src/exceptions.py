@@ -1,10 +1,10 @@
 from jsonschema import ValidationError
-from api_utils.exceptions import (
+from eoepca_api_utils.exceptions import (
     APIException,
     APIForbiddenError,
     APIUserInputError,
 )
-from api_utils.json_api_types import ErrorSourcePointer
+from eoepca_api_utils.json_api_types import ErrorSourcePointer
 
 
 class JsonValidationError(APIException):

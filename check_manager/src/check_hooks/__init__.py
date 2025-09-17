@@ -10,7 +10,7 @@ from plugin_utils.loader import (
     load_plugins,
     convert_file_based_hooks_to_name_based_hooks,
 )
-from api_utils.exceptions import APIForbiddenError
+from eoepca_api_utils.exceptions import APIForbiddenError
 from check_backends.check_backend import CheckIdError, CheckTemplateIdError
 
 logger = logging.getLogger("HEALTH_CHECK")
