@@ -14,7 +14,8 @@ from kubernetes_asyncio.client.models.v1_job import V1Job
 from kubernetes_asyncio.client.models.v1_object_meta import V1ObjectMeta
 from kubernetes_asyncio.client.models.v1_owner_reference import V1OwnerReference
 
-from api_utils.exceptions import APIInternalError
+from plugin_utils.runner import call_hooks_until_not_none, call_hooks_ignore_results
+from eoepca_api_utils.exceptions import APIInternalError
 from check_backends.check_backend import (
     AuthenticationObject,
     CheckBackend,
@@ -31,11 +32,7 @@ from check_backends.k8s_backend.templates import (
     load_templates,
     default_make_check,
 )
-from check_hooks import (
-    call_hooks_check_if_allow,
-    call_hooks_ignore_results,
-    call_hooks_until_not_none,
-)
+from check_hooks import call_hooks_check_if_allow
 from exceptions import (
     CheckConnectionError,
     CronExpressionValidationError,

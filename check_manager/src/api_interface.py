@@ -1,6 +1,6 @@
 from typing import Any, Final
 
-from api_utils.exceptions import (
+from eoepca_api_utils.exceptions import (
     APIExceptions,
     APIForbiddenError,
     APIInternalError,
@@ -19,7 +19,7 @@ from exceptions import (
     JsonValidationError,
     CronExpressionValidationError,
 )
-from api_utils.json_api_types import Error
+from eoepca_api_utils.json_api_types import Error
 
 
 ROUTE_PREFIX = "/v1"

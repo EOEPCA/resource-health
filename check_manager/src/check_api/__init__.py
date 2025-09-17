@@ -13,13 +13,12 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from os import environ
+
 from check_hooks import (
     call_hooks_check_if_allow,
-    call_hooks_ignore_results,
-    call_hooks_until_not_none,
     load_hooks,
 )
-
+from plugin_utils.runner import call_hooks_until_not_none, call_hooks_ignore_results
 from api_interface import (
     GET_CHECK_PATH,
     GET_CHECK_TEMPLATE_PATH,
@@ -29,7 +28,7 @@ from api_interface import (
     REMOVE_CHECK_PATH,
     RUN_CHECK_PATH,
 )
-from api_utils.api_utils import (
+from eoepca_api_utils.api_utils import (
     JSONAPIResponse,
     add_exception_handlers,
     get_api_router_with_defaults,
@@ -59,7 +58,7 @@ from exceptions import (
     APIException,
     NewCheckClientSpecifiedId,
 )
-from api_utils.json_api_types import (
+from eoepca_api_utils.json_api_types import (
     APIOKResponse,
     APIOKResponseList,
     Link,

@@ -3,15 +3,7 @@ from dataclasses import dataclass
 from typing import Any, Callable
 
 import pytest
-from api_utils.exceptions import APIException, APIForbiddenError
-from check_backends.check_backend import (
-    CheckId,
-    CheckIdError,
-    CheckTemplateId,
-    CheckTemplateIdError,
-)
-from check_hooks import (
-    _convert_file_based_hooks_to_name_based_hooks,
+from plugin_utils.runner import (
     call_hooks_check_if_allow,
     call_hooks_ignore_results,
     call_hooks_until_not_none,
@@ -29,59 +21,12 @@ def hookB(a: str) -> Any:
 async def hookC(a: str) -> Any:
     match a:
         case "a":
-            raise APIForbiddenError(title="", detail="")
+            raise ValueError("a")
         case "b":
-            raise CheckTemplateIdError(CheckTemplateId(""))
+            # inherits from RuntimeError
+            raise NotImplementedError("b")
         case "c":
-            raise CheckIdError(CheckId(""))
-        case "d":
-            raise APIException(status="", title="", detail="")
-
-
-def hookD(a: str) -> Any:
-    raise APIForbiddenError(title="", detail="")
-
-
-@dataclass
-class HooksExtractionArgs:
-    file_to_hooks: dict[str, dict[str, Callable]]
-    expected_name_to_hooks: dict[str, list[Callable]]
-
-
-@pytest.mark.parametrize(
-    ("args"),
-    [
-        HooksExtractionArgs(
-            file_to_hooks={
-                "fileA": {"funcA": hookA, "funcB": hookB},
-                "fileB": {"funcB": hookC, "funcC": hookB},
-                "fileC": {},
-            },
-            expected_name_to_hooks={
-                "funcA": [hookA],
-                "funcB": [hookB, hookC],
-                "funcC": [hookB],
-            },
-        ),
-        HooksExtractionArgs(
-            file_to_hooks={
-                "fileB": {"funcB": hookC, "funcC": hookB},
-                "fileA": {"funcA": hookA, "funcB": hookB},
-                "fileC": {},
-            },
-            expected_name_to_hooks={
-                "funcA": [hookA],
-                "funcB": [hookB, hookC],
-                "funcC": [hookB],
-            },
-        ),
-    ],
-)
-def test_hook_list_extraction(args: HooksExtractionArgs) -> None:
-    assert (
-        _convert_file_based_hooks_to_name_based_hooks(args.file_to_hooks)
-        == args.expected_name_to_hooks
-    )
+            raise RuntimeError("c")
 
 
 @dataclass
@@ -117,7 +62,7 @@ class HooksArgs:
             funcs=[hookA, hookC, hookB],
             args=["a"],
             kwargs={},
-            expectation=pytest.raises(APIForbiddenError),
+            expectation=pytest.raises(ValueError),
         ),
     ],
 )
@@ -135,7 +80,7 @@ async def test_call_hooks_until_not_none(args: HooksArgs) -> None:
             funcs=[hookA, hookB, hookC],
             args=["a"],
             kwargs={},
-            expectation=pytest.raises(APIForbiddenError),
+            expectation=pytest.raises(ValueError),
         ),
         HooksArgs(
             funcs=[hookA, hookB],
@@ -172,13 +117,7 @@ async def test_call_hooks_ignore_results(args: HooksArgs) -> None:
             funcs=[hookA, hookB, hookC],
             args=["c"],
             kwargs={},
-            expectation=contextlib.nullcontext(False),
-        ),
-        HooksArgs(
-            funcs=[hookA, hookB, hookC],
-            args=["d"],
-            kwargs={},
-            expectation=pytest.raises(APIException),
+            expectation=pytest.raises(RuntimeError),
         ),
         HooksArgs(
             funcs=[hookA, hookB, hookC],
@@ -197,5 +136,8 @@ async def test_call_hooks_ignore_results(args: HooksArgs) -> None:
 async def test_call_hooks_check_if_allow(args: HooksArgs) -> None:
     with args.expectation as e:
         assert (
-            await call_hooks_check_if_allow(args.funcs, *args.args, **args.kwargs) == e
+            await call_hooks_check_if_allow(
+                (ValueError, NotImplementedError), args.funcs, *args.args, **args.kwargs
+            )
+            == e
         )

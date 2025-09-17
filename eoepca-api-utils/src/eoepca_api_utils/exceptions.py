@@ -3,7 +3,7 @@ from typing import Any, Callable, Self
 
 from pydantic import Json
 
-from api_utils.json_api_types import APIErrorResponse, Error, ErrorSource
+from eoepca_api_utils.json_api_types import APIErrorResponse, Error, ErrorSource
 
 
 class APIException(Exception):

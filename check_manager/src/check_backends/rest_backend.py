@@ -13,7 +13,7 @@ from api_interface import (
     RUN_CHECK_PATH,
     get_check_exceptions,
 )
-from api_utils.api_utils import get_url_str
+from eoepca_api_utils.api_utils import get_url_str
 from check_backends.check_backend import (
     AuthenticationObject,
     CheckBackend,
@@ -29,7 +29,7 @@ from check_backends.check_backend import (
 )
 
 from exceptions import CheckConnectionError
-from api_utils.json_api_types import APIOKResponse, APIOKResponseList
+from eoepca_api_utils.json_api_types import APIOKResponse, APIOKResponseList
 
 
 class RestBackend(CheckBackend[AuthenticationObject]):
