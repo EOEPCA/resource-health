@@ -100,7 +100,7 @@ Follow along the following steps:
        )
        assert abs(outcome1 - outcome2) <= 1
    ```
-   See [Health Check Script](#health-check-script) for more details about health check scripts.  
+   See [Health Check Script](#health-check-script) for more details about health check scripts, and [Setting Up a Development Environment](#setting-up-a-development-environment) to ease health check development.  
    Create new check just like before. This time you should use `generic script template`. Set `Name`, `Description`, and `Schedule` to whatever you like (see [Cron Schedule](#cron-schedule) for a refresher on scheduling). Then input 
    ```
    https://gist.githubusercontent.com/tilowiklundSensmetry/aa8a28ab9bc432b8a76635a238c9aa11/raw/9dc5847959a909ffbaeb1a9239bbf10ad442266f/test_producing_custom_data.py
@@ -268,15 +268,18 @@ Here is how you would forbid some user (eric in this case) from creating a ping-
 ### Setting up a development environment
 
 1. [Install uv](https://docs.astral.sh/uv/#installation).
-2. Go to the subdirectory where the project is (as [Resource Health repo](https://github.com/EOEPCA/resource-health) is a monorepo, with each subdirectory generally being a separate project). It should have a `pyproject.toml` file, which specifies the dependencies.
-3. Run `uv sync`. This installs all dependencies and a suitable Python version in a virtual environment `.venv` placed in the current working directory.
+2. Go to the subdirectory where the project is - one of `pytest-health` (to see example health checks or develop one of your own), `check_manager`, `mock/service`, `plugin-utils` (as [Resource Health repo](https://github.com/EOEPCA/resource-health) is a monorepo, with each subdirectory generally being a separate project).
+3. The following installs all dependencies and a suitable Python version in a virtual environment `.venv` placed in the current working directory.
+    1. If you're in `pytest-health`, run `uv venv --python 3.12 && uv pip install -r runner-image/base_requirements.txt`.
+    2. Otherwise run `uv sync`.
 4. If you IDE support, you should point your IDE to use the Python from the virtual environment. For example, in vscode should do that automatically, or give a popup ![Python environment prompt](./img/dev-environment/python-environment-prompt.png) where you should select `Yes`.
 
     !!! note
         Some vscode extensions (such as Ruff) need to be reloaded for them to pick up a newly created virtual environment
 
-5. You should also consider enabling mypy type checking in your IDE. For example, in vs code/ium install [Mypy extension](https://marketplace.visualstudio.com/items?itemName=matangover.mypy), and set `mypy.runUsingActiveInterpreter` setting to `true`. This will mean that mypy uses the virtual environment to run, just like Python, and will be able to see all the installed dependencies properly.
-6. You can now run code with `uv run <the-usual-command>`, e.g. `uv run python my_file.py` or `uv run pytest .`
+5. You should also consider enabling mypy type checking in your IDE. For example, in vs code(ium) install [Mypy extension](https://marketplace.visualstudio.com/items?itemName=matangover.mypy), and set `mypy.runUsingActiveInterpreter` setting to `true`. This will mean that mypy uses the virtual environment to run, just like Python, and will be able to see all the installed dependencies properly.
+    1. If you're in `pytest-health`, you also need to install mypy into the virtual environment by running `uv pip install mypy`
+6. You can now run code with `uv run <the-usual-command>`, e.g. to run a health check use `uv run pytest <path-to-check.py>`
 
     In particular, you can type check using mypy by running `uv run mypy my_file.py`.
 

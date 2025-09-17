@@ -7,7 +7,7 @@ from typer import Argument, Context, Exit, Option, Typer
 from typing import Optional
 from typing_extensions import Annotated
 
-from api_utils.exceptions import APIException
+from eoepca_api_utils.exceptions import APIException
 from check_backends.check_backend import (
     AggregationBackend,
     AuthenticationObject,

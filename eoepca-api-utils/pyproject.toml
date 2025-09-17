@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "eoepca-api-utils"
+version = "0.1.0"
+description = "FastAPI utilities, such as exceptions and JSON:API types"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard]>=0.115.4",
+    "pydantic>=2.9.2",
+    "pydantic-settings>=2.8.1",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "mypy>=1.15.0",
+    "pytest>=8.3.3",
+    "pytest-cov>=6.0.0",
+]
+
+# [tool.pytest.ini_options]
+# addopts = "-ra -q --import-mode=importlib --cov=eoepca_api_utils --cov-report=term-missing"
+# testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.12"
+disallow_untyped_defs = true
+show_error_context = true
+pretty = true
+no_implicit_optional = true
+warn_unused_ignores = true
+warn_return_any = true

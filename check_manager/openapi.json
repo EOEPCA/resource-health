@@ -468,6 +468,7 @@
                 "type": "boolean"
               },
               {
+                "additionalProperties": true,
                 "type": "object"
               }
             ],
@@ -694,6 +695,7 @@
         "title": "InCheckMetadata"
       },
       "Json": {
+        "additionalProperties": true,
         "type": "object"
       },
       "Link": {

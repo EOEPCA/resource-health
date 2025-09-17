@@ -1,5 +1,5 @@
 import contextlib
-import importlib.util
+from dataclasses import dataclass
 import inspect
 import json
 import pathlib
@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 from plugin_utils.loader import (
+    convert_file_based_hooks_to_name_based_hooks,
     load_python_module,
     extract_and_transform,
     load_plugins,
@@ -284,7 +285,7 @@ def test_load_plugins(
 def test_not_a_directory() -> None:
     logger = MagicMock()
     dir = pathlib.Path("not/an/actual/path")
-    plugins = load_plugins(
+    _plugins = load_plugins(
         dir=dir,
         logger=logger,
     )
@@ -305,7 +306,7 @@ def test_empty_spec(
     with open(test_module.with_suffix(".py"), "w") as file:
         file.write("")
 
-    plugins = load_plugins(
+    _plugins = load_plugins(
         dir=tmp_path,
         logger=logger,
     )
@@ -316,3 +317,55 @@ def test_empty_spec(
     )
     logger.error.assert_called_once()
     logger.exception.assert_not_called()
+
+@dataclass
+class HooksExtractionArgs:
+    file_to_hooks: dict[str, dict[str, Callable]]
+    expected_name_to_hooks: dict[str, list[Callable]]
+
+
+def hookA(a: str) -> Any:
+    return a + "A"
+
+
+def hookB(a: str) -> Any:
+    return a + "B"
+
+
+async def hookC(a: str) -> Any:
+    return a + "C"
+
+@pytest.mark.parametrize(
+    ("args"),
+    [
+        HooksExtractionArgs(
+            file_to_hooks={
+                "fileA": {"funcA": hookA, "funcB": hookB},
+                "fileB": {"funcB": hookC, "funcC": hookB},
+                "fileC": {},
+            },
+            expected_name_to_hooks={
+                "funcA": [hookA],
+                "funcB": [hookB, hookC],
+                "funcC": [hookB],
+            },
+        ),
+        HooksExtractionArgs(
+            file_to_hooks={
+                "fileB": {"funcB": hookC, "funcC": hookB},
+                "fileA": {"funcA": hookA, "funcB": hookB},
+                "fileC": {},
+            },
+            expected_name_to_hooks={
+                "funcA": [hookA],
+                "funcB": [hookB, hookC],
+                "funcC": [hookB],
+            },
+        ),
+    ],
+)
+def test_hook_list_extraction(args: HooksExtractionArgs) -> None:
+    assert (
+        convert_file_based_hooks_to_name_based_hooks(args.file_to_hooks)
+        == args.expected_name_to_hooks
+    )
