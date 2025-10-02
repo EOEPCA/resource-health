@@ -19,10 +19,12 @@ import {
   IsSpanError,
   IsStatusError,
   SpanFilterParamsToDql,
+  UnixNanoTimestampToDate,
   useFetchStateIncremental,
 } from "@/lib/helpers";
 import CustomLink from "@/components/CustomLink";
 import ButtonWithCheckmark from "@/components/ButtonWithCheckmark";
+import { format } from "date-fns";
 
 type HealthCheckRunPageProps = {
   params: { check_id: string; trace_id: string };
@@ -76,11 +78,15 @@ function HealthCheckRunPageDetails({
   });
   const filterParamsDql = SpanFilterParamsToDql(spanFilterParams);
   let checkPass: boolean | null = null;
+  let checkTimestamp: Date | null = null;
   if (fetchState === "Completed") {
     checkPass = true;
     for (const resourceSpans of allSpans.resourceSpans) {
       for (const scopeSpans of resourceSpans.scopeSpans) {
         for (const span of scopeSpans.spans) {
+          if (!span.parentSpanId) {
+            checkTimestamp = UnixNanoTimestampToDate(span.startTimeUnixNano);
+          }
           if (IsSpanError(span)) {
             checkPass = false;
           }
@@ -108,6 +114,11 @@ function HealthCheckRunPageDetails({
           {/* <span className={checkResultClassName}>{checkResultString}</span> */}
         </Text>
         {checkPass === null ? <Spinner /> : <Text>{checkResultString}</Text>}
+      </div>
+      <div>
+        {checkTimestamp === null
+          ? ""
+          : format(checkTimestamp, "MM/dd/yyyy hh:mm:ss a")}
       </div>
       <ButtonWithCheckmark
         onClick={() => navigator.clipboard.writeText(filterParamsDql)}

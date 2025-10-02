@@ -43,7 +43,7 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 import { IoReload as Reload } from "react-icons/io5";
-import { formatDuration } from "date-fns";
+import { formatDuration, formatRelative } from "date-fns";
 import {
   CallBackendIncremental,
   durationStringToDuration,
@@ -59,6 +59,7 @@ import {
   StringifyPretty,
   CallBackend,
   useFetchState,
+  UnixNanoTimestampToDate,
 } from "@/lib/helpers";
 import {
   CheckErrorPopup,
@@ -72,6 +73,7 @@ import ButtonWithCheckmark from "@/components/ButtonWithCheckmark";
 import { DEFAULT_TELEMETRY_DURATION } from "@/lib/config";
 import { TelemetryDurationTextAndDropdown } from "@/components/TelemetryDurationDropdown";
 import { LoadingDiv } from "@/components/LoadingDiv";
+import { enUS } from "date-fns/locale";
 
 type HealthCheckPageProps = {
   params: { check_id: string };
@@ -469,12 +471,13 @@ function CheckRunsTable({
   const traceIdToSpans = GetTraceIdToSpans(allSpans);
   return (
     // <TableContainer>
-    <Table variant="simple">
+    <Table variant="simple" className="w-full">
       <Thead>
         <Tr>
           <Th>Check Result</Th>
           <Th>Health Check Run Id (same as Trace id)</Th>
           <Th>Error Details</Th>
+          <Th>Timestamp</Th>
         </Tr>
       </Thead>
       <Tbody>
@@ -548,6 +551,26 @@ function CheckRunsSummaryRow({
   );
 }
 
+// This format is heavily inpired by how gmail shows the relative timestamp
+// couldn't easily implement the actual gmail behavior as
+// there is no lastYear setting
+// Code based on https://stackoverflow.com/a/61409387
+// THESE ARE CASE-SENSITIVE
+const formatRelativeLocale: Record<string, string> = {
+  // lastWeek: "MMM dd",
+  lastWeek: "E h:mm a",
+  yesterday: "E h:mm a",
+  today: "h:mm a",
+  tomorrow: "MM/dd/yyyy",
+  nextWeek: "MM/dd/yyyy",
+  other: "MM/dd/yyyy",
+};
+
+const locale = {
+  ...enUS,
+  formatRelative: (token: string): string => formatRelativeLocale[token],
+};
+
 function CheckRunTableRow({
   checkId,
   traceId,
@@ -559,9 +582,16 @@ function CheckRunTableRow({
 }): JSX.Element {
   let checkPass = true;
   const errorMessages: string[] = [];
+  let checkTimestamp: Date | null = null;
   for (const resourceSpans of traceSpans.resourceSpans) {
     for (const scopeSpans of resourceSpans.scopeSpans) {
       for (const span of scopeSpans.spans) {
+        const newCheckTimestamp = UnixNanoTimestampToDate(
+          span.startTimeUnixNano
+        );
+        if (checkTimestamp === null || newCheckTimestamp < checkTimestamp)
+          checkTimestamp = newCheckTimestamp;
+
         if (IsSpanError(span)) {
           checkPass = false;
           if (span.status.message) {
@@ -582,13 +612,23 @@ function CheckRunTableRow({
         </CustomLink>
       </Td>
       <Td>
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 break-words">
           {errorMessages.map((message) => (
             <div key={message} className="whitespace-pre-line">
               {message}
             </div>
           ))}
         </div>
+      </Td>
+      <Td className="whitespace-nowrap">
+        {checkTimestamp === null
+          ? ""
+          : formatRelative(
+              checkTimestamp,
+              // subHours(Date.now(), 3),
+              Date.now(),
+              { locale }
+            )}
       </Td>
     </Tr>
   );

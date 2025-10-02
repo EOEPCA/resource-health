@@ -32,6 +32,14 @@ export const durationStringToDuration: Map<string, Duration> = new Map(
   ])
 );
 
+export function UnixNanoTimestampToDate(unixNanoTimestamp: number): Date {
+  return new Date(unixNanoTimestamp / 1_000_000);
+}
+
+export function DateToUnixNanoTimestamp(date: Date): number {
+  return Math.floor(date.getTime() * 1_000_000);
+}
+
 export type FetchState = "Loading" | "Completed";
 
 export type SetResultType<T> = (result: T, fetchState: FetchState) => void;
@@ -245,9 +253,6 @@ export function SpanFilterParamsToDql({
   scopeAttributes,
   spanAttributes,
 }: GetSpansQueryParams): string {
-  // function DateToUnixNano(date: Date): number {
-  //   return Math.floor(date.getTime() * 1_000_000);
-  // }
   const queryParts: string[] = [];
   if (traceId !== undefined) {
     queryParts.push(`traceId: ${EscChars(traceId)}`);
