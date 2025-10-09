@@ -20,8 +20,7 @@ You should follow along the following steps to get used to how things work.
 1. Go to the Health Check website [https://resource-health.apx.develop.eoepca.org/](https://resource-health.apx.develop.eoepca.org/). As noted above, you should log in as one of the standard users.
 2. Click on `Create new check`.
    ![Create new check](./img/basic-user-tutorial/01-Create-new-check.png)
-   Platform operators configure what kinds of checks you can create. You choose the check kind by picking a check template. For example, in the reference deployment you can choose `Generic script template`, and the check will be a Python script you provide (we will take a look at that later in an advanced guide). For now, we will choose `simple ping template`, which will create a check which pings an endpoint that we specify, and checks that the return code is as specified.
-
+   Platform operators configure what kinds of checks you can create. You choose the check kind by picking a check template. For example, in the reference deployment you can choose `Generic script template`, and the check will be a Python script you provide (we will take a look at that later in an advanced guide). For now, we will choose `simple ping template`, which will create a check which pings an endpoint that we specify, and checks that the return code is as specified.  
    From the dropdown shown below choose `simple ping template` check template (keep in mind that the platform might be configured to not have a check template exactly like this - the name of check template might be different, or it might not even exist, for example)
    ![Choose check template](./img/basic-user-tutorial/02-Choose-check-template.png)
    Enter the values as you see below
@@ -30,8 +29,7 @@ You should follow along the following steps to get used to how things work.
    `schedule` is a CRON-style schedule specifying when the health check is to be executed. The schedule `0 0 1,15 * *` means the check will run `At 00:00 on day-of-month 1 and 15`. See [Cron Schedule](#cron-schedule) for more detailed information.
    Then click submit.
 3. After submitting the check, click on `Create new check` again, to hide the check creation form.  
-   `Ping example.com` (or however you named it) should now be visible somewhere in the list, usually near the top.
-
+   `Ping example.com` (or however you named it) should now be visible somewhere in the list, usually near the top.  
    Since the new check hasn't executed yet, all the stats in the table show empty values for it. By clicking `Run Check`, the check will be executed in the background. Pressing the reload button (**&#10227;**) refreshes the telemetry for this check, updating the displayed statistics. Once `Run count` indicates that the check executed, we should also see `problematic run count` indicating the something went wrong. This is to be expected, as we deliberately introduced a typo. Click on the check to get more details on its executions.
    ![Checks list](./img/basic-user-tutorial/04-Show-non-zero-run-count.png)
 4. When a check name is pressed, a page describing that particular check should open. Scroll to the bottom of the page. It should look something like below.
@@ -192,7 +190,7 @@ See [Raw Health Check Telemetry](#raw-health-check-telemetry). In particular, yo
    ```
    in the `Script` field.  
    Click `Submit`
-5. So that this check has more data to inspect, run the previous check a few times manually (you don't need to wait for one run to finish running the check again). Then run the current check once. As the quantities `random_outcome`, `random_outcome1`, `random_outcome2` are randomised, the aggregate check might or might not succeed, but the more times the original check runs, the more likely the aggregate check to succeed. That's it!
+5. So that this check has more data to inspect, run the previous check a few times manually (you don't need to wait for previous check run to finish before running the check again). Then run the current check once. As the quantities `random_outcome`, `random_outcome1`, `random_outcome2` are randomised, the aggregate check might or might not succeed, but the more times the original check runs, the more likely the aggregate check to succeed. That's it!
 
 ## Tutorial for platform administrators
 
