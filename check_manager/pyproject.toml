@@ -34,9 +34,9 @@ dev-dependencies = [
 ]
 
 [tool.uv.sources]
-eoepca-api-utils = { git = "https://github.com/EOEPCA/resource-health.git", subdirectory = "eoepca-api-utils" }
-plugin_utils = { git = "https://github.com/EOEPCA/resource-health.git", subdirectory = "plugin-utils" }
-eoepca-security = { git = "https://github.com/EOEPCA/python-eoepca-security.git", branch = "2.0.0-rc2" }
+eoepca-api-utils = { git = "https://github.com/EOEPCA/resource-health.git", subdirectory = "eoepca-api-utils", branch = "2.0.0" }
+plugin_utils = { git = "https://github.com/EOEPCA/resource-health.git", subdirectory = "plugin-utils", branch = "2.0.0" }
+eoepca-security = { git = "https://github.com/EOEPCA/python-eoepca-security.git", branch = "2.0.0" }
 
 [tool.pytest.ini_options]
 minversion = "6.0"
