@@ -43,12 +43,12 @@ from kubernetes_asyncio.client.models.v1_secret_key_selector import V1SecretKeyS
 
 DEFAULT_RUNNER_IMAGE: str = (
     os.environ.get("RH_CHECK_K8S_DEFAULT_RUNNER_IMAGE")
-    or "docker.io/eoepca/healthcheck_runner:v0.3.0-internal7-ccd84f1"
+    or "docker.io/eoepca/healthcheck_runner:2.0.0"
 )
 
 DEFAULT_OIDC_MITMPROXY_IMAGE: str = (
     os.environ.get("RH_CHECK_K8S_DEFAULT_OIDC_MITMPROXY_IMAGE")
-    or "docker.io/eoepca/mitmproxy_oidc:2.0.0-rc1"
+    or "docker.io/eoepca/mitmproxy_oidc:2.0.0"
 )
 
 def make_base_cronjob(
