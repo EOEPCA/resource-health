@@ -7,19 +7,19 @@ global:
   defaultHealthCheckImage:
     repository: docker.io/eoepca/healthcheck_runner
     pullPolicy: IfNotPresent
-    tag: "2.0.0-rc2"
+    tag: "2.0.0"
 
   ## TODO: Remove this default and make sure it is set or unused
   defaultOTLPEndpoint: https://resource-health-opentelemetry-collector:4317
 
-  defaultCheckAPIBaseURL: https://resource-health.apx.develop.eoepca.org/api/healthchecks/
-  defaultTelemetryAPIBaseURL: https://resource-health.apx.develop.eoepca.org/api/telemetry/
+  defaultCheckAPIBaseURL: https://resource-health.develop.eoepca.org/api/healthchecks/
+  defaultTelemetryAPIBaseURL: https://resource-health.develop.eoepca.org/api/telemetry/
 
 mock_api:
   image:
     repository: docker.io/eoepca/mock_service
     pullPolicy: IfNotPresent
-    tag: "2.0.0-rc2"
+    tag: "2.0.0"
   serviceType: ClusterIP
   containerPort: 5000
   servicePort: 5000
@@ -71,7 +71,7 @@ check_api:
   image:
     repository: docker.io/eoepca/resourcehealth_check_api
     pullPolicy: IfNotPresent
-    tag: "v0.3.0-internal22-9c1f23f"
+    tag: "2.0.0"
   serviceType: ClusterIP
   containerPort: 8000
   servicePort: 8000
@@ -84,7 +84,7 @@ check_api:
 
   environmentFixed:
   # - name: RH_CHECK_API_BASE_URL
-  #   value: https://resource-health.apx.develop.eoepca.org/api/healthchecks/
+  #   value: https://resource-health.develop.eoepca.org/api/healthchecks/
   # - name: ...
   #   secret: ...
   #   key: ...
@@ -100,7 +100,7 @@ telemetry_api:
   image:
     repository: docker.io/eoepca/resourcehealth_telemetry_api
     pullPolicy: IfNotPresent
-    tag: "v0.3.0-internal23-b50848b"
+    tag: "2.0.0"
   serviceType: ClusterIP
   containerPort: 8080
   servicePort: 8080
@@ -113,7 +113,7 @@ telemetry_api:
 
   environmentFixed:
   # - name: RH_TELEMETRY_API_BASE_URL
-  #   value: https://resource-health.apx.develop.eoepca.org/api/telemetry/
+  #   value: https://resource-health.develop.eoepca.org/api/telemetry/
   # - name: ...
   #   secret: ...
   #   key: ...
@@ -125,7 +125,7 @@ web:
   image:
     repository: docker.io/eoepca/resourcehealth_web
     pullPolicy: IfNotPresent
-    tag: "v0.3.0-internal21-9411162"
+    tag: "2.0.0"
   serviceType: ClusterIP
   containerPort: 3000
   servicePort: 80
@@ -133,7 +133,7 @@ web:
   environmentSecrets: []
   environmentFixed:
     - name: NEXT_PUBLIC_RELOGIN_URL
-      value: https://resource-health.apx.develop.eoepca.org/login
+      value: https://resource-health.develop.eoepca.org/login
     - name: NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT
       value: http://resource-health-check-api:8000/v1
     - name: NEXT_PUBLIC_TELEMETRY_ENDPOINT

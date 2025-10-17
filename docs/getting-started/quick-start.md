@@ -36,16 +36,16 @@ All the health checks (and their outcomes) are currently owned by example users,
 
 There are two API endpoints:
 
-- API for managing health checks [https://resource-health.apx.develop.eoepca.org/api/healthchecks/](https://resource-health.apx.develop.eoepca.org/api/healthchecks/)
-- API for accessing the (OpenTelemetry trace) outcomes of health check executions [https://resource-health.apx.develop.eoepca.org/api/telemetry/](https://resource-health.apx.develop.eoepca.org/api/telemetry/)
+- API for managing health checks [https://resource-health.develop.eoepca.org/api/healthchecks/](https://resource-health.develop.eoepca.org/api/healthchecks/)
+- API for accessing the (OpenTelemetry trace) outcomes of health check executions [https://resource-health.develop.eoepca.org/api/telemetry/](https://resource-health.develop.eoepca.org/api/telemetry/)
 
 ### Web interface
 
-Available at [https://resource-health.apx.develop.eoepca.org/](https://resource-health.apx.develop.eoepca.org/).
+Available at [https://resource-health.develop.eoepca.org/](https://resource-health.develop.eoepca.org/).
 
 ### Define health checks
 
-The easiest way to define health checks is using the web interface [https://resource-health.apx.develop.eoepca.org/](https://resource-health.apx.develop.eoepca.org/).
+The easiest way to define health checks is using the web interface [https://resource-health.develop.eoepca.org/](https://resource-health.develop.eoepca.org/).
 
 <!-- 
 ### Using Helm values
