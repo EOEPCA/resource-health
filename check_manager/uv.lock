@@ -393,8 +393,8 @@ wheels = [
 
 [[package]]
 name = "eoepca-api-utils"
-version = "0.1.0"
-source = { git = "https://github.com/EOEPCA/resource-health.git?subdirectory=eoepca-api-utils&branch=2.0.0#4708b3802f6c3b14b3a1dab51d8c06d0e5ba49a7" }
+version = "2.0.0"
+source = { git = "https://github.com/EOEPCA/resource-health.git?subdirectory=eoepca-api-utils&branch=2.0.0#ebf80f5be370dbb515c5f9af04f328884ff7e647" }
 dependencies = [
     { name = "fastapi", extra = ["standard"] },
     { name = "pydantic" },
@@ -403,8 +403,8 @@ dependencies = [
 
 [[package]]
 name = "eoepca-security"
-version = "0.2.0"
-source = { git = "https://github.com/EOEPCA/python-eoepca-security.git?branch=2.0.0#858dff9ce7e270a1e193480e8655265482ceb7b4" }
+version = "2.0.0"
+source = { git = "https://github.com/EOEPCA/python-eoepca-security.git?branch=2.0.0#1284b7fa15c4fa42ff2a85841c76904872ce472c" }
 dependencies = [
     { name = "cryptography" },
     { name = "fastapi", extra = ["standard"] },
@@ -861,8 +861,8 @@ wheels = [
 
 [[package]]
 name = "plugin-utils"
-version = "0.1.1"
-source = { git = "https://github.com/EOEPCA/resource-health.git?subdirectory=plugin-utils&branch=2.0.0#4708b3802f6c3b14b3a1dab51d8c06d0e5ba49a7" }
+version = "2.0.0"
+source = { git = "https://github.com/EOEPCA/resource-health.git?subdirectory=plugin-utils&branch=2.0.0#ebf80f5be370dbb515c5f9af04f328884ff7e647" }
 
 [[package]]
 name = "propcache"
