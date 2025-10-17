@@ -12,8 +12,8 @@ global:
   ## TODO: Remove this default and make sure it is set or unused
   defaultOTLPEndpoint: https://resource-health-opentelemetry-collector:4317
 
-  defaultCheckAPIBaseURL: https://resource-health.apx.develop.eoepca.org/api/healthchecks/
-  defaultTelemetryAPIBaseURL: https://resource-health.apx.develop.eoepca.org/api/telemetry/
+  defaultCheckAPIBaseURL: https://resource-health.develop.eoepca.org/api/healthchecks/
+  defaultTelemetryAPIBaseURL: https://resource-health.develop.eoepca.org/api/telemetry/
 
 mock_api:
   image:
@@ -84,7 +84,7 @@ check_api:
 
   environmentFixed:
   # - name: RH_CHECK_API_BASE_URL
-  #   value: https://resource-health.apx.develop.eoepca.org/api/healthchecks/
+  #   value: https://resource-health.develop.eoepca.org/api/healthchecks/
   # - name: ...
   #   secret: ...
   #   key: ...
@@ -113,7 +113,7 @@ telemetry_api:
 
   environmentFixed:
   # - name: RH_TELEMETRY_API_BASE_URL
-  #   value: https://resource-health.apx.develop.eoepca.org/api/telemetry/
+  #   value: https://resource-health.develop.eoepca.org/api/telemetry/
   # - name: ...
   #   secret: ...
   #   key: ...
@@ -133,7 +133,7 @@ web:
   environmentSecrets: []
   environmentFixed:
     - name: NEXT_PUBLIC_RELOGIN_URL
-      value: https://resource-health.apx.develop.eoepca.org/login
+      value: https://resource-health.develop.eoepca.org/login
     - name: NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT
       value: http://resource-health-check-api:8000/v1
     - name: NEXT_PUBLIC_TELEMETRY_ENDPOINT

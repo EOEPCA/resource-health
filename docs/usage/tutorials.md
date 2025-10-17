@@ -17,7 +17,7 @@ In this tutorial you will learn:
 
 You should follow along the following steps to get used to how things work.
 
-1. Go to the Health Check website [https://resource-health.apx.develop.eoepca.org/](https://resource-health.apx.develop.eoepca.org/). As noted above, you should log in as one of the standard users.
+1. Go to the Health Check website [https://resource-health.develop.eoepca.org/](https://resource-health.develop.eoepca.org/). As noted above, you should log in as one of the standard users.
 2. Click on `Create new check`.
    ![Create new check](./img/basic-user-tutorial/01-Create-new-check.png)
    Platform operators configure what kinds of checks you can create. You choose the check kind by picking a check template. For example, in the reference deployment you can choose `Generic script template`, and the check will be a Python script you provide (we will take a look at that later in an advanced guide). For now, we will choose `simple ping template`, which will create a check which pings an endpoint that we specify, and checks that the return code is as specified.  
@@ -60,7 +60,7 @@ In this tutorial we will learn:
 
 Follow along the following steps:
 
-1. Go to the Health Check website [https://resource-health.apx.develop.eoepca.org/](https://resource-health.apx.develop.eoepca.org/). Again, you should log in as one of the standard users.
+1. Go to the Health Check website [https://resource-health.develop.eoepca.org/](https://resource-health.develop.eoepca.org/). Again, you should log in as one of the standard users.
 2. We will create a health check which will execute the Python script below using the [Pytest](https://docs.pytest.org/en/stable/) testing framework.
    ```python
    import random
