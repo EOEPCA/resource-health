@@ -5,7 +5,7 @@ from typer import Argument, Context, Exit, Option, Typer
 from typing import Optional
 from typing_extensions import Annotated
 
-__config_version__: str = "0.0.1"
+__config_version__: str = "2.0.0"
 
 
 class ServiceName(str, Enum):
