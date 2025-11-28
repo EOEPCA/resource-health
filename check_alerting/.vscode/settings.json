@@ -1,0 +1,14 @@
+{
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  },
+  "cSpell.words": [
+    "eoepca",
+    "betterproto",
+    "mypy",
+    "grpclib",
+    "grpcio"
+  ],
+  "mypy.runUsingActiveInterpreter": true
+}
