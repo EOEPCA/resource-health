@@ -1,14 +1,23 @@
 {
   "[python]": {
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "charliermarsh.ruff"
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
   },
   "cSpell.words": [
-    "eoepca",
+    "addrs",
     "betterproto",
-    "mypy",
+    "binpb",
+    "dotenv",
+    "eoepca",
+    "grpcio",
     "grpclib",
-    "grpcio"
+    "mypy",
+    "notif",
+    "otelcol",
+    "protoc"
   ],
   "mypy.runUsingActiveInterpreter": true
 }
