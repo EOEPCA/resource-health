@@ -41,10 +41,9 @@ class Mailer:
         message["From"] = self._from_email
         message["To"] = to_email
         message["Subject"] = subject
-        print(f"EMAIL to: {to_email}, subject: {subject}, text: {message.as_string()}")
-        # self._smtp.sendmail(
-        #     from_addr=self._from_email, to_addrs=[to_email], msg=message.as_string()
-        # )
+        self._smtp.sendmail(
+            from_addr=self._from_email, to_addrs=[to_email], msg=message.as_string()
+        )
 
     def __enter__(self) -> Self:
         self._smtp.__enter__()
