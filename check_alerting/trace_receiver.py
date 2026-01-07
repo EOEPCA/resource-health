@@ -1,6 +1,7 @@
 import binascii
 import dbm
 import logging
+import threading
 from concurrent import futures
 from datetime import datetime, timezone
 
@@ -30,6 +31,10 @@ from common import (
 )
 from proto import TraceInfo, TraceInfoStatusCode
 
+logger = logging.getLogger()
+logging.basicConfig()
+logger.setLevel(logging.DEBUG)
+
 
 def append_span(
     dict_resource_spans_list: list[ResourceSpans],
@@ -58,20 +63,47 @@ def append_span(
     dict_scope_spans_list[-1].spans.append(span)
 
 
-class TraceService:
-    def __init__(
-        self,
-        trace_to_resource_spans: MutableMappingBytes,
-        trace_to_info: MutableMappingBytes,
-    ) -> None:
-        self._trace_to_resource_spans = trace_to_resource_spans
-        self._trace_to_info = trace_to_info
+thread_local = threading.local()
 
+
+# class DbConnections:
+#     def __init__(self) -> None:
+#         logger.debug("Open db connections for this thread")
+#         self.trace_to_resource_spans = dbm.open(ERROR_TRACES_FILE, flag="c")
+#         self.trace_to_info = dbm.open(TRACE_INFOS_FILE, flag="c")
+
+#     def __del__(self) -> None:
+#         logger.debug("Closing db connections for this thread")
+#         self.trace_to_resource_spans.close()
+#         self.trace_to_info.close()
+
+
+# def us_dbs() -> None:
+#     if not hasattr(thread_local, "db_connections"):
+#         thread_local.db_connections = DbConnections()
+
+#     trace_to_resource_spans: dbm._Database = (
+#         thread_local.db_connections.trace_to_resource_spans
+#     )
+#     trace_to_info: dbm._Database = thread_local.db_connections.trace_to_info
+
+
+class TraceService:
     def export(
         self,
         export_trace_service_request: ExportTraceServiceRequest,
         context: grpc.RpcContext,
     ) -> ExportTraceServiceResponse:
+        logger.debug("Got traces")
+        if not hasattr(thread_local, "trace_to_resource_spans"):
+            logger.debug("Open trace_to_resource_spans db connection for this thread")
+            thread_local.trace_to_resource_spans = dbm.open(ERROR_TRACES_FILE, flag="c")
+        trace_to_resource_spans: dbm._Database = thread_local.trace_to_resource_spans
+        if not hasattr(thread_local, "trace_to_info"):
+            logger.debug("Open trace_to_info db connection for this thread")
+            thread_local.trace_to_info = dbm.open(TRACE_INFOS_FILE, flag="c")
+        trace_to_info: dbm._Database = thread_local.trace_to_info
+
         error_spans: dict[str, list[ResourceSpans]] = {}
         for resource_spans in export_trace_service_request.resource_spans:
             for scope_spans in resource_spans.scope_spans:
@@ -89,8 +121,9 @@ class TraceService:
                             scope_schema_url=scope_spans.schema_url,
                             span=span,
                         )
+        logger.debug(f"{len(error_spans)} error traces")
         for trace_id, resource_spans_list in error_spans.items():
-            trace_info = get_trace_info(self._trace_to_info, trace_id)
+            trace_info = get_trace_info(trace_to_info, trace_id)
 
             trace_status: TraceInfoStatusCode = (
                 TRACE_INFO_STATUS_CODE_RECEIVING
@@ -98,12 +131,13 @@ class TraceService:
                 else trace_info.status
             )
             if trace_status != TraceInfoStatusCode.RECEIVING:
+                logger.info(
+                    f"Trace {trace_id} has status {trace_status.name}, so it is not saved"
+                )
                 continue
-            db_resource_spans_list_serialized = self._trace_to_resource_spans.get(
-                trace_id
-            )
+            db_resource_spans_list_serialized = trace_to_resource_spans.get(trace_id)
             db_resource_spans_list_or_none = get_resource_spans_list(
-                self._trace_to_resource_spans, trace_id
+                trace_to_resource_spans, trace_id
             )
             db_resource_spans_list = (
                 []
@@ -123,16 +157,17 @@ class TraceService:
 
             # Write trace info first so that all keys from self._trace_to_resource_spans
             # have a corresponding value in self._trace_to_info
-            self._trace_to_info[trace_id] = trace_info_serialized
-            self._trace_to_resource_spans[trace_id] = db_resource_spans_list_serialized
+            trace_to_info[trace_id] = trace_info_serialized
+            trace_to_resource_spans[trace_id] = db_resource_spans_list_serialized
+            logger.debug(
+                f"Saved trace and info. There are {len(trace_to_info)} traces infos, and {len(trace_to_resource_spans)} traces saved"
+            )
 
         return ExportTraceServiceResponse(ExportTracePartialSuccess(rejected_spans=0))
 
 
-def serve(
-    trace_id_to_resource_spans: MutableMappingBytes, trace_to_info: MutableMappingBytes
-) -> None:
-    trace_service = TraceService(trace_id_to_resource_spans, trace_to_info)
+def main() -> None:
+    trace_service = TraceService()
     rpc_method_handlers = {
         "Export": grpc.unary_unary_rpc_method_handler(
             trace_service.export,
@@ -148,20 +183,9 @@ def serve(
         thread_pool=futures.ThreadPoolExecutor(max_workers=10),
         handlers=[generic_handler],
     )
-    logger = logging.getLogger()
-    logger.handlers.clear()
-    logger.setLevel(logging.DEBUG)
     server.add_insecure_port("[::]:50051")
     server.start()
     server.wait_for_termination()
-
-
-def main() -> None:
-    with (
-        dbm.open(ERROR_TRACES_FILE, flag="c") as trace_to_resource_spans,
-        dbm.open(TRACE_INFOS_FILE, flag="c") as trace_to_info,
-    ):
-        serve(trace_to_resource_spans, trace_to_info)
 
 
 if __name__ == "__main__":

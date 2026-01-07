@@ -8,12 +8,14 @@ from email.message import Message
 from email.mime.text import MIMEText
 from time import sleep
 from types import TracebackType
-from typing import Any, Self
+from typing import Self
 
+from opentelemetry_betterproto.opentelemetry.proto.common.v1 import AnyValue
 from opentelemetry_betterproto.opentelemetry.proto.trace.v1 import ResourceSpans
 
 from common import (
     ERROR_TRACES_FILE,
+    TRACE_INFO_STATUS_CODE_ERROR,
     TRACE_INFO_STATUS_CODE_PROCESSED,
     TRACE_INFO_STATUS_CODE_PROCESSING,
     TRACE_INFOS_FILE,
@@ -41,6 +43,9 @@ class Mailer:
         message["From"] = self._from_email
         message["To"] = to_email
         message["Subject"] = subject
+        logger.info(
+            f"Send mail from: {self._from_email}, to: {to_email}, subject: {subject}, body: {message.as_string()}"
+        )
         self._smtp.sendmail(
             from_addr=self._from_email, to_addrs=[to_email], msg=message.as_string()
         )
@@ -58,6 +63,11 @@ class Mailer:
         self._smtp.__exit__(exc_type, exc_value, tb)
 
 
+def get_string_attribute_value(attributes: dict[str, AnyValue], key: str) -> str | None:
+    value_any = attributes.get(key, None)
+    return None if value_any is None else value_any.string_value
+
+
 def send_email_notification(
     mailer: Mailer,
     alert_user_to_email: dict[str, str],
@@ -67,10 +77,10 @@ def send_email_notification(
     user_id: str | None = None
     health_check_name: str | None = None
     for resource_spans in resource_spans_list:
-        resource_attributes: dict[str, Any] = dict(
+        resource_attributes: dict[str, AnyValue] = dict(
             (attr.key, attr.value) for attr in resource_spans.resource.attributes
         )
-        cur_user_id = resource_attributes.get("user.id", None)
+        cur_user_id = get_string_attribute_value(resource_attributes, "user.id")
         if user_id is None and cur_user_id is not None:
             user_id = cur_user_id
         elif user_id != cur_user_id:
@@ -78,7 +88,9 @@ def send_email_notification(
                 f"Trace {trace_id} specifies distinct user ids '{user_id}' and '{cur_user_id}'"
             )
 
-        cur_health_check_name = resource_attributes.get("health_check.name", None)
+        cur_health_check_name = get_string_attribute_value(
+            resource_attributes, "health_check.name"
+        )
         if health_check_name is None and cur_health_check_name is not None:
             health_check_name = cur_health_check_name
         elif health_check_name != cur_health_check_name:
@@ -128,41 +140,51 @@ def process_trace(
     assert trace_info is not None
     now = datetime.now(timezone.utc)
     if (
-        trace_info.status == TraceInfoStatusCode.PROCESSED
-        and trace_info.last_seen + remove_trace_time < now
-    ):
-        del trace_to_info[trace_id]
-        if trace_id in trace_to_resource_spans:
-            logger.warning(
-                f"Trace {trace_id} is processed, and still present in the database after {remove_trace_time} from receiving it"
-            )
-            del trace_to_resource_spans[trace_id]
-        return
-    if (
         trace_info.status == TraceInfoStatusCode.RECEIVING
         and trace_info.last_seen + send_notif_time < now
     ):
-        trace_to_info[trace_id] = bytes(
-            TraceInfo(
-                last_seen=trace_info.last_seen,
-                status=TRACE_INFO_STATUS_CODE_PROCESSING,
+        try:
+            trace_to_info[trace_id] = bytes(
+                TraceInfo(
+                    last_seen=trace_info.last_seen,
+                    status=TRACE_INFO_STATUS_CODE_PROCESSING,
+                )
             )
-        )
-        resource_spans_list = get_resource_spans_list(trace_to_resource_spans, trace_id)
-        assert resource_spans_list is not None
-        send_email_notification(
-            mailer,
-            alert_user_to_email,
-            trace_id,
-            resource_spans_list,
-        )
-        trace_to_info[trace_id] = bytes(
-            TraceInfo(
-                last_seen=trace_info.last_seen,
-                status=TRACE_INFO_STATUS_CODE_PROCESSED,
+            resource_spans_list = get_resource_spans_list(
+                trace_to_resource_spans, trace_id
             )
-        )
-        del trace_to_resource_spans[trace_id]
+            assert resource_spans_list is not None
+            send_email_notification(
+                mailer,
+                alert_user_to_email,
+                trace_id,
+                resource_spans_list,
+            )
+            trace_to_info[trace_id] = bytes(
+                TraceInfo(
+                    last_seen=trace_info.last_seen,
+                    status=TRACE_INFO_STATUS_CODE_PROCESSED,
+                )
+            )
+        except:
+            trace_to_info[trace_id] = bytes(
+                TraceInfo(
+                    last_seen=trace_info.last_seen,
+                    status=TRACE_INFO_STATUS_CODE_ERROR,
+                )
+            )
+            raise
+        finally:
+            del trace_to_resource_spans[trace_id]
+        return
+    if trace_info.last_seen + remove_trace_time < now:
+        del trace_to_info[trace_id]
+        if trace_id in trace_to_resource_spans:
+            logger.warning(
+                f"Trace {trace_id} is still present in the database after {remove_trace_time} from receiving it. It has status {trace_info.status.name}."
+            )
+            del trace_to_resource_spans[trace_id]
+        return
 
 
 def main() -> None:
@@ -183,9 +205,9 @@ def main() -> None:
         dbm.open(TRACE_INFOS_FILE, flag="c") as trace_to_info,
     ):
         while True:
-            trace_ids = trace_to_resource_spans.keys()
+            trace_ids = trace_to_info.keys()
             logger.debug(
-                f"Checking if any notifications need sending. There are {len(trace_ids)} traces stored"
+                f"Checking if any notifications need sending. There are {len(trace_to_resource_spans)} traces stored, and {len(trace_to_info)} trace infos stored"
             )
             for trace_id_bytes in trace_ids:
                 trace_id = (

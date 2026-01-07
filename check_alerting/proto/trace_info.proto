@@ -10,6 +10,7 @@ message TraceInfo {
         RECEIVING = 0;
         PROCESSING = 1;
         PROCESSED = 2;
+        ERROR = 3;
     }
     StatusCode status = 2;
 }

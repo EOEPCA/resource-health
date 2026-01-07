@@ -13,6 +13,7 @@ class TraceInfoStatusCode(betterproto.Enum):
     RECEIVING = 0
     PROCESSING = 1
     PROCESSED = 2
+    ERROR = 3
 
 
 @dataclass(eq=False, repr=False)

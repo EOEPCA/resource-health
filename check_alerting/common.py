@@ -22,6 +22,9 @@ TRACE_INFO_STATUS_CODE_PROCESSING: TraceInfoStatusCode = cast(
 TRACE_INFO_STATUS_CODE_PROCESSED: TraceInfoStatusCode = cast(
     TraceInfoStatusCode, TraceInfoStatusCode.PROCESSED
 )
+TRACE_INFO_STATUS_CODE_ERROR: TraceInfoStatusCode = cast(
+    TraceInfoStatusCode, TraceInfoStatusCode.ERROR
+)
 
 # Load environment variables from .env file
 load_dotenv()

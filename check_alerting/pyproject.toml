@@ -3,7 +3,7 @@ name = "check-alerting"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
     "dotenv>=0.9.9",
     "opentelemetry-betterproto>=2.0.0",
@@ -23,7 +23,7 @@ dev = [
 opentelemetry-betterproto = { git = "https://github.com/EOEPCA/opentelemetry-betterproto.git", branch = "2.0.0" }
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"
 disallow_untyped_defs = true
 show_error_context = true
 pretty = true
