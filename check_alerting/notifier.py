@@ -1,3 +1,4 @@
+import ast
 import dbm
 import json
 import logging
@@ -20,35 +21,67 @@ from common import (
     TRACE_INFO_STATUS_CODE_PROCESSING,
     TRACE_INFOS_FILE,
     MutableMappingBytes,
-    get_env_var_or_throw,
+    get_int_env_var_or_default,
+    get_int_env_var_or_throw,
     get_resource_spans_list,
+    get_str_env_var_or_default,
+    get_str_env_var_or_throw,
     get_trace_info,
 )
 from proto import TraceInfo, TraceInfoStatusCode
 
 logger = logging.getLogger()
-logging.basicConfig()
-logger.setLevel(logging.DEBUG)
+# based on https://stackoverflow.com/a/76026506
+logging.basicConfig(
+    level=get_str_env_var_or_default("NOTIFIER_LOG_LEVEL", "INFO").upper()
+)
 
 
 class Mailer:
-    def __init__(self, from_email: str, from_email_password: str) -> None:
+    def __init__(
+        self,
+        email_counters: MutableMappingBytes,
+        max_emails_per_day: int,
+        host: str,
+        port: int,
+        from_email: str,
+        from_email_password: str,
+    ) -> None:
+        self._email_counters = email_counters
+        self._max_emails_per_day = max_emails_per_day
         self._from_email = from_email
         self._smtp = smtplib.SMTP_SSL(
-            "smtp.gmail.com", port=465, context=ssl.create_default_context()
+            host=host, port=port, context=ssl.create_default_context()
         )
         self._smtp.login(user=from_email, password=from_email_password)
 
-    def send_email(self, to_email: str, subject: str, message: Message) -> None:
+    def send_email(self, to_email: str, subject: str, message: Message) -> bool:
+        """returns if the email was sent successfully"""
         message["From"] = self._from_email
         message["To"] = to_email
         message["Subject"] = subject
-        logger.info(
-            f"Send mail from: {self._from_email}, to: {to_email}, subject: {subject}, body: {message.as_string()}"
+
+        today = str(datetime.now().date())
+        day_count_bytes = self._email_counters.get("day_count")
+        day_count: tuple[str, int] = (
+            (today, 0)
+            if day_count_bytes is None
+            else ast.literal_eval(day_count_bytes.decode())
+        )
+        (day, count) = day_count
+        if day == today and count >= self._max_emails_per_day:
+            logger.warning(
+                f"Not sending email as daily limit of {self._max_emails_per_day} is reached"
+            )
+            return False
+        next_count = count + 1 if day == today else 1
+        self._email_counters["day_count"] = bytes(
+            str((today, next_count)), encoding="utf-8"
         )
         self._smtp.sendmail(
             from_addr=self._from_email, to_addrs=[to_email], msg=message.as_string()
         )
+        return True
 
     def __enter__(self) -> Self:
         self._smtp.__enter__()
@@ -103,7 +136,6 @@ def send_email_notification(
             f"Trace {trace_id} has errors but doesn't have an associated user id, so no notification was sent"
         )
         return
-    print(type(user_id))
     if user_id not in alert_user_to_email:
         logger.info(
             f"User id {user_id} doesn't have an associated email for notifications, so no notification was sent for failed check run {trace_id}",
@@ -119,12 +151,15 @@ def send_email_notification(
         if health_check_name is None
         else f"Health check {health_check_name} run {trace_id} failed"
     )
-    mailer.send_email(
-        to_email=to_email, subject="Health Check Failed", message=MIMEText(message_text)
-    )
-    logger.info(
-        f"Email notification for failed check run {trace_id} was successfully sent to user {user_id}",
-    )
+
+    if mailer.send_email(
+        to_email=to_email,
+        subject="Health Check Failed",
+        message=MIMEText(message_text),
+    ):
+        logger.info(
+            f"Email notification for failed check run {trace_id} was successfully sent to user {user_id}",
+        )
 
 
 def process_trace(
@@ -188,18 +223,35 @@ def process_trace(
 
 
 def main() -> None:
-    from_email = get_env_var_or_throw("FROM_EMAIL")
-    from_email_password = get_env_var_or_throw("FROM_EMAIL_PASSWORD")
-    execute_period_secs = int(get_env_var_or_throw("EXECUTE_PERIOD_SECS"))
-    with open(get_env_var_or_throw("ALERT_USER_EMAILS"), "r") as f:
+    email_counters_file = get_str_env_var_or_default(
+        "EMAIL_COUNTERS", "email_counters.sqlite3"
+    )
+    max_emails_per_day = get_int_env_var_or_throw("MAX_EMAILS_PER_DAY")
+    smtp_mailer_host = get_str_env_var_or_throw("SMTP_MAILER_HOST")
+    smtp_mailer_port = get_int_env_var_or_default("SMTP_MAILER_PORT", 465)
+    from_email = get_str_env_var_or_throw("FROM_EMAIL")
+    from_email_password = get_str_env_var_or_throw("FROM_EMAIL_PASSWORD")
+    execute_period_secs = get_int_env_var_or_default("EXECUTE_PERIOD_SECS", 10)
+    alert_user_emails_file = get_str_env_var_or_default(
+        "ALERT_USER_EMAILS", "alert_user_emails.json"
+    )
+    with open(alert_user_emails_file, "r") as f:
         alert_user_to_email: dict[str, str] = json.load(f)
-    send_notif_time = timedelta(seconds=int(get_env_var_or_throw("SEND_NOTIF_SECS")))
+    send_notif_time = timedelta(
+        seconds=get_int_env_var_or_default("SEND_NOTIF_SECS", 60)
+    )
     remove_trace_time = timedelta(
-        seconds=int(get_env_var_or_throw("REMOVE_TRACE_SECS"))
+        seconds=get_int_env_var_or_default("REMOVE_TRACE_SECS", 600)
     )
     with (
+        dbm.open(email_counters_file, flag="c") as email_counters,
         Mailer(
-            from_email=from_email, from_email_password=from_email_password
+            email_counters=email_counters,
+            max_emails_per_day=max_emails_per_day,
+            host=smtp_mailer_host,
+            port=smtp_mailer_port,
+            from_email=from_email,
+            from_email_password=from_email_password,
         ) as mailer,
         dbm.open(ERROR_TRACES_FILE, flag="c") as trace_to_resource_spans,
         dbm.open(TRACE_INFOS_FILE, flag="c") as trace_to_info,

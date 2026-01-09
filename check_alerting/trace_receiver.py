@@ -25,15 +25,18 @@ from common import (
     ERROR_TRACES_FILE,
     TRACE_INFO_STATUS_CODE_RECEIVING,
     TRACE_INFOS_FILE,
-    MutableMappingBytes,
+    get_int_env_var_or_default,
     get_resource_spans_list,
+    get_str_env_var_or_default,
     get_trace_info,
 )
 from proto import TraceInfo, TraceInfoStatusCode
 
 logger = logging.getLogger()
-logging.basicConfig()
-logger.setLevel(logging.DEBUG)
+# based on https://stackoverflow.com/a/76026506
+logging.basicConfig(
+    level=get_str_env_var_or_default("TRACE_RECEIVER_LOG_LEVEL", "INFO").upper()
+)
 
 
 def append_span(
@@ -66,28 +69,6 @@ def append_span(
 thread_local = threading.local()
 
 
-# class DbConnections:
-#     def __init__(self) -> None:
-#         logger.debug("Open db connections for this thread")
-#         self.trace_to_resource_spans = dbm.open(ERROR_TRACES_FILE, flag="c")
-#         self.trace_to_info = dbm.open(TRACE_INFOS_FILE, flag="c")
-
-#     def __del__(self) -> None:
-#         logger.debug("Closing db connections for this thread")
-#         self.trace_to_resource_spans.close()
-#         self.trace_to_info.close()
-
-
-# def us_dbs() -> None:
-#     if not hasattr(thread_local, "db_connections"):
-#         thread_local.db_connections = DbConnections()
-
-#     trace_to_resource_spans: dbm._Database = (
-#         thread_local.db_connections.trace_to_resource_spans
-#     )
-#     trace_to_info: dbm._Database = thread_local.db_connections.trace_to_info
-
-
 class TraceService:
     def export(
         self,
@@ -97,6 +78,7 @@ class TraceService:
         logger.debug("Got traces")
         if not hasattr(thread_local, "trace_to_resource_spans"):
             logger.debug("Open trace_to_resource_spans db connection for this thread")
+            # TODO: should probably explicitly close the database connection before the program exits
             thread_local.trace_to_resource_spans = dbm.open(ERROR_TRACES_FILE, flag="c")
         trace_to_resource_spans: dbm._Database = thread_local.trace_to_resource_spans
         if not hasattr(thread_local, "trace_to_info"):
@@ -104,7 +86,7 @@ class TraceService:
             thread_local.trace_to_info = dbm.open(TRACE_INFOS_FILE, flag="c")
         trace_to_info: dbm._Database = thread_local.trace_to_info
 
-        error_spans: dict[str, list[ResourceSpans]] = {}
+        error_trace_id_to_spans: dict[str, list[ResourceSpans]] = {}
         for resource_spans in export_trace_service_request.resource_spans:
             for scope_spans in resource_spans.scope_spans:
                 for span in scope_spans.spans:
@@ -112,7 +94,7 @@ class TraceService:
                         # This is how telemetry API converts from trace id bytes to string
                         trace_id = binascii.b2a_hex(span.trace_id).decode("ascii")
                         append_span(
-                            dict_resource_spans_list=error_spans.setdefault(
+                            dict_resource_spans_list=error_trace_id_to_spans.setdefault(
                                 trace_id, []
                             ),
                             resource=resource_spans.resource,
@@ -121,8 +103,9 @@ class TraceService:
                             scope_schema_url=scope_spans.schema_url,
                             span=span,
                         )
-        logger.debug(f"{len(error_spans)} error traces")
-        for trace_id, resource_spans_list in error_spans.items():
+        if len(error_trace_id_to_spans) > 0:
+            logger.info(f"Got {len(error_trace_id_to_spans)} error traces")
+        for trace_id, resource_spans_list in error_trace_id_to_spans.items():
             trace_info = get_trace_info(trace_to_info, trace_id)
 
             trace_status: TraceInfoStatusCode = (
@@ -167,6 +150,8 @@ class TraceService:
 
 
 def main() -> None:
+    max_workers = get_int_env_var_or_default("TRACE_RECEIVER_MAX_WORKERS", 20)
+    address = get_str_env_var_or_default("TRACE_RECEIVER_ADDRESS", "[::]:50051")
     trace_service = TraceService()
     rpc_method_handlers = {
         "Export": grpc.unary_unary_rpc_method_handler(
@@ -180,10 +165,10 @@ def main() -> None:
         rpc_method_handlers,
     )
     server = grpc.server(
-        thread_pool=futures.ThreadPoolExecutor(max_workers=10),
+        thread_pool=futures.ThreadPoolExecutor(max_workers=max_workers),
         handlers=[generic_handler],
     )
-    server.add_insecure_port("[::]:50051")
+    server.add_insecure_port(address)
     server.start()
     server.wait_for_termination()
 

@@ -30,15 +30,42 @@ TRACE_INFO_STATUS_CODE_ERROR: TraceInfoStatusCode = cast(
 load_dotenv()
 
 
-def get_env_var_or_throw(name: str) -> str:
+def get_str_env_var_or_throw(name: str) -> str:
     value = environ.get(name)
     if value is None:
         raise ValueError(f"Environment variable {name} must be set")
     return value
 
 
-ERROR_TRACES_FILE = get_env_var_or_throw("ERROR_TRACES_FILE")
-TRACE_INFOS_FILE = get_env_var_or_throw("TRACE_INFOS_FILE")
+def get_int_env_var_or_throw(name: str) -> int:
+    value = get_str_env_var_or_throw(name)
+    try:
+        return int(value)
+    except BaseException:
+        raise ValueError(f"Environment variable {name} must have integer value")
+
+
+def get_str_env_var_or_default(name: str, default: str) -> str:
+    value = environ.get(name)
+    if value is None:
+        return default
+    return value
+
+
+def get_int_env_var_or_default(name: str, default: int) -> int:
+    value = environ.get(name)
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except BaseException:
+        raise ValueError(f"Environment variable {name} must have integer value")
+
+
+ERROR_TRACES_FILE = get_str_env_var_or_default(
+    "ERROR_TRACES_FILE", "error_traces.sqlite3"
+)
+TRACE_INFOS_FILE = get_str_env_var_or_default("TRACE_INFOS_FILE", "trace_infos.sqlite3")
 
 
 def get_trace_info(
