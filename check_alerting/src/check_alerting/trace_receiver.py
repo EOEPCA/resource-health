@@ -21,7 +21,7 @@ from opentelemetry_betterproto.opentelemetry.proto.trace.v1 import (
     StatusStatusCode,
 )
 
-from common import (
+from check_alerting.common import (
     ERROR_TRACES_FILE,
     TRACE_INFO_STATUS_CODE_RECEIVING,
     TRACE_INFOS_FILE,
@@ -30,9 +30,9 @@ from common import (
     get_str_env_var_or_default,
     get_trace_info,
 )
-from proto import TraceInfo, TraceInfoStatusCode
+from check_alerting.proto import TraceInfo, TraceInfoStatusCode
 
-logger = logging.getLogger()
+logger = logging.getLogger(name="trace_receiver")
 # based on https://stackoverflow.com/a/76026506
 logging.basicConfig(
     level=get_str_env_var_or_default("TRACE_RECEIVER_LOG_LEVEL", "INFO").upper()

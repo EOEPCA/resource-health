@@ -7,7 +7,7 @@ from opentelemetry_betterproto.opentelemetry.proto.collector.trace.v1 import (
 )
 from opentelemetry_betterproto.opentelemetry.proto.trace.v1 import ResourceSpans
 
-from proto import TraceInfo, TraceInfoStatusCode
+from check_alerting.proto import TraceInfo, TraceInfoStatusCode
 
 type MutableMappingBytes = MutableMapping[str | bytes, bytes]
 
