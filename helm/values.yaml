@@ -121,6 +121,51 @@ telemetry_api:
   # - name: ...
   #   value: ...
 
+alerting:
+  image:
+    repository: docker.io/eoepca/resourcehealth_alerting
+    pullPolicy: IfNotPresent
+    tag: v0.3.0-internal1-e78ca37
+  serviceType: ClusterIP
+  containerPort: 50051
+  servicePort: 50051
+  # If have more replicas, some spans from a failed check trace might go
+  # to one replica, and some to another, thus resulting in two alert emails
+  # or at least neither replica having a complete picture of the trace
+  replicaCount: 1
+  environmentFixed:
+  - name: ERROR_TRACES_FILE
+    value: error_traces.sqlite3
+  - name: TRACE_INFOS_FILE
+    value: trace_infos.sqlite3
+  
+  - name: TRACE_RECEIVER_ADDRESS
+    value: "[::]:50051"
+  - name: TRACE_RECEIVER_MAX_WORKERS
+    value: 20
+  - name: TRACE_RECEIVER_LOG_LEVEL
+    value: INFO
+  
+  - name: EMAIL_COUNTERS
+    value: email_counters.sqlite3
+  # - name: MAX_EMAILS_PER_DAY
+  #   value: 300
+  # - name: ALERT_USER_EMAILS
+  #   value: alert_user_emails.json
+  # - name: SMTP_MAILER_HOST
+  #   value: smtp.gmail.com
+  # - name: SMTP_MAILER_PORT
+  #   value: 465
+  - name: EXECUTE_PERIOD_SECS
+    value: 10
+  - name: SEND_NOTIF_SECS
+    value: 60
+  - name: REMOVE_TRACE_SECS
+    value: 600
+  - name: NOTIFIER_LOG_LEVEL
+    value: INFO
+
+
 web:
   image:
     repository: docker.io/eoepca/resourcehealth_web
