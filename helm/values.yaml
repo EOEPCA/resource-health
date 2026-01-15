@@ -142,26 +142,26 @@ alerting:
   - name: TRACE_RECEIVER_ADDRESS
     value: "[::]:50051"
   - name: TRACE_RECEIVER_MAX_WORKERS
-    value: 20
+    value: "20"
   - name: TRACE_RECEIVER_LOG_LEVEL
     value: INFO
   
   - name: EMAIL_COUNTERS
     value: email_counters.sqlite3
   # - name: MAX_EMAILS_PER_DAY
-  #   value: 300
+  #   value: "300"
   # - name: ALERT_USER_EMAILS
   #   value: alert_user_emails.json
   # - name: SMTP_MAILER_HOST
   #   value: smtp.gmail.com
   # - name: SMTP_MAILER_PORT
-  #   value: 465
+  #   value: "465"
   - name: EXECUTE_PERIOD_SECS
-    value: 10
+    value: "10"
   - name: SEND_NOTIF_SECS
-    value: 60
+    value: "60"
   - name: REMOVE_TRACE_SECS
-    value: 600
+    value: "600"
   - name: NOTIFIER_LOG_LEVEL
     value: INFO
 
