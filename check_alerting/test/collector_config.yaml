@@ -1,0 +1,27 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+      grpc:
+
+exporters:
+  debug:
+    verbosity: detailed
+  file:
+    path: "telemetry_dump.json"
+  # file:
+  #   path: "telemetry_dump.binpb"
+  #   format: proto
+  # Based on https://github.com/open-telemetry/opentelemetry-collector/blob/main/exporter/otlpexporter/README.md
+  otlp:
+    endpoint: 0.0.0.0:50051
+    tls:
+      insecure: true
+    compression: none
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      # exporters: [file, debug]
+      exporters: [otlp]
