@@ -1,8 +1,11 @@
 [project]
 name = "check-alerting"
 version = "0.1.0"
-description = "Add your description here"
+description = "Send email alerts based on errors in OTel traces"
 readme = "README.md"
+authors = [
+    { name = "Jonas Puksta", email = "jonas.puksta@sensmetry.com" } 
+]
 requires-python = ">=3.13"
 dependencies = [
     "dotenv>=0.9.9",
@@ -19,6 +22,10 @@ dev = [
     "mypy>=1.18.2",
 ]
 
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [tool.uv.sources]
 opentelemetry-betterproto = { git = "https://github.com/EOEPCA/opentelemetry-betterproto.git", branch = "2.0.0" }
 
@@ -32,3 +39,7 @@ warn_unused_ignores = true
 warn_return_any = true
 ignore_missing_imports = true
 follow_untyped_imports = true
+
+[project.scripts]
+trace_receiver = "check_alerting.trace_receiver:main"
+notifier = "check_alerting.notifier:main"
