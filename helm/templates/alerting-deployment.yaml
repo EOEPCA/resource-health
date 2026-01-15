@@ -72,13 +72,11 @@ spec:
               value: {{ toYaml .value | trim }}
           {{- end }}
           livenessProbe:
-            httpGet:
-              path: /docs
-              port: http
-          readinessProbe:
-            httpGet:
-              path: /docs
-              port: http
+            tcpSocket:
+              # TODO: unhardcode this
+              port: 50051
+            initialDelaySeconds: 15
+            periodSeconds: 30
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}
