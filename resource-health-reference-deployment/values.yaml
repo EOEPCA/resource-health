@@ -207,7 +207,7 @@ opentelemetry-collector:
             ca_file: /certs/client/ca.crt
             cert_file: /certs/client/tls.crt
             key_file: /certs/client/tls.key
-      alerting:
+      otlp:
         endpoint: https://resource-health-alerting:50051
         tls:
           insecure: true
@@ -256,7 +256,7 @@ opentelemetry-collector:
           exporters:
           - debug
           - opensearch
-          - alerting
+          - otlp
           processors:
           - memory_limiter
           - batch
