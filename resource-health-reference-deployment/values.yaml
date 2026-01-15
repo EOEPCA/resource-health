@@ -208,7 +208,7 @@ opentelemetry-collector:
             cert_file: /certs/client/tls.crt
             key_file: /certs/client/tls.key
       otlp:
-        endpoint: https://resource-health-alerting:50051
+        endpoint: http://resource-health-alerting:50051
         tls:
           insecure: true
 
