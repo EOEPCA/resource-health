@@ -33,6 +33,16 @@ spec:
         - name: client-tls
           secret:
             secretName: {{ include "resource-health.fullname" . }}-web-client-certificate
+        {{- range .Values.web.secretMounts }}
+        - name: {{ toYaml .name | trim }}
+          secret:
+            secretName: {{ toYaml .secretName | trim }}
+        {{- end }}
+        {{- range .Values.web.configmapMounts }}
+        - name: {{ toYaml .name | trim }}
+          configMap:
+            name: {{ toYaml .configmapName | trim }}
+        {{- end }}
 
       containers:
         - name: {{ .Chart.Name }}
@@ -66,9 +76,18 @@ spec:
           {{- end }}
 
           volumeMounts:
-          - name: client-tls
-            readOnly: true
-            mountPath: "/client-tls"
+            - name: client-tls
+              readOnly: true
+              mountPath: "/client-tls"
+            {{- range .Values.web.secretMounts }}
+            - name: {{ toYaml .name | trim }}
+              readOnly: true
+              mountPath: {{ toYaml .mountPath | trim }}
+            {{- end }}
+            {{- range .Values.web.configmapMounts }}
+            - name: {{ toYaml .name | trim }}
+              mountPath: {{ toYaml .mountPath | trim }}
+            {{- end }}
 
           livenessProbe:
             httpGet:

@@ -38,6 +38,16 @@ spec:
           configMap:
             name: {{ include "resource-health.fullname" . }}-telemetry-api-hooks-configmap
         {{- end }}
+        {{- range .Values.telemetry_api.secretMounts }}
+        - name: {{ toYaml .name | trim }}
+          secret:
+            secretName: {{ toYaml .secretName | trim }}
+        {{- end }}
+        {{- range .Values.telemetry_api.configmapMounts }}
+        - name: {{ toYaml .name | trim }}
+          configMap:
+            name: {{ toYaml .configmapName | trim }}
+        {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
@@ -56,6 +66,15 @@ spec:
           - name: telemetry-api-hooks
             mountPath: /app/hooks/
           {{- end }}
+            {{- range .Values.telemetry_api.secretMounts }}
+            - name: {{ toYaml .name | trim }}
+              readOnly: true
+              mountPath: {{ toYaml .mountPath | trim }}
+            {{- end }}
+            {{- range .Values.telemetry_api.configmapMounts }}
+            - name: {{ toYaml .name | trim }}
+              mountPath: {{ toYaml .mountPath | trim }}
+            {{- end }}
           env:
             - name: RH_TELEMETRY_API_BASE_URL
               value: {{ toYaml .Values.global.defaultTelemetryAPIBaseURL }}

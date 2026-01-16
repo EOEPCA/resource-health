@@ -39,6 +39,10 @@ spec:
           configMap:
             name: {{ include "resource-health.fullname" . }}-api-hooks-configmap
         {{- end }}
+        {{- range .Values.check_api.secretMounts }}
+        - name: {{ toYaml .name | trim }}
+          secret:
+            secretName: {{ toYaml .secretName | trim }}
         {{- range .Values.check_api.configmapMounts }}
         - name: {{ toYaml .name | trim }}
           configMap:
@@ -62,6 +66,11 @@ spec:
             {{- if .Values.check_api.use_hook_configmap }}
             - name: check-api-hooks
               mountPath: /app/hooks/
+            {{- end }}
+            {{- range .Values.check_api.secretMounts }}
+            - name: {{ toYaml .name | trim }}
+              readOnly: true
+              mountPath: {{ toYaml .mountPath | trim }}
             {{- end }}
             {{- range .Values.check_api.configmapMounts }}
             - name: {{ toYaml .name | trim }}
