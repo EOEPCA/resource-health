@@ -43,6 +43,7 @@ spec:
         - name: {{ toYaml .name | trim }}
           secret:
             secretName: {{ toYaml .secretName | trim }}
+        {{- end }}
         {{- range .Values.check_api.configmapMounts }}
         - name: {{ toYaml .name | trim }}
           configMap:
