@@ -125,7 +125,7 @@ alerting:
   image:
     repository: docker.io/eoepca/resourcehealth_alerting
     pullPolicy: IfNotPresent
-    tag: v0.3.0-internal1-e78ca37
+    tag: v0.3.0-internal2-b302fa2
   serviceType: ClusterIP
   containerPort: 50051
   servicePort: 50051
