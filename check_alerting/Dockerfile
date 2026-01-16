@@ -12,6 +12,10 @@ FROM python:3.13-slim-bookworm AS runner
 WORKDIR /app
 
 COPY --from=build /app/.venv /app/.venv
+COPY ./alerting.sh /app/
+
+RUN chmod +x /app/alerting.sh
 
 EXPOSE 50051
-ENTRYPOINT [".venv/bin/trace_receiver", "&", ".venv/bin/notifier"]
+ENTRYPOINT ["/app/alerting.sh"]
+# ENTRYPOINT ["/bin/bash", "-c", "/app/.venv/bin/trace_receiver & /app/.venv/bin/notifier"]
