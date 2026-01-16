@@ -150,6 +150,7 @@ class TraceService:
 
 
 def main() -> None:
+    logger.info("starting")
     max_workers = get_int_env_var_or_default("TRACE_RECEIVER_MAX_WORKERS", 20)
     address = get_str_env_var_or_default("TRACE_RECEIVER_ADDRESS", "[::]:50051")
     trace_service = TraceService()
@@ -169,6 +170,7 @@ def main() -> None:
         handlers=[generic_handler],
     )
     server.add_insecure_port(address)
+    logger.info("initialization done")
     server.start()
     server.wait_for_termination()
 

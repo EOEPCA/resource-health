@@ -8,8 +8,6 @@ from datetime import datetime, timedelta, timezone
 from email.message import Message
 from email.mime.text import MIMEText
 from time import sleep
-from types import TracebackType
-from typing import Self
 
 from opentelemetry_betterproto.opentelemetry.proto.common.v1 import AnyValue
 from opentelemetry_betterproto.opentelemetry.proto.trace.v1 import ResourceSpans
@@ -49,51 +47,57 @@ class Mailer:
     ) -> None:
         self._email_counters = email_counters
         self._max_emails_per_day = max_emails_per_day
+        self._host = host
+        self._port = port
         self._from_email = from_email
-        self._smtp = smtplib.SMTP_SSL(
-            host=host, port=port, context=ssl.create_default_context()
-        )
-        self._smtp.login(user=from_email, password=from_email_password)
+        self._from_email_password = from_email_password
 
     def send_email(self, to_email: str, subject: str, message: Message) -> bool:
-        """returns if the email was sent successfully"""
-        message["From"] = self._from_email
-        message["To"] = to_email
-        message["Subject"] = subject
+        # For now create a new connection for sending every email
+        # to avoid connection timeout problem like here
+        # https://stackoverflow.com/questions/49203706/is-there-a-way-to-prevent-smtp-connection-timeout-smtplib-python
+        with smtplib.SMTP_SSL(
+            host=self._host, port=self._port, context=ssl.create_default_context()
+        ) as smtp:
+            smtp.login(user=self._from_email, password=self._from_email_password)
+            """returns if the email was sent successfully"""
+            message["From"] = self._from_email
+            message["To"] = to_email
+            message["Subject"] = subject
 
-        today = str(datetime.now().date())
-        day_count_bytes = self._email_counters.get("day_count")
-        day_count: tuple[str, int] = (
-            (today, 0)
-            if day_count_bytes is None
-            else ast.literal_eval(day_count_bytes.decode())
-        )
-        (day, count) = day_count
-        if day == today and count >= self._max_emails_per_day:
-            logger.warning(
-                f"Not sending email as daily limit of {self._max_emails_per_day} is reached"
+            today = str(datetime.now().date())
+            day_count_bytes = self._email_counters.get("day_count")
+            day_count: tuple[str, int] = (
+                (today, 0)
+                if day_count_bytes is None
+                else ast.literal_eval(day_count_bytes.decode())
             )
-            return False
-        next_count = count + 1 if day == today else 1
-        self._email_counters["day_count"] = bytes(
-            str((today, next_count)), encoding="utf-8"
-        )
-        self._smtp.sendmail(
-            from_addr=self._from_email, to_addrs=[to_email], msg=message.as_string()
-        )
-        return True
+            (day, count) = day_count
+            if day == today and count >= self._max_emails_per_day:
+                logger.warning(
+                    f"Not sending email as daily limit of {self._max_emails_per_day} is reached"
+                )
+                return False
+            next_count = count + 1 if day == today else 1
+            self._email_counters["day_count"] = bytes(
+                str((today, next_count)), encoding="utf-8"
+            )
+            smtp.sendmail(
+                from_addr=self._from_email, to_addrs=[to_email], msg=message.as_string()
+            )
+            return True
 
-    def __enter__(self) -> Self:
-        self._smtp.__enter__()
-        return self
+    # def __enter__(self) -> Self:
+    #     self._smtp.__enter__()
+    #     return self
 
-    def __exit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc_value: BaseException | None,
-        tb: TracebackType | None,
-    ) -> None:
-        self._smtp.__exit__(exc_type, exc_value, tb)
+    # def __exit__(
+    #     self,
+    #     exc_type: type[BaseException] | None,
+    #     exc_value: BaseException | None,
+    #     tb: TracebackType | None,
+    # ) -> None:
+    #     self._smtp.__exit__(exc_type, exc_value, tb)
 
 
 def get_string_attribute_value(attributes: dict[str, AnyValue], key: str) -> str | None:
@@ -223,6 +227,7 @@ def process_trace(
 
 
 def main() -> None:
+    logger.info("starting")
     email_counters_file = get_str_env_var_or_default(
         "EMAIL_COUNTERS", "email_counters.sqlite3"
     )
@@ -245,17 +250,18 @@ def main() -> None:
     )
     with (
         dbm.open(email_counters_file, flag="c") as email_counters,
-        Mailer(
+        dbm.open(ERROR_TRACES_FILE, flag="c") as trace_to_resource_spans,
+        dbm.open(TRACE_INFOS_FILE, flag="c") as trace_to_info,
+    ):
+        mailer = Mailer(
             email_counters=email_counters,
             max_emails_per_day=max_emails_per_day,
             host=smtp_mailer_host,
             port=smtp_mailer_port,
             from_email=from_email,
             from_email_password=from_email_password,
-        ) as mailer,
-        dbm.open(ERROR_TRACES_FILE, flag="c") as trace_to_resource_spans,
-        dbm.open(TRACE_INFOS_FILE, flag="c") as trace_to_info,
-    ):
+        )
+        logger.info("initialization done")
         while True:
             trace_ids = trace_to_info.keys()
             logger.debug(
