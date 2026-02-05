@@ -1,0 +1,595 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          {
+            "key": "container.id",
+            "value": {
+              "stringValue": "8125d1b23f53a9038cd799fee8893fef3d5ca4122634203df05070952b159cbb"
+            }
+          },
+          {
+            "key": "container.runtime",
+            "value": {
+              "stringValue": "docker"
+            }
+          },
+          {
+            "key": "health_check.name",
+            "value": {
+              "stringValue": "Ice Sheet Data Drilldown"
+            }
+          },
+          {
+            "key": "k8s.cronjob.name",
+            "value": {
+              "stringValue": "68a133ea-1aa8-4dae-8504-2171e1aa1f9f"
+            }
+          },
+          {
+            "key": "process.command",
+            "value": {
+              "stringValue": "/app/.venv/bin/python3"
+            }
+          },
+          {
+            "key": "process.command_args",
+            "value": {
+              "stringValue": "/app/.venv/bin/pytest --export-traces --suppress-tests-failed-exit-code -rP tests.py"
+            }
+          },
+          {
+            "key": "process.command_line",
+            "value": {
+              "stringValue": "/app/.venv/bin/python3 /app/.venv/bin/pytest --export-traces --suppress-tests-failed-exit-code -rP tests.py"
+            }
+          },
+          {
+            "key": "process.executable.name",
+            "value": {
+              "stringValue": "pytest"
+            }
+          },
+          {
+            "key": "process.executable.path",
+            "value": {
+              "stringValue": "/usr/local/bin/python3.12"
+            }
+          },
+          {
+            "key": "process.owner",
+            "value": {
+              "stringValue": "root"
+            }
+          },
+          {
+            "key": "process.pid",
+            "value": {
+              "stringValue": "15"
+            }
+          },
+          {
+            "key": "process.runtime.description",
+            "value": {
+              "stringValue": "3.12.10 (main, May  9 2025, 23:48:54) [GCC 12.2.0]"
+            }
+          },
+          {
+            "key": "process.runtime.name",
+            "value": {
+              "stringValue": "cpython"
+            }
+          },
+          {
+            "key": "process.runtime.version",
+            "value": {
+              "stringValue": "3.12.10"
+            }
+          },
+          {
+            "key": "service.name",
+            "value": {
+              "stringValue": "unknown_service:pytest"
+            }
+          },
+          {
+            "key": "telemetry.auto.version",
+            "value": {
+              "stringValue": "0.46b0"
+            }
+          },
+          {
+            "key": "telemetry.sdk.language",
+            "value": {
+              "stringValue": "python"
+            }
+          },
+          {
+            "key": "telemetry.sdk.name",
+            "value": {
+              "stringValue": "opentelemetry"
+            }
+          },
+          {
+            "key": "telemetry.sdk.version",
+            "value": {
+              "stringValue": "1.25.0"
+            }
+          },
+          {
+            "key": "user.id",
+            "value": {
+              "stringValue": "bob"
+            }
+          }
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": {
+            "name": "pytest-opentelemetry"
+          },
+          "spans": [
+            {
+              "traceId": "6b56512da1b77df68aef3b0ac721643e",
+              "spanId": "ab11869ea6ab079d",
+              "parentSpanId": "",
+              "name": "test run",
+              "kind": 1,
+              "startTimeUnixNano": "1763510404643721896",
+              "endTimeUnixNano": "1763510408273638006",
+              "attributes": [
+                {
+                  "key": "data_stream.dataset",
+                  "value": {
+                    "stringValue": "default"
+                  }
+                },
+                {
+                  "key": "data_stream.namespace",
+                  "value": {
+                    "stringValue": "namespace"
+                  }
+                },
+                {
+                  "key": "data_stream.type",
+                  "value": {
+                    "stringValue": "span"
+                  }
+                },
+                {
+                  "key": "pytest.span_type",
+                  "value": {
+                    "stringValue": "run"
+                  }
+                }
+              ],
+              "status": {
+                "code": 2
+              }
+            },
+            {
+              "traceId": "6b56512da1b77df68aef3b0ac721643e",
+              "spanId": "c106e55ddfcac2dc",
+              "parentSpanId": "c2276cef7d69d532",
+              "name": "tests.py::test_ice_elevation_data::setup",
+              "kind": 1,
+              "startTimeUnixNano": "1763510404658889610",
+              "endTimeUnixNano": "1763510404659074855",
+              "attributes": [
+                {
+                  "key": "data_stream.dataset",
+                  "value": {
+                    "stringValue": "default"
+                  }
+                },
+                {
+                  "key": "data_stream.namespace",
+                  "value": {
+                    "stringValue": "namespace"
+                  }
+                },
+                {
+                  "key": "data_stream.type",
+                  "value": {
+                    "stringValue": "span"
+                  }
+                },
+                {
+                  "key": "code.filepath",
+                  "value": {
+                    "stringValue": "tests.py"
+                  }
+                },
+                {
+                  "key": "code.function",
+                  "value": {
+                    "stringValue": "test_ice_elevation_data"
+                  }
+                },
+                {
+                  "key": "code.lineno",
+                  "value": {
+                    "intValue": "7"
+                  }
+                },
+                {
+                  "key": "pytest.nodeid",
+                  "value": {
+                    "stringValue": "tests.py::test_ice_elevation_data"
+                  }
+                },
+                {
+                  "key": "pytest.span_type",
+                  "value": {
+                    "stringValue": "test"
+                  }
+                },
+                {
+                  "key": "test.case.name",
+                  "value": {
+                    "stringValue": "test_ice_elevation_data"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "6b56512da1b77df68aef3b0ac721643e",
+              "spanId": "c2276cef7d69d532",
+              "parentSpanId": "ab11869ea6ab079d",
+              "name": "tests.py::test_ice_elevation_data",
+              "kind": 1,
+              "startTimeUnixNano": "1763510404658581610",
+              "endTimeUnixNano": "1763510408273418199",
+              "attributes": [
+                {
+                  "key": "data_stream.dataset",
+                  "value": {
+                    "stringValue": "default"
+                  }
+                },
+                {
+                  "key": "data_stream.namespace",
+                  "value": {
+                    "stringValue": "namespace"
+                  }
+                },
+                {
+                  "key": "data_stream.type",
+                  "value": {
+                    "stringValue": "span"
+                  }
+                },
+                {
+                  "key": "code.filepath",
+                  "value": {
+                    "stringValue": "tests.py"
+                  }
+                },
+                {
+                  "key": "code.function",
+                  "value": {
+                    "stringValue": "test_ice_elevation_data"
+                  }
+                },
+                {
+                  "key": "code.lineno",
+                  "value": {
+                    "intValue": "7"
+                  }
+                },
+                {
+                  "key": "pytest.nodeid",
+                  "value": {
+                    "stringValue": "tests.py::test_ice_elevation_data"
+                  }
+                },
+                {
+                  "key": "pytest.span_type",
+                  "value": {
+                    "stringValue": "test"
+                  }
+                },
+                {
+                  "key": "test.case.name",
+                  "value": {
+                    "stringValue": "test_ice_elevation_data"
+                  }
+                },
+                {
+                  "key": "test.case.result.status",
+                  "value": {
+                    "stringValue": "fail"
+                  }
+                }
+              ],
+              "events": [
+                {
+                  "timeUnixNano": "1763510408272988726",
+                  "name": "exception",
+                  "attributes": [
+                    {
+                      "key": "exception.escaped",
+                      "value": {
+                        "stringValue": "False"
+                      }
+                    },
+                    {
+                      "key": "exception.message",
+                      "value": {
+                        "stringValue": "assert False\n +  where False = <Response [502]>.ok"
+                      }
+                    },
+                    {
+                      "key": "exception.stacktrace",
+                      "value": {
+                        "stringValue": "def test_ice_elevation_data() -> None:\n        collection_response = requests.get(\n            \"https://catalog.osc-staging.earthcode.eox.at/collections/metadata:main/items/sentinel3-ampli-ice-sheet-elevation?f=json\"\n        )\n        assert collection_response.ok\n        collection_json: dict = collection_response.json()\n        items_link_json = next(\n            (link_object for link_object in collection_json[\"links\"] if link_object[\"rel\"] == \"items\"),\n            None,\n        )\n        assert items_link_json is not None, f\"Couldn't find 'items' link in links {collection_json[\"links\"]}\"\n    \n        feature_collection_response = requests.get(items_link_json[\"href\"])\n>       assert feature_collection_response.ok\nE       assert False\nE        +  where False = <Response [502]>.ok\n\ntests.py:21: AssertionError"
+                      }
+                    },
+                    {
+                      "key": "exception.type",
+                      "value": {
+                        "stringValue": "AssertionError"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "status": {
+                "message": "<class 'AssertionError'>: assert False\n +  where False = <Response [502]>.ok",
+                "code": 2
+              }
+            },
+            {
+              "traceId": "6b56512da1b77df68aef3b0ac721643e",
+              "spanId": "47087e0f5f072639",
+              "parentSpanId": "c2276cef7d69d532",
+              "name": "tests.py::test_ice_elevation_data::call",
+              "kind": 1,
+              "startTimeUnixNano": "1763510404659327093",
+              "endTimeUnixNano": "1763510408234154079",
+              "attributes": [
+                {
+                  "key": "data_stream.dataset",
+                  "value": {
+                    "stringValue": "default"
+                  }
+                },
+                {
+                  "key": "data_stream.namespace",
+                  "value": {
+                    "stringValue": "namespace"
+                  }
+                },
+                {
+                  "key": "data_stream.type",
+                  "value": {
+                    "stringValue": "span"
+                  }
+                },
+                {
+                  "key": "code.filepath",
+                  "value": {
+                    "stringValue": "tests.py"
+                  }
+                },
+                {
+                  "key": "code.function",
+                  "value": {
+                    "stringValue": "test_ice_elevation_data"
+                  }
+                },
+                {
+                  "key": "code.lineno",
+                  "value": {
+                    "intValue": "7"
+                  }
+                },
+                {
+                  "key": "pytest.nodeid",
+                  "value": {
+                    "stringValue": "tests.py::test_ice_elevation_data"
+                  }
+                },
+                {
+                  "key": "pytest.span_type",
+                  "value": {
+                    "stringValue": "test"
+                  }
+                },
+                {
+                  "key": "test.case.name",
+                  "value": {
+                    "stringValue": "test_ice_elevation_data"
+                  }
+                }
+              ],
+              "status": {}
+            }
+          ]
+        },
+        {
+          "scope": {
+            "name": "opentelemetry.instrumentation.requests",
+            "version": "0.46b0"
+          },
+          "spans": [
+            {
+              "traceId": "6b56512da1b77df68aef3b0ac721643e",
+              "spanId": "b306ab38e8e8e640",
+              "parentSpanId": "47087e0f5f072639",
+              "name": "GET",
+              "kind": 3,
+              "startTimeUnixNano": "1763510404660734546",
+              "endTimeUnixNano": "1763510404916795995",
+              "attributes": [
+                {
+                  "key": "data_stream.dataset",
+                  "value": {
+                    "stringValue": "default"
+                  }
+                },
+                {
+                  "key": "data_stream.namespace",
+                  "value": {
+                    "stringValue": "namespace"
+                  }
+                },
+                {
+                  "key": "data_stream.type",
+                  "value": {
+                    "stringValue": "span"
+                  }
+                },
+                {
+                  "key": "http.method",
+                  "value": {
+                    "stringValue": "GET"
+                  }
+                },
+                {
+                  "key": "http.status_code",
+                  "value": {
+                    "intValue": "200"
+                  }
+                },
+                {
+                  "key": "http.url",
+                  "value": {
+                    "stringValue": "https://catalog.osc-staging.earthcode.eox.at/collections/metadata:main/items/sentinel3-ampli-ice-sheet-elevation?f=json"
+                  }
+                }
+              ],
+              "status": {}
+            },
+            {
+              "traceId": "6b56512da1b77df68aef3b0ac721643e",
+              "spanId": "291ec485d0a060c9",
+              "parentSpanId": "47087e0f5f072639",
+              "name": "GET",
+              "kind": 3,
+              "startTimeUnixNano": "1763510404917440825",
+              "endTimeUnixNano": "1763510408233846940",
+              "attributes": [
+                {
+                  "key": "data_stream.dataset",
+                  "value": {
+                    "stringValue": "default"
+                  }
+                },
+                {
+                  "key": "data_stream.namespace",
+                  "value": {
+                    "stringValue": "namespace"
+                  }
+                },
+                {
+                  "key": "data_stream.type",
+                  "value": {
+                    "stringValue": "span"
+                  }
+                },
+                {
+                  "key": "http.method",
+                  "value": {
+                    "stringValue": "GET"
+                  }
+                },
+                {
+                  "key": "http.status_code",
+                  "value": {
+                    "intValue": "502"
+                  }
+                },
+                {
+                  "key": "http.url",
+                  "value": {
+                    "stringValue": "https://eoresults.esa.int/stac/collections/sentinel3-ampli-ice-sheet-elevation/items"
+                  }
+                }
+              ],
+              "status": {
+                "code": 2
+              }
+            }
+          ]
+        },
+        {
+          "scope": {
+            "name": "pytest-opentelemetry"
+          },
+          "spans": [
+            {
+              "traceId": "6b56512da1b77df68aef3b0ac721643e",
+              "spanId": "54d5c3a24ec1c6e0",
+              "parentSpanId": "c2276cef7d69d532",
+              "name": "tests.py::test_ice_elevation_data::teardown",
+              "kind": 1,
+              "startTimeUnixNano": "1763510408273135371",
+              "endTimeUnixNano": "1763510408273312627",
+              "attributes": [
+                {
+                  "key": "data_stream.dataset",
+                  "value": {
+                    "stringValue": "default"
+                  }
+                },
+                {
+                  "key": "data_stream.namespace",
+                  "value": {
+                    "stringValue": "namespace"
+                  }
+                },
+                {
+                  "key": "data_stream.type",
+                  "value": {
+                    "stringValue": "span"
+                  }
+                },
+                {
+                  "key": "code.filepath",
+                  "value": {
+                    "stringValue": "tests.py"
+                  }
+                },
+                {
+                  "key": "code.function",
+                  "value": {
+                    "stringValue": "test_ice_elevation_data"
+                  }
+                },
+                {
+                  "key": "code.lineno",
+                  "value": {
+                    "intValue": "7"
+                  }
+                },
+                {
+                  "key": "pytest.nodeid",
+                  "value": {
+                    "stringValue": "tests.py::test_ice_elevation_data"
+                  }
+                },
+                {
+                  "key": "pytest.span_type",
+                  "value": {
+                    "stringValue": "test"
+                  }
+                },
+                {
+                  "key": "test.case.name",
+                  "value": {
+                    "stringValue": "test_ice_elevation_data"
+                  }
+                }
+              ],
+              "status": {}
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

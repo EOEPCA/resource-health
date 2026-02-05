@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+// package <package-name>
+
+import "google/protobuf/timestamp.proto";
+
+message TraceInfo {
+    google.protobuf.Timestamp last_seen = 1;
+    enum StatusCode {
+        RECEIVING = 0;
+        PROCESSING = 1;
+        PROCESSED = 2;
+        ERROR = 3;
+    }
+    StatusCode status = 2;
+}
