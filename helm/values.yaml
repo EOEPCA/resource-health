@@ -129,10 +129,6 @@ alerting:
   serviceType: ClusterIP
   containerPort: 50051
   servicePort: 50051
-  # If have more replicas, some spans from a failed check trace might go
-  # to one replica, and some to another, thus resulting in two alert emails
-  # or at least neither replica having a complete picture of the trace
-  replicaCount: 1
   environmentFixed:
   - name: ERROR_TRACES_FILE
     value: error_traces.sqlite3
