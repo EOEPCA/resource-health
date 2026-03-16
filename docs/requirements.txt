@@ -2,3 +2,6 @@ mkdocs==1.5.3
 mkdocs-material==9.5.17
 mkdocs-autorefs==1.0.1
 mkdocs-publisher==1.2.0
+# click needs to be pinned to 8.2.1 to avoid breaking live-reload in Mkdocs:
+# See: https://github.com/mkdocs/mkdocs/issues/4032
+click==8.2.1

@@ -196,10 +196,6 @@ See [Raw Health Check Telemetry](#raw-health-check-telemetry). In particular, yo
 
 The two most important configuration parts are defining hooks and check templates.
 
-### Health Check Templates
-
-Coming soon.
-
 ### Hooks Tutorial
 
 In this tutorial we will learn:
@@ -254,6 +250,111 @@ Here is how you would forbid some user (eric in this case) from creating a ping-
 7. Push the updated hooks. Then we either manually sync the changes or wait for automatic syncing. When you see that your changes are visible in the resource health deployment manifest, restart the `resource-health-check-api` **service** (the icon should be as in the image below). ![Restart resource-health-check-api](./img/hooks/restart-health-check-api.png).
 
 8. Now we're done! If possible, we should check that eric can no longer create a ping-an-endpoint check (he should get an error like `Check creation disallowed (code 403): You are not authorized to create this check`), and that other users still can.
+
+### Check Templates Tutorial
+
+In this tutorial we will learn:
+
+* How to allow users to create a new kind of health check
+
+Follow the steps below to create a health check template for checks which make a `GET` request, and check that a specified place in the json response has an array which is no shorter than specified. The place in json is specified using a [json pointer](https://datatracker.ietf.org/doc/html/rfc6901).
+
+Follow along the following steps:
+
+1. Usually health check template is just a parameterized health check script. See [Health Check Script](#health-check-script) for more details. So the first step is to create a concrete health check. In this case we will use health check
+    ```python
+    from os import environ
+	import requests
+	from jsonpointer import resolve_pointer
+	
+	URL = "https://jsonplaceholder.typicode.com/todos"
+	COLLECTION_POINTER = ""
+	EXPECTED_COUNT = 100
+	
+	
+	def test_collections() -> None:
+	    response = requests.get(URL)
+	    assert response.ok
+	    resp_json = response.json()
+	    collection = resolve_pointer(resp_json, COLLECTION_POINTER)
+	    assert isinstance(collection, list)
+	    assert len(collection) >= EXPECTED_COUNT
+    ```
+    This check also uses `jsonpointer` library, so we will use `requirements.txt` below
+    ```text
+    jsonpointer==3.0.0
+    ```
+2. Then it is a good idea to test this health check script, for example by creating a health check from it in the health check website.
+3. To actually code the check template it is recommended that you clone [Resource Health repo](https://github.com/EOEPCA/resource-health), open `check-manager` directory, and set up your development environment in by following [Setting Up a Development Environment](#setting-up-a-development-environment) section to have the IDE and type checking support.
+4. Now we turn the above health check into a health check template script. See the code comments for more detailed explanation
+    ```python
+    import check_backends.k8s_backend.template_utils as tu
+
+    # Parameterised health check script
+    CODE_SOURCE = """
+    from os import environ
+    import requests
+    from jsonpointer import resolve_pointer
+
+    URL = environ["URL"]
+    COLLECTION_POINTER = environ["COLLECTION_POINTER"]
+    EXPECTED_COUNT = int(environ["EXPECTED_COUNT"])
+
+
+    def test_collections() -> None:
+        response = requests.get(URL)
+        assert response.ok
+        resp_json = response.json()
+        collection = resolve_pointer(resp_json, COLLECTION_POINTER)
+        assert isinstance(collection, list)
+        assert len(collection) >= EXPECTED_COUNT
+    """
+    # Additional Python libraries used by the script above
+    REQUIREMENTS_SOURCE = """
+    jsonpointer==3.0.0
+    """
+
+    # Pydantic model from which the json schema for the health check template arguments is generated
+    # See https://docs.pydantic.dev/latest/concepts/json_schema/
+    class CollectionCheckArguments(tu.BaseModel):
+        # Additional arguments besides `url`, `collection_pointer`, `expected_count` are
+        # forbidden
+        model_config = tu.ConfigDict(extra="forbid")
+
+        url: str = tu.Field(json_schema_extra={"format": "textarea"})
+        collection_pointer: str = tu.Field(
+            description="Json pointer to the collection in the response to inspect",
+            # Empty string is a valid json pointer. If this line is omitted, empty string will
+            # be rejected by the health check website
+            default="",
+        )
+        expected_count: int = tu.Field(gt=0)
+
+
+    CollectionCheck = tu.simple_runner_template(
+        template_id="collection_check",
+        argument_type=CollectionCheckArguments,
+        label="Collection template",
+        description="To create checks which query an endpoint and check that the returned collection size is not smaller than expected.",
+        script_url=tu.src_to_data_url(CODE_SOURCE),
+        requirements_url=tu.src_to_data_url(REQUIREMENTS_SOURCE),
+        runner_env=lambda template_args, userinfo: {
+            # Set URL, COLLECTION_POINTER, and EXPECTED_COUNT environment variables
+            # to the values the user chooses when creating the check
+            "URL": template_args.url,
+            "COLLECTION_POINTER": template_args.collection_pointer,
+            "EXPECTED_COUNT": str(template_args.expected_count),
+        },
+        user_id=lambda template_args, userinfo: userinfo["username"],
+        otlp_tls_secret="resource-health-healthchecks-certificate",
+    )
+    ```
+5. Now we go to where the current deployment hooks are synced from. For the reference deployment, it is [here](https://github.com/EOEPCA/eoepca-plus/blob/549c1d6ff43ce442cc88c56125f6fb9468854e0e/argocd/eoepca/resource-health/resource-health.yaml#L342) (we just look at the `templates:` part of the `check_api`).
+6. Now paste the check template code into a new field like `collection_template.py`
+7. We can now update hooks to specify which users get access to the new check template, see [Hooks Tutorial](#hooks-tutorial).
+8. Push the updated templates and hooks. Then we either manually sync the changes or wait for automatic syncing. When you see that your changes are visible in the resource health deployment manifest, restart the `resource-health-check-api` **service** (below is how it looks in ArgoCD). ![Restart resource-health-check-api](./img/hooks/restart-health-check-api.png).
+9. Finally, we should create a check from the new check template, and verify that the health check passes when valid data is provided, and fails when incorrect data is provided. For example, we expect `url` [https://jsonplaceholder.typicode.com/todos](https://jsonplaceholder.typicode.com/todos), with `collection_pointer` not set (i.e. empty string) to have no less than 100 items. And the check should fail if `expected_count` is set to 300.
+
 
 ## Appendix
 
@@ -443,14 +544,14 @@ See [Data URL](https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Scheme
 
 #### Health Check API backend
 
-Health Check API by itself doesn't know how to fulfill any of its functions, like listing checks, creating checks, running checks, etc. That's where backends come in - they tell the API how to perform all those actions. Currently the following backends are implemented:
+Health Check API by itself doesn't know how to fulfil any of its functions, like listing checks, creating checks, running checks, etc. That's where backends come in - they tell the API how to perform all those actions. Currently the following backends are implemented:
 * K8s backend. It is the main backend, and the only backend which knows how to actually execute the health checks. In [Health Check Templates section](#health-check-templates) you learn how to specify check templates for K8s backend specifically.
 * REST backend. It takes an already running Health Check API endpoint and uses it to execute all the API actions. Mostly used by the command line interface, as the CLI often runs on a machine which doesn't have direct access to a K8s cluster.
 * Mock backend. As the name suggests, mostly used for testing.
 
 #### Telemetry API backend/proxy
 
-Just like Health Check API, the Telemetry API by itself doesn't know how to fulfill any of its functions, like like listing spans and applying filtering. The backends/proxies tell the API how to do perform those functions. Currently the following backends/proxies are implemented:
+Just like Health Check API, the Telemetry API by itself doesn't know how to fulfil any of its functions, like like listing spans and applying filtering. The backends/proxies tell the API how to do perform those functions. Currently the following backends/proxies are implemented:
 * Opensearch SS4O. It is the main backend. Takes telemetry data from an OpenSearch database.
 * Mock Proxy. Takes telemetry from file. Mostly used for testing, but could also be used to make data available from a no-longer-used database by putting that data into a file first
 
@@ -650,7 +751,7 @@ Hooks script parts specific to Telemetry API:
 2. `get_opensearch_config` is the only Telemetry-API-specific hook at the moment. It takes `UserInfo` and returns OpenSearch proxy configuration, including authorization headers to be used for the given user.
 
 !!! info
-    Just like for Healh Check API hooks, you can configure what each hook is called through environment variables. You get the default naming by setting environment variables like so (or not setting them at all)
+    Just like for Health Check API hooks, you can configure what each hook is called through environment variables. You get the default naming by setting environment variables like so (or not setting them at all)
     ```
     RH_TELEMETRY_GET_FASTAPI_SECURITY_HOOK_NAME=get_fastapi_security
     RH_TELEMETRY_ON_AUTH_HOOK_NAME=on_auth
