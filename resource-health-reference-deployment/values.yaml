@@ -451,6 +451,24 @@ opensearch:
           _meta:
             type: "rolesmapping"
             config_version: 2
+          
+          dashboards_access_ro:
+            hosts: []
+            users:
+            - "*"
+            reserved: false
+            hidden: false
+            backend_roles: []
+            and_backend_roles: []
+          
+          own_trace_data_access:
+            hosts: []
+            users:
+            - "*"
+            reserved: false
+            hidden: false
+            backend_roles: []
+            and_backend_roles: []
 
           all_access:
             reserved: false
