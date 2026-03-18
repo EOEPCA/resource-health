@@ -21,9 +21,9 @@ nav:
     - Usage:
       - usage/tutorials.md
       - usage/howtos.md
-    # - Administration:
-    #   - admin/configuration.md
-    #   - admin/maintenance.md
+    - Administration:
+      - admin/configuration.md
+      # - admin/maintenance.md
     # - API:
     #   - api/endpoint-specification.md
     #   - api/usage.md
