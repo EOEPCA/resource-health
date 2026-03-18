@@ -46,6 +46,19 @@ DEFAULT_RUNNER_IMAGE: str = (
     or "docker.io/eoepca/healthcheck_runner:2.0.0"
 )
 
+# Protocol (https or http) will be added later
+DEFAULT_COLLECTOR_URL_NO_PROTOCOL: str = (
+    os.environ.get("DEFAULT_COLLECTOR_URL_NO_PROTOCOL")
+    or "resource-health-opentelemetry-collector:4317"
+)
+
+OPEN_ID_CONNECT_URL = os.environ.get("OPEN_ID_CONNECT_URL")
+
+DEFAULT_PROXY_REMOTE_DOMAIN: str = (
+    os.environ.get("DEFAULT_PROXY_REMOTE_DOMAIN")
+    or "https://opensearch-cluster-master-headless:9200"
+)
+
 DEFAULT_OIDC_MITMPROXY_IMAGE: str = (
     os.environ.get("RH_CHECK_K8S_DEFAULT_OIDC_MITMPROXY_IMAGE")
     or "docker.io/eoepca/mitmproxy_oidc:2.0.0"
@@ -324,9 +337,9 @@ def simple_runner_template[ArgumentType](
     proxy : bool = False,
     proxy_oidc_client_secret : tuple[str,str,str]|None = None,
     proxy_oidc_refresh_token_secret : Callable[[ArgumentType, Any], tuple[str, str]] | tuple[str,str] | None = None,
-    proxy_oidc_url : str|None = os.environ.get("OPEN_ID_CONNECT_URL"),
+    proxy_oidc_url : str | None = OPEN_ID_CONNECT_URL,
     proxy_oidc_audience : str = "account",
-    proxy_remote_domain : str = "https://opensearch-cluster-master-headless:9200",
+    proxy_remote_domain : str = DEFAULT_PROXY_REMOTE_DOMAIN,
     proxy_image : str = DEFAULT_OIDC_MITMPROXY_IMAGE,
 ) -> type[CronjobTemplate]:
     if proxy:
@@ -373,10 +386,10 @@ def simple_runner_template[ArgumentType](
             env = runner_env(template_args, userinfo)
 
         if otlp_exporter_endpoint is None:
-            if otlp_tls_secret is None:
-                env["OTEL_EXPORTER_OTLP_ENDPOINT"] = 'http://resource-health-opentelemetry-collector:4317'
-            else:
-                env["OTEL_EXPORTER_OTLP_ENDPOINT"] = 'https://resource-health-opentelemetry-collector:4317'
+            protocol = "http" if otlp_tls_secret is None else "https"
+            env["OTEL_EXPORTER_OTLP_ENDPOINT"] = (
+                protocol + "//" + DEFAULT_COLLECTOR_URL_NO_PROTOCOL
+            )
         else:
             env["OTEL_EXPORTER_OTLP_ENDPOINT"] = otlp_exporter_endpoint
 
