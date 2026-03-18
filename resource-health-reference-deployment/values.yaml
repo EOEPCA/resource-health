@@ -445,7 +445,26 @@ opensearch:
           #   - "admin"
           #   description: "Temporary admin user (Delete me)"
 
-        # roles.yml: |-
+        roles.yml: |-
+          own_trace_data_access:
+            reserved: false
+            hidden: false
+            cluster_permissions: []
+            index_permissions:
+            - index_patterns:
+              - "ss4o_*-default-namespace*"
+              dls: "{ \"bool\": { \"must\" : { \"match\": { \"resource.user.id\" : \"${user.name}\"\
+                \ } } } }"
+              fls: []
+              masked_fields: []
+              allowed_actions:
+              - "crud"
+              - "view_metadata"
+              - "indices:admin/mappings/get"
+              - "indices:monitor/settings/get"
+              - "indices:admin/get"
+            tenant_permissions: []
+            static: false
 
         roles_mapping.yml: |-
           _meta:
