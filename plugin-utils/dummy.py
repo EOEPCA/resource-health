@@ -2,7 +2,7 @@ def foo(exceptions: type[BaseException] | tuple[type[BaseException], ...]) -> No
     try:
         raise TypeError("Bad type :(")
     except exceptions:
-        print("Exception occured")
+        print("Exception occurred")
     
 
 foo(TypeError)

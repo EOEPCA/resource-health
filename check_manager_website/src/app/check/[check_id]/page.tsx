@@ -551,7 +551,7 @@ function CheckRunsSummaryRow({
   );
 }
 
-// This format is heavily inpired by how gmail shows the relative timestamp
+// This format is heavily inspired by how gmail shows the relative timestamp
 // couldn't easily implement the actual gmail behavior as
 // there is no lastYear setting
 // Code based on https://stackoverflow.com/a/61409387

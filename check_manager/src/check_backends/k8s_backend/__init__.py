@@ -194,7 +194,7 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
                     namespace=namespace,
                     body=cronjob,
                 )
-                logger.info(f"Succesfully created new cron job: {api_response}")
+                logger.info(f"Successfully created new cron job: {api_response}")
             except ApiException as e:
                 logger.error(f"Failed to create new cron job: {e}")
                 if e.status == 422:
@@ -241,7 +241,7 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
     #                     requirements=requirements,
     #                 ),
     #             )
-    #             logger.info(f"Succesfully patched cron job: {api_response}")
+    #             logger.info(f"Successfully patched cron job: {api_response}")
     #         except ApiException as e:
     #             logger.error(f"Failed to patch cron job: {e}")
     #             if e.status == 422:
@@ -305,7 +305,7 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
                     name=check_id,
                     namespace=namespace,
                 )
-                logger.info(f"Succesfully deleted cron job: {api_response}")
+                logger.info(f"Successfully deleted cron job: {api_response}")
             except aiohttp.ClientConnectionError as e:
                 logger.error(f"Failed to delete cron job: {e}")
                 raise CheckConnectionError("Cannot connect to cluster")
@@ -427,7 +427,7 @@ class K8sBackend(CheckBackend[AuthenticationObject]):
                     namespace=namespace,
                     body=job_from(cronjob),
                 )
-                logger.info(f"Succesfully created new job: {api_response}")
+                logger.info(f"Successfully created new job: {api_response}")
             except aiohttp.ClientConnectionError as e:
                 logger.error(f"Failed to delete cron job: {e}")
                 raise CheckConnectionError("Cannot connect to cluster")

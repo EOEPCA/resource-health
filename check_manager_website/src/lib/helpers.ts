@@ -191,11 +191,11 @@ export function StringifyPretty(json: object): string {
 
 export function GetSpanFilterParams(
   check: Check,
-  delemetryDuration: Duration,
+  telemetryDuration: Duration,
   now: Date
 ): GetSpansQueryParams {
   return {
-    fromTime: subDuration(now, delemetryDuration),
+    fromTime: subDuration(now, telemetryDuration),
     toTime: now,
     resourceAttributes: check.attributes.outcome_filter.resource_attributes,
     scopeAttributes: check.attributes.outcome_filter.scope_attributes,

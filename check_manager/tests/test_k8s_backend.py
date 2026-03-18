@@ -94,7 +94,7 @@ cronjob_3 = V1CronJob(
 @pytest.fixture(autouse=True)
 def setup_template_env() -> None:
     # Needed for telemetry_access_template to initialize without raising exceptions
-    os.environ["OPEN_ID_CONNECT_URL"] = "DYMMY_TEST_URL"
+    os.environ["OPEN_ID_CONNECT_URL"] = "DUMMY_TEST_URL"
 
 
 @pytest.fixture
