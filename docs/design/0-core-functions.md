@@ -1,6 +1,6 @@
 # Core ("Level 0")
 
-At its core, the Resource Health BB provides a health-check support library for expressing health-checks, using a standard scripting language, and an executor for ensuring the correct setup for running and collecting the results of a single such script. The choice made here is to simply augment and adapt the Pytest framefork, as Pytest already provides much of the necessary functionality: expressing expectations about pieces of data and collating whether or not such expectations are satisfied for a particular run. These scripts also indicate their preferred execution schedule and triggers which, at level 0, are purely indicative.
+At its core, the Resource Health BB provides a health-check support library for expressing health-checks, using a standard scripting language, and an executor for ensuring the correct setup for running and collecting the results of a single such script. The choice made here is to simply augment and adapt the Pytest framework, as Pytest already provides much of the necessary functionality: expressing expectations about pieces of data and collating whether or not such expectations are satisfied for a particular run. These scripts also indicate their preferred execution schedule and triggers which, at level 0, are purely indicative.
 
 Given minimal setup and authentication, a single such script could even be executed locally on the computer of the end-user. We will refer to this as level 0 functionality, which can be achieved with no or only minimal centralised services on the platform (beyond the functionality being checked).
 
@@ -9,4 +9,4 @@ For example, an end-user can run a health-check script that checks that a publis
 
 The rest of the resource health BB is concerned with supporting the management of health-checks, their timely execution, as well as the persisting and consumption of their outcomes.
 
-![Level 0 Health Resourch BB allows users to easily express health checks in custom scripts](level-0.png)
+![Level 0 Resource Health BB allows users to easily express health checks in custom scripts](level-0.png)

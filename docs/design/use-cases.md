@@ -61,7 +61,7 @@ to receive notifications according to the outcome.
 
 * REST API
 * Dashboard (web UI)
-* Git repository (Gitops-style)
+* Git repository (GitOps-style)
 It shall be possible to specify all aspects of the check – including the target
 (endpoint/resource) of the check, the tests to be performed and the expected outcomes.
 

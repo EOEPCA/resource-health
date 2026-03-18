@@ -47,7 +47,7 @@ def raise_error_if_schedule_too_frequent(
     start_date = datetime.now()
     schedule = cron_instance.schedule(start_date)
     prev_date = schedule.next()
-    # At this point we know that the schedule is not more frequence than once per day
+    # At this point we know that the schedule is not more frequent than once per day
     # This just creates schedules for next year (or more) and checks if any two consecutive
     # schedules have enough of a gap between them
     for i in range(365):
