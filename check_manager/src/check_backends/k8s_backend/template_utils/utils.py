@@ -330,7 +330,7 @@ def simple_runner_template[ArgumentType](
     requirements_url: Callable[[ArgumentType, Any], str] | str | None = None,
     runner_env: Callable[[ArgumentType, Any], dict[str, str]] | dict[str,str] | None = None,
     user_id: Callable[[ArgumentType, Any], str] | str | None = None,
-    otlp_exporter_endpoint : str | None = None,
+    collector_url_no_protocol: str = DEFAULT_COLLECTOR_URL_NO_PROTOCOL,
     otlp_tls_secret : str | None = None,
     runner_image: str = DEFAULT_RUNNER_IMAGE,
     resource_attributes: dict[str,str]|None = None,
@@ -385,13 +385,8 @@ def simple_runner_template[ArgumentType](
         else:
             env = runner_env(template_args, userinfo)
 
-        if otlp_exporter_endpoint is None:
-            protocol = "http" if otlp_tls_secret is None else "https"
-            env["OTEL_EXPORTER_OTLP_ENDPOINT"] = (
-                protocol + "//" + DEFAULT_COLLECTOR_URL_NO_PROTOCOL
-            )
-        else:
-            env["OTEL_EXPORTER_OTLP_ENDPOINT"] = otlp_exporter_endpoint
+        protocol = "http" if otlp_tls_secret is None else "https"
+        env["OTEL_EXPORTER_OTLP_ENDPOINT"] = protocol + "//" + collector_url_no_protocol
 
         if otlp_tls_secret is None:
             volume_mounts = None
