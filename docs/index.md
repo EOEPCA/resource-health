@@ -11,7 +11,7 @@ Description of the BB design - including its subcomponent architecture and inter
 * **Usage**<br>
 Tutorials, How-tos, etc. to communicate usage of the BB.
 * **Administration**<br>
-Configuration and maintenance of the BB.
+Configuration and maintenance, and troubleshooting of the BB.
 <!-- * **API**<br>
 Details of APIs provided by the BB - including endpoints, usage descriptions and examples etc. -->
 
