@@ -64,6 +64,12 @@ DEFAULT_OIDC_MITMPROXY_IMAGE: str = (
     or "docker.io/eoepca/mitmproxy_oidc:2.0.0"
 )
 
+DEFAULT_TELEMETRY_OPENSEARCH_INDEX: str = (
+    os.environ.get("DEFAULT_TELEMETRY_OPENSEARCH_INDEX")
+    or "ss4o_traces-default-namespace"
+)
+
+
 def make_base_cronjob(
     schedule: CronExpression,
     container_image: Optional[str] = DEFAULT_RUNNER_IMAGE,
@@ -341,6 +347,7 @@ def simple_runner_template[ArgumentType](
     proxy_oidc_audience : str = "account",
     proxy_remote_domain : str = DEFAULT_PROXY_REMOTE_DOMAIN,
     proxy_image : str = DEFAULT_OIDC_MITMPROXY_IMAGE,
+    proxy_telemetry_opensearch_index: str = DEFAULT_TELEMETRY_OPENSEARCH_INDEX,
 ) -> type[CronjobTemplate]:
     if proxy:
         if proxy_oidc_url is None:
@@ -432,6 +439,9 @@ def simple_runner_template[ArgumentType](
                     refresh_token_secret = this_proxy_oidc_refresh_token_secret,
                     tls_verify = False,
                     image = proxy_image,
+                    env={
+                        "RH_TELEMETRY_OPENSEARCH_INDEX": proxy_telemetry_opensearch_index
+                    },
                 )
             )
 
