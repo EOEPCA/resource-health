@@ -393,7 +393,7 @@ def simple_runner_template[ArgumentType](
             env = runner_env(template_args, userinfo)
 
         protocol = "http" if otlp_tls_secret is None else "https"
-        env["OTEL_EXPORTER_OTLP_ENDPOINT"] = protocol + "//" + collector_url_no_protocol
+        env["OTEL_EXPORTER_OTLP_ENDPOINT"] = protocol + "://" + collector_url_no_protocol
 
         if otlp_tls_secret is None:
             volume_mounts = None
