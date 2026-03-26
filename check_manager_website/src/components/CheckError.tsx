@@ -96,7 +96,7 @@ export function CheckErrorPopup({
             />
             {reLogin && (
               <Text>
-                Relogging in is likely to fix the issue. Return to this page
+                Re-logging-in is likely to fix the issue. Return to this page
                 after to retry.
               </Text>
             )}
