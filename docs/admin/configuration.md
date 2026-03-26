@@ -22,8 +22,24 @@ How to put the checks into per-user namespaces:
 
 ## Auth
 
-Resource Health BB is designed to work with any OpenID Provider. To integrate with you OpenID Provider you just need to point Health Check API, Telemetry API, and OpenSearch to it. Specifically, you need to set `OPEN_ID_CONNECT_URL` and `OPEN_ID_CONNECT_AUDIENCE` environment variables [here](https://github.com/EOEPCA/eoepca-plus/blob/b1bb06b98abf9bf68b4de7cc95a710862c356be6/argocd/eoepca/resource-health/resource-health.yaml#L189) for Health Check Api, and [here](https://github.com/EOEPCA/eoepca-plus/blob/b1bb06b98abf9bf68b4de7cc95a710862c356be6/argocd/eoepca/resource-health/resource-health.yaml#L99) for Telemetry API.
-You also need to configure OpenSearch to use your OpenID Provider by following [this](https://docs.opensearch.org/latest/security/authentication-backends/openid-connect/#configure-openid-connect-integration). See an example [here](https://github.com/EOEPCA/eoepca-plus/blob/b1bb06b98abf9bf68b4de7cc95a710862c356be6/argocd/eoepca/resource-health/resource-health.yaml#L60).
+### OpenID Connect
+
+Resource Health BB is designed to work with any OpenID Provider. To integrate with you OpenID Provider you just need to point OpenSearch, Health Check API, and Telemetry API to it.  
+Specifically, you need to:
+
+* Configure OpenSearch to use your OpenID Provider by following [this](https://docs.opensearch.org/latest/security/authentication-backends/openid-connect/#configure-openid-connect-integration). See an example [here](https://github.com/EOEPCA/eoepca-plus/blob/b1bb06b98abf9bf68b4de7cc95a710862c356be6/argocd/eoepca/resource-health/resource-health.yaml#L60).
+* Set `OPEN_ID_CONNECT_URL` and `OPEN_ID_CONNECT_AUDIENCE` environment variables [here](https://github.com/EOEPCA/eoepca-plus/blob/b1bb06b98abf9bf68b4de7cc95a710862c356be6/argocd/eoepca/resource-health/resource-health.yaml#L189) for Health Check Api, and [here](https://github.com/EOEPCA/eoepca-plus/blob/b1bb06b98abf9bf68b4de7cc95a710862c356be6/argocd/eoepca/resource-health/resource-health.yaml#L99) for Telemetry API.
+
+### Alternative Auth Schemes
+
+To use some other auth scheme (such as basic HTTP auth), you need to:
+
+* Configure OpenSearch authentication, see [here](https://docs.opensearch.org/latest/security/configuration/configuration/#authentication).
+* Implement Health Check API hooks `get_fastapi_security` and `on_auth` based on examples [here](https://github.com/EOEPCA/resource-health/tree/9c9444b6eca420e3d81147d24c3ff3e2b7d956a4/check_manager/example_hooks).
+* Implement Telemetry API hooks `get_fastapi_security`, `on_auth`, and `get_opensearch_config` based on the example [here](https://github.com/EOEPCA/python-opentelemetry-access/blob/542cd1ca7378bb67460c4309bcb5fbfd0583396d/example_hooks/oidc_auth/auth_hooks.py).
+* For health checks to be able to access telemetry using alternative authentication methods:
+    * Create a new Docker image which launches an appropriately configured mitmproxy based on [this](https://github.com/EOEPCA/python-eoepca-security/blob/87cc35c7e9e2fc23376a49d50a8553c951762ff9/Dockerfile.mitmproxy).
+    * Update the health check template for accessing telemetry to use the new image based on [this](https://github.com/EOEPCA/resource-health/blob/9c9444b6eca420e3d81147d24c3ff3e2b7d956a4/check_manager/src/check_backends/k8s_backend/template_utils/utils.py#L180) and [this](https://github.com/EOEPCA/resource-health/blob/9c9444b6eca420e3d81147d24c3ff3e2b7d956a4/check_manager/src/check_backends/k8s_backend/template_utils/utils.py#L325C5-L325C27).
 
 ## OpenSearch
 
