@@ -4,7 +4,7 @@ Resource Health BB can be deployed with authentication. See [Current deployment 
 
 ## API endpoints
 
-There are two API endpoints, exposed as seperate services (which will, in the future, be exposed through a single ingress). One endpoint
+There are two API endpoints, exposed as separate services (which will, in the future, be exposed through a single ingress). One endpoint
 for managing defined health checks and another for accessing the (OpenTelemetry trace) outcomes of health check executions.
 
 The former (health checks) can be forwarded using

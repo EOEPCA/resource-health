@@ -46,10 +46,29 @@ DEFAULT_RUNNER_IMAGE: str = (
     or "docker.io/eoepca/healthcheck_runner:2.0.0"
 )
 
+# Protocol (https or http) will be added later
+DEFAULT_COLLECTOR_URL_NO_PROTOCOL: str = (
+    os.environ.get("DEFAULT_COLLECTOR_URL_NO_PROTOCOL")
+    or "resource-health-opentelemetry-collector:4317"
+)
+
+OPEN_ID_CONNECT_URL = os.environ.get("OPEN_ID_CONNECT_URL")
+
+DEFAULT_PROXY_REMOTE_DOMAIN: str = (
+    os.environ.get("DEFAULT_PROXY_REMOTE_DOMAIN")
+    or "https://opensearch-cluster-master-headless:9200"
+)
+
 DEFAULT_OIDC_MITMPROXY_IMAGE: str = (
     os.environ.get("RH_CHECK_K8S_DEFAULT_OIDC_MITMPROXY_IMAGE")
     or "docker.io/eoepca/mitmproxy_oidc:2.0.0"
 )
+
+DEFAULT_TELEMETRY_OPENSEARCH_INDEX: str = (
+    os.environ.get("DEFAULT_TELEMETRY_OPENSEARCH_INDEX")
+    or "ss4o_traces-default-namespace"
+)
+
 
 def make_base_cronjob(
     schedule: CronExpression,
@@ -317,17 +336,18 @@ def simple_runner_template[ArgumentType](
     requirements_url: Callable[[ArgumentType, Any], str] | str | None = None,
     runner_env: Callable[[ArgumentType, Any], dict[str, str]] | dict[str,str] | None = None,
     user_id: Callable[[ArgumentType, Any], str] | str | None = None,
-    otlp_exporter_endpoint : str | None = None,
+    collector_url_no_protocol: str = DEFAULT_COLLECTOR_URL_NO_PROTOCOL,
     otlp_tls_secret : str | None = None,
     runner_image: str = DEFAULT_RUNNER_IMAGE,
     resource_attributes: dict[str,str]|None = None,
     proxy : bool = False,
     proxy_oidc_client_secret : tuple[str,str,str]|None = None,
     proxy_oidc_refresh_token_secret : Callable[[ArgumentType, Any], tuple[str, str]] | tuple[str,str] | None = None,
-    proxy_oidc_url : str|None = os.environ.get("OPEN_ID_CONNECT_URL"),
+    proxy_oidc_url : str | None = OPEN_ID_CONNECT_URL,
     proxy_oidc_audience : str = "account",
-    proxy_remote_domain : str = "https://opensearch-cluster-master-headless:9200",
+    proxy_remote_domain : str = DEFAULT_PROXY_REMOTE_DOMAIN,
     proxy_image : str = DEFAULT_OIDC_MITMPROXY_IMAGE,
+    proxy_telemetry_opensearch_index: str = DEFAULT_TELEMETRY_OPENSEARCH_INDEX,
 ) -> type[CronjobTemplate]:
     if proxy:
         if proxy_oidc_url is None:
@@ -372,13 +392,8 @@ def simple_runner_template[ArgumentType](
         else:
             env = runner_env(template_args, userinfo)
 
-        if otlp_exporter_endpoint is None:
-            if otlp_tls_secret is None:
-                env["OTEL_EXPORTER_OTLP_ENDPOINT"] = 'http://resource-health-opentelemetry-collector:4317'
-            else:
-                env["OTEL_EXPORTER_OTLP_ENDPOINT"] = 'https://resource-health-opentelemetry-collector:4317'
-        else:
-            env["OTEL_EXPORTER_OTLP_ENDPOINT"] = otlp_exporter_endpoint
+        protocol = "http" if otlp_tls_secret is None else "https"
+        env["OTEL_EXPORTER_OTLP_ENDPOINT"] = protocol + "//" + collector_url_no_protocol
 
         if otlp_tls_secret is None:
             volume_mounts = None
@@ -424,6 +439,9 @@ def simple_runner_template[ArgumentType](
                     refresh_token_secret = this_proxy_oidc_refresh_token_secret,
                     tls_verify = False,
                     image = proxy_image,
+                    env={
+                        "RH_TELEMETRY_OPENSEARCH_INDEX": proxy_telemetry_opensearch_index
+                    },
                 )
             )
 

@@ -5,7 +5,7 @@ The next level of additional functionality is to centrally organize (suites of) 
 
 A suite of health-checks is simply a collection of health-check scripts, stored in one place, that will be executed with the privileges of a specified identity (or group). The simplest use case is a user-specific suite of health-checks, accessible only to the specific user and executed with the privileges of the same. Currently the primary way that such suites are stored is as Kubernetes CronJob attributes.
 
-All interfaces (Web UI, REST API, and Git with CI/CD) are then simply concerned with exposing the ability to create and delete suites and with modifying the set of health-check script files in each suite. In particular, synchronising from a git repository is a matter of syncronising (some subset) of health-check script files from a git repository.
+All interfaces (Web UI, REST API, and Git with CI/CD) are then simply concerned with exposing the ability to create and delete suites and with modifying the set of health-check script files in each suite. In particular, synchronising from a git repository is a matter of synchronising (some subset) of health-check script files from a git repository.
 
 A custom service (execution and scheduling) in the resource health BB monitors the set of existing suites (by way of regular polling, by notifications from the workspace building block, or by internal notifications generated from the internal interfaces of the resource health building block). It does so in order to track which checks are available, and what are their preferred execution schedule/triggers.
 

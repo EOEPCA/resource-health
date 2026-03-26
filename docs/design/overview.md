@@ -29,7 +29,7 @@ A platform operator can choose either to use all of the above components (to ach
 
 ### Health check framework
 
-At its core, the Resource Health BB provides a health-check support library for expressing health-checks, using a standard scripting language, and an executor for ensuring the correct setup for running and collecting the results of a single such script. The choice made here is to simply augment and adapt the Pytest framefork, as Pytest already provides much of the necessary functionality: expressing expectations about pieces of data and collating whether or not such expectations are satisfied for a particular run.
+At its core, the Resource Health BB provides a health-check support library for expressing health-checks, using a standard scripting language, and an executor for ensuring the correct setup for running and collecting the results of a single such script. The choice made here is to simply augment and adapt the Pytest framework, as Pytest already provides much of the necessary functionality: expressing expectations about pieces of data and collating whether or not such expectations are satisfied for a particular run.
 
 Assuming some minimal amount of setup and authentication, it is intended that a single such script could even be executed locally on the computer of the end-user. We will refer to this as level 0/core functionality, which can be achieved with no or only minimal centralised services on the platform (beyond the functionality being checked).
 
@@ -42,7 +42,7 @@ The framework will provide a means to make relevant requests (e.g. HTTP requests
 
 The current implementation uses [PyTest](https://docs.pytest.org/en/stable/), with special instrumentation to produce the appropriate spans and traces. The primary way to execute the checks is currently is to use a Kubernetes CronJobs, though that can be replaced by some other implementation easily. The checks are primarily created from check templates, usually by specifying what Pytest script to run, and what are its dependencies, or by specifying the parameters to use for a platform-operator-defined script. The platform operators also define the check templates, and implement Python hooks to specify the exact configuration and authentication details.
 
-For example, the following defines a check which reads `RESOURCE_CATALOGUE_ENDPOINT` from an environment variable and checks that the enpoint returns OK to a simple ping.
+For example, the following defines a check which reads `RESOURCE_CATALOGUE_ENDPOINT` from an environment variable and checks that the endpoint returns OK to a simple ping.
 
 ```python
 from os import environ

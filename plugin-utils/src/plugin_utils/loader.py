@@ -95,7 +95,7 @@ def load_plugins(
             single dictionary. Is set to `False` by default.
         loader (Callable[[pathlib.Path], dict | None], optional): A custom
             loader function that can load files other than Python files (e.g.,
-            YAML, JSON). If not provided, the deafult `load_python_module`
+            YAML, JSON). If not provided, the default `load_python_module`
             will be used, loading only Python files.
         key (Callable[[Any], str], optional): A function that transforms the
             name of each member. If not provided, the original name is used.
