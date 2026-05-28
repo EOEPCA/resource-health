@@ -637,7 +637,7 @@ The following hook parts are common for both Health Check API and Telemetry API 
 
 #### Health Check API hooks
 
-You should put Health Check API hooks code [here](https://github.com/EOEPCA/resource-health/blob/58087ff26eca34e6aeaf58216fd87b18b745e36b/helm/values.yaml#L82).
+You should put Health Check API hooks code [here](https://github.com/EOEPCA/helm-charts-dev/tree/e0dd33dd8d78cb9e23e5383c1788aa8b0ba235f1/charts/resource-health/values.yaml#L82).
 <!-- (TODO: add a note what to do if want script in a file, and not inline here?). -->
 
 You can see example Health Check API hooks [here](https://github.com/EOEPCA/resource-health/tree/58087ff26eca34e6aeaf58216fd87b18b745e36b/check_manager/example_hooks).
@@ -740,7 +740,7 @@ Hooks script parts specific to Health Check API:
 
 #### Telemetry API hooks
 
-You should put Telemetry API hooks code [here](https://github.com/EOEPCA/resource-health/blob/58087ff26eca34e6aeaf58216fd87b18b745e36b/helm/values.yaml#L111).
+You should put Telemetry API hooks code [here](https://github.com/EOEPCA/helm-charts-dev/tree/e0dd33dd8d78cb9e23e5383c1788aa8b0ba235f1/charts/resource-health/values.yaml#L111).
 <!-- (TODO: add a note what to do if want script in a file, and not inline here?). -->
 
 You can see example Telemetry API hooks implementation [here](https://github.com/EOEPCA/python-opentelemetry-access/blob/2275ab863e4d17dcd123ca48be35219acf36f21a/example_hooks/oidc_auth/auth_hooks.py). It implements authentication with OpenID Connect protocol, configuration to take telemetry from OpenSearch database.

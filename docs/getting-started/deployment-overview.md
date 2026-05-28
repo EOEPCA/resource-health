@@ -15,6 +15,6 @@ The Resource Health BB in the default configuration relies on:
 
 TODO: write a bit about authentication here
 
-The "core" components in (E) can be deployed through the Helm-chart in the [`helm` directory of the Resource Health repository](https://github.com/EOEPCA/resource-health/tree/main/helm).
+The "core" components in (E) can be deployed through the Helm-chart in the [`resource-health` directory of the Helm Charts Dev repository](https://github.com/EOEPCA/helm-charts-dev/tree/e0dd33dd8d78cb9e23e5383c1788aa8b0ba235f1/charts/resource-health).
 
-There is also a [full reference deployment chart](https://github.com/EOEPCA/resource-health/tree/main/resource-health-reference-deployment) that includes reference deployments of (B) and (C) as well as (E) (but not (A)).
+There is also a [full reference deployment chart](https://github.com/EOEPCA/helm-charts-dev/tree/e0dd33dd8d78cb9e23e5383c1788aa8b0ba235f1/charts/resource-health-reference-deployment) that includes reference deployments of (B) and (C) as well as (E) (but not (A)).
