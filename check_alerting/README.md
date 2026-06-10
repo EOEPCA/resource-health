@@ -2,7 +2,7 @@
 
 ## Trace receiver
 
-A gRPC server which accepts the OTel traces. Currently unauthenticated. Writes the error spans to a local key-value store "error_traces.sqlite3" by default. Writes the processing status of those traces to a local key-value store "trace_infos.sqlite3" by default.
+A gRPC server which accepts the OTel traces. Currently unauthenticated. Writes the error spans to a local key-value store `error_traces.sqlite3` by default. Writes the processing status of those traces to a local key-value store `trace_infos.sqlite3` by default.
 
 To start trace receiver, first do the steps in [Setup](#setup), and then run:
 
@@ -10,7 +10,7 @@ To start trace receiver, first do the steps in [Setup](#setup), and then run:
 
 ## Notifier
 
-Reads error spans from "error_traces.sqlite3" by default, and trace processing status from "trace_infos.sqlite3" by default. Sends email notifications for users which have emails in `alert_user_emails.json`.
+Reads error spans from `error_traces.sqlite3` by default, and trace processing status from `trace_infos.sqlite3` by default. Sends email notifications for users which have emails in `alert_user_emails.json`.
 
 To start notifier, first do the steps in [Setup](#setup), and then run
 
