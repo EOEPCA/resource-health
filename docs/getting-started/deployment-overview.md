@@ -1,5 +1,7 @@
 # Deployment overview
 
+This is a high level deployment overview. For precise deployment instruction see [Resource Health Deployment Guide](https://eoepca.readthedocs.io/projects/deploy/en/stable/building-blocks/resource-health/).
+
 This document outlines what the current and planned deployment structure of the Resource Health BB is.
 
 The Resource Health BB in the default configuration relies on:
