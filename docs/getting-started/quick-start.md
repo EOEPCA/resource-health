@@ -28,24 +28,69 @@ hostnames `resource-health-check-api` and `resource-health-telemetry-api` have t
 workaround until API endpoints are securely exposed through an endpoint. -->
 
 
-## Current deployment in development cluster
+## Minimal local deployment
 
-All the health checks (and their outcomes) are currently owned by example users, so you will need to use those credentials to see the list of checks and the check outcomes for those users.
+Here is described how to deploy a minimal version of Resource Health BB. Among other things, this means that the deployment isn't secure, doesn't have user management, doesn't have redundancy, and isn't performant.
+
+For more information about what various components of Resource Health do, see [Deployment Overview](https://eoepca.readthedocs.io/projects/resource-health/en/latest/getting-started/deployment-overview/). For a production deployment guide, see [Resource Health Deployment Guide](https://eoepca.readthedocs.io/projects/deploy/en/latest/building-blocks/resource-health/).
+
+!!! note
+    The Docker images of Resource Health BB are for `x86_64` processor architecture. The latest image version (the versions used in this deployment guide) also have `arm64` variants. If the cluster is running on `arm64` architecture, append `-arm64` to each image tag to each image `docker.io/eoepca/...` in `resource-health-deployment.yaml`. For example, `docker.io/eoepca/resourcehealth_check_api:2.1.1-b013dbe` should be replaced with `docker.io/eoepca/resourcehealth_check_api:2.1.1-b013dbe-arm64`.
+
+This guide assumes that you have a minikube cluster running locally with a `resource-health` namespace already created. A very similar setup should would with any other Kubernetes clusters, the only different step is how you expose a service to be available from the outside.
+
+1. Clone [Resource Health main repository](https://github.com/EOEPCA/resource-health). The rest of the steps should be executed from `minimal-local-deployment` directory.
+2. Deploy a minimal version of OpenSearch. This skips any security, and only deploys one instance. You can deploy it in any other way you see fit. The other components assume an unsecured OpenSearch deployment with `cluster.name` being `opensearch-cluster` and which ingests data at port `9200`.
+    1. ```
+      helm repo add opensearch https://opensearch-project.github.io/helm-charts/
+      helm repo update
+      ```
+    2. Replace `<strong_password>` with an actual strong password in `opensearch-values.yaml`
+    3. ```
+      helm install opensearch opensearch/opensearch --version 2.21.0 -f opensearch-values.yaml
+      ```
+3. Deploy an OpenTelemetry Collector which will gather OpenTelemetry traces and forward them to OpenSearch. You can also deploy this another way if you so choose. The other components assume that `resource-health-opentelemetry-collector:4317` is an unsecured gRPC endpoint to which traces can be sent.
+    1. ```
+      helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+      helm repo update
+      ```
+    2. ```
+      helm install otelcol open-telemetry/opentelemetry-collector --version 0.101.2 -f otelcol-values.yaml -n resource-health
+      ```
+4. Deploy Health Check API, Telemetry API, and Web UI
+    1. ```
+      kubectl apply -f resource-health-service.yaml
+      ```
+    2. Now you need to expose the service above to outside the cluster. In this case we use `minikube tunnel`, but you'll need to use other means if you're not using minikube. For example you could use an ingress.
+      ```
+      minikube tunnel (this calls a sudo command so requires password)
+      ```
+    3. Now you need to find which IP could be used to access the resource health service we deployed. Run
+      ```
+      kubectl get svc
+      ```
+      You can see the service external IP in the `LoadBalancer` row. Replace `<service-external-ip>` in `resource-health-deployment.yaml` with it
+    4. ```
+      kubectl apply -f resource-health-deployment.yaml
+      ```
 
 ### API endpoints
 
 There are two API endpoints:
 
-- API for managing health checks [https://resource-health.develop.eoepca.org/api/healthchecks/](https://resource-health.develop.eoepca.org/api/healthchecks/)
-- API for accessing the (OpenTelemetry trace) outcomes of health check executions [https://resource-health.develop.eoepca.org/api/telemetry/](https://resource-health.develop.eoepca.org/api/telemetry/)
+- API for managing health checks `http://<service-external-ip>:8000`. Go to `http://<service-external-ip>:8000/docs` to explore the API - this page serves as both documentation and allows you to make HTTP requests to the API.
+- API for accessing the (OpenTelemetry trace) outcomes of health check executions `http://<service-external-ip>:8000`.
+
+The APIs are self-documenting - you the base of the APIs is a json file with named links to the main parts.
+In particular, you can go to `/docs` route in either API to explore it - that page serves as both documentation and allows you to make HTTP requests to the API.
 
 ### Web interface
 
-Available at [https://resource-health.develop.eoepca.org/](https://resource-health.develop.eoepca.org/).
+Available at `http://<service-external-ip>:3000`.
 
-### Define health checks
+### Basic usage
 
-The easiest way to define health checks is using the web interface [https://resource-health.develop.eoepca.org/](https://resource-health.develop.eoepca.org/).
+For the basics of how to use Resource Health BB, see [Basic tutorial for users](../usage/tutorials.md#basic-tutorial-for-users).
 
 <!-- 
 ### Using Helm values

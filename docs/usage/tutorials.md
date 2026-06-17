@@ -2,8 +2,7 @@
 
 Tutorials as a learning aid.
 
-Note that all the links in the tutorial are for the development cluster, and you need to authenticate as one of the three standard users to create checks and view their results.
-In other deployments the links will be different. I will also note all deployment dependant aspects as they come up. 
+This guide assumes that you have access to a Resource Health BB deployment. I will note all deployment-dependant aspects as they come up.
 
 ## Basic tutorial for users
 
@@ -17,7 +16,7 @@ In this tutorial you will learn:
 
 You should follow along the following steps to get used to how things work.
 
-1. Go to the Health Check website [https://resource-health.develop.eoepca.org/](https://resource-health.develop.eoepca.org/). As noted above, you should log in as one of the standard users.
+1. Go to the Health Check website.
 2. Click on `Create new check`.
    ![Create new check](./img/basic-user-tutorial/01-Create-new-check.png)
    Platform operators configure what kinds of checks you can create. You choose the check kind by picking a check template. For example, in the reference deployment you can choose `Generic script template`, and the check will be a Python script you provide (we will take a look at that later in an advanced guide). For now, we will choose `simple ping template`, which will create a check which pings an endpoint that we specify, and checks that the return code is as specified.  
@@ -60,7 +59,7 @@ In this tutorial we will learn:
 
 Follow along the following steps:
 
-1. Go to the Health Check website [https://resource-health.develop.eoepca.org/](https://resource-health.develop.eoepca.org/). Again, you should log in as one of the standard users.
+1. Go to the Health Check website.
 2. We will create a health check which will execute the Python script below using the [Pytest](https://docs.pytest.org/en/stable/) testing framework.
    ```python
    import random
@@ -110,7 +109,7 @@ Follow along the following steps:
 3. Run the check once, just as before. The check should succeed. Now go to the check results table and click on the check run ID. A page with the raw telemetry (like below) for that check run should open up - in here you see what information is stored about each check run in the database.
 ![Inspect Raw Telemetry](./img/advanced-user-tutorial/02-Inspect-Raw-Telemetry.png)
 See [Raw Health Check Telemetry](#raw-health-check-telemetry). In particular, you can search (with ctrl + F) for `resourcehealth.example.random_outcome` or `resourcehealth.example.random_outcome1` and see those results.
-4. We will now see one way to use the detailed health check telemetry. We will create a health check which looks into the telemetry generated from the above checks and verifies that the results from above overall are as expected. The check code is shown below
+1. We will now see one way to use the detailed health check telemetry. We will create a health check which looks into the telemetry generated from the above checks and verifies that the results from above overall are as expected. The check code is shown below
    ```python
    from datetime import timedelta
    from statistics import median

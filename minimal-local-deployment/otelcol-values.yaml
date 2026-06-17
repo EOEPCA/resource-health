@@ -1,0 +1,77 @@
+# Needed for predictable DNS and resource names
+fullnameOverride: "resource-health-opentelemetry-collector"
+
+image:
+  repository: otel/opentelemetry-collector-contrib
+
+mode: deployment
+
+# Fully overrides the default config.
+# See https://github.com/open-telemetry/opentelemetry-helm-charts/blob/b8eaf5e3f611fd5059a351d525b9f152e1cd5360/charts/opentelemetry-collector/values.yaml#L314
+# for full explanation
+alternateConfig:
+  exporters:
+    debug:
+      verbosity: detailed
+    nop: {}
+    opensearch:
+      http:
+        endpoint: http://opensearch-cluster-master:9200
+
+  extensions:
+    health_check:
+      endpoint: ${env:MY_POD_IP}:13133
+
+  processors:
+    memory_limiter:
+      check_interval: 5s
+      limit_percentage: 80
+      spike_limit_percentage: 25
+
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+
+  service:
+    extensions:
+    - health_check
+    pipelines:
+      traces:
+        exporters:
+        - debug
+        - opensearch
+        processors:
+        - memory_limiter
+        receivers:
+        - otlp
+
+ports:
+  jaeger-compact:
+    enabled: false
+  jaeger-grpc:
+    enabled: false
+  jaeger-thrift:
+    enabled: false
+  metrics:
+    enabled: false
+  otlp-http:
+    enabled: false
+  zipkin:
+    enabled: false
+presets:
+  clusterMetrics:
+    enabled: false
+  hostMetrics:
+    enabled: false
+  kubeletMetrics:
+    enabled: false
+  kubernetesAttributes:
+    enabled: false
+  logsCollection:
+    enabled: false
+resources:
+  limits:
+    cpu: 250m
+    memory: 512Mi

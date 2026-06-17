@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: resource-health-main
+  namespace: resource-health
+  labels:
+    app.kubernetes.io/component: "resource-health"
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 8000
+      protocol: TCP
+      name: check-api
+    - port: 8080
+      protocol: TCP
+      name: telemetry-api
+    - port: 3000
+      protocol: TCP
+      name: web
+  selector:
+    app.kubernetes.io/component: "resource-health"
