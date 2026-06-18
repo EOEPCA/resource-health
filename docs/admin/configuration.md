@@ -41,6 +41,10 @@ To use some other auth scheme (such as basic HTTP auth), you need to:
     * Create a new Docker image which launches an appropriately configured mitmproxy based on [this](https://github.com/EOEPCA/python-eoepca-security/blob/87cc35c7e9e2fc23376a49d50a8553c951762ff9/Dockerfile.mitmproxy).
     * Update the health check template for accessing telemetry to use the new image based on [this](https://github.com/EOEPCA/resource-health/blob/9c9444b6eca420e3d81147d24c3ff3e2b7d956a4/check_manager/src/check_backends/k8s_backend/template_utils/utils.py#L180) and [this](https://github.com/EOEPCA/resource-health/blob/9c9444b6eca420e3d81147d24c3ff3e2b7d956a4/check_manager/src/check_backends/k8s_backend/template_utils/utils.py#L325C5-L325C27).
 
+### Resource Health APIs
+
+Resource Health APIs authentication and authorization is configured through hooks, see [Hooks Tutorial](../usage/tutorials.md#hooks-tutorial) and [Hooks Documentation](../usage/tutorials.md#hooks-documentation).
+
 ## OpenSearch
 
 OpenSearch configuration for the reference deployment is defined [here](https://github.com/EOEPCA/helm-charts-dev/tree/e0dd33dd8d78cb9e23e5383c1788aa8b0ba235f1/charts/resource-health-reference-deployment/values.yaml#L342)

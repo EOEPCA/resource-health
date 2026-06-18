@@ -1,0 +1,250 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: resource-health-check-manager
+  labels:
+    app.kubernetes.io/component: "resource-health"
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: resource-health-check-manager-role
+  labels:
+    app.kubernetes.io/component: "resource-health"
+rules:
+- apiGroups: ["batch"] 
+  resources: ["cronjobs", "jobs"]
+  verbs: ["get", "watch", "list", "create", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["secrets"] # "" indicates the core API group
+  verbs: ["get", "watch", "list", "create", "patch", "delete"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: resource-health-check-manager-rolebinding
+subjects:
+  - kind: ServiceAccount
+    name: resource-health-check-manager
+    namespace: resource-health
+roleRef:
+  kind: Role
+  name: resource-health-check-manager-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: resource-health-main
+  namespace: resource-health
+  labels:
+    app.kubernetes.io/component: "resource-health"
+spec:
+  restartPolicy: Never
+  securityContext: {}
+  serviceAccountName: resource-health-check-manager
+  containers:
+    - name: resource-health-check-api
+      image: docker.io/eoepca/resourcehealth_check_api:2.1.1-b013dbe
+      imagePullPolicy: IfNotPresent
+      ports:
+        - name: check-api
+          containerPort: 8000
+          protocol: TCP
+      env:
+        - name: RH_CHECK_K8S_DEFAULT_RUNNER_IMAGE
+          value: docker.io/eoepca/healthcheck_runner:2.0.1-6cbbcf4
+        - name: RH_CHECK_K8S_TEMPLATE_PATH
+          value: /app/templates/
+        - name: RH_CHECK_HOOK_DIR_PATH
+          value: /app/hooks/
+        - name: RH_CHECK_API_BASE_URL
+          value: http://<service-external-ip>:8000/
+        - name: DEFAULT_COLLECTOR_URL_NO_PROTOCOL
+          value: "resource-health-opentelemetry-collector:4317"
+      volumeMounts:
+        - name: check-api-templates-vol
+          mountPath: /app/templates/
+        - name: check-api-hooks-vol
+          mountPath: /app/hooks/
+      resources: {}
+    - name: resource-health-telemetry-api
+      image: docker.io/eoepca/resourcehealth_telemetry_api:2.1.0-542cd1c
+      imagePullPolicy: IfNotPresent
+      ports:
+        - name: telemetry-api
+          containerPort: 8080
+          protocol: TCP
+      env:
+        - name: RH_TELEMETRY_OPENSEARCH_INDEX
+          value: ss4o_traces-default-namespace
+        - name: RH_TELEMETRY_API_BASE_URL
+          value: http://<service-external-ip>:8080/
+        - name: RH_TELEMETRY_HOOK_DIR_PATH
+          value: "/app/hooks/"
+      volumeMounts:
+        - name: telemetry-api-hooks-vol
+          mountPath: /app/hooks/
+      resources: {}
+    - name: resource-health-web
+      image: docker.io/eoepca/resourcehealth_web:2.0.0
+      imagePullPolicy: IfNotPresent
+      ports:
+        - name: web
+          containerPort: 3000
+          protocol: TCP
+      env:
+        - name: NEXT_PUBLIC_RELOGIN_URL
+          value: http://<service-external-ip>:3000/login
+        - name: NEXT_PUBLIC_CHECK_MANAGER_ENDPOINT
+          value: http://<service-external-ip>:8000/v1
+        - name: NEXT_PUBLIC_TELEMETRY_ENDPOINT
+          value: http://<service-external-ip>:8080/v1
+      resources: {}
+  volumes:
+    - name: check-api-templates-vol
+      configMap:
+        name: check-api-templates
+    - name: check-api-hooks-vol
+      configMap:
+        name: check-api-hooks
+    - name: telemetry-api-hooks-vol
+      configMap:
+        name: telemetry-api-hooks
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: check-api-templates
+  namespace: resource-health
+data:
+  ping_template.py: |
+    import check_backends.k8s_backend.template_utils as tu
+
+    SIMPLE_PING_SRC = """
+    from os import environ
+    import requests
+
+    GENERIC_ENDPOINT: str = environ["GENERIC_ENDPOINT"]
+    EXPECTED_STATUS_CODE: int = int(environ["EXPECTED_STATUS_CODE"])
+
+
+    def test_ping() -> None:
+        response = requests.get(
+            GENERIC_ENDPOINT,
+        )
+        assert response.status_code == EXPECTED_STATUS_CODE
+    """
+
+
+    class SimplePingArguments(tu.BaseModel):
+        model_config = tu.ConfigDict(extra="forbid")
+        endpoint: str = tu.Field(json_schema_extra={"format": "textarea"})
+        expected_status_code: int = tu.Field(ge=100, lt=600, default=200)
+
+
+    SimplePing = tu.simple_runner_template(
+        template_id="simple_ping",
+        argument_type=SimplePingArguments,
+        label="Simple ping template",
+        description="Simple template with preset script for pinging single endpoint.",
+        script_url=tu.src_to_data_url(SIMPLE_PING_SRC),
+        runner_env=lambda template_args, userinfo: {
+            "GENERIC_ENDPOINT": template_args.endpoint,
+            "EXPECTED_STATUS_CODE": str(template_args.expected_status_code),
+        },
+        user_id=lambda template_args, userinfo: userinfo["username"],
+        otlp_tls_secret=None,
+    )
+
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: check-api-hooks
+  namespace: resource-health
+data:
+  hooks.py: |
+    import check_hooks.hook_utils as hu
+
+    from typing import TypedDict
+    from fastapi import Request
+
+
+    class UserInfo(TypedDict):
+        username: str
+
+
+    async def get_fastapi_security(request: Request) -> None:
+        return None
+
+
+    def on_auth(tokens: None) -> UserInfo:
+        return UserInfo(username="unauthenticated-user")
+
+
+    ## For the k8s backend
+
+    async def get_k8s_config(userinfo: UserInfo) -> hu.K8sConfiguration:
+        return await hu.k8s_config_from_cluster()
+
+
+    def get_k8s_namespace(userinfo: UserInfo) -> str:
+        return "resource-health"
+
+
+    async def on_k8s_cronjob_create(
+        userinfo: UserInfo, client: hu.K8sClient, cronjob: hu.K8sCronJob
+    ) -> None:
+        ## Ensure cronjob is tagged with correct owner
+        cronjob.metadata.annotations["owner"] = userinfo["username"]
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: telemetry-api-hooks
+  namespace: resource-health
+data:
+  hooks.py: |
+    from fastapi import Request
+    import python_opentelemetry_access.telemetry_hooks.utils as hu
+    from typing import TypedDict
+
+
+    class UserInfo(TypedDict):
+        username: str | None
+
+
+    async def get_fastapi_security(request: Request) -> None:
+        return None
+
+
+    def on_auth(tokens: None) -> UserInfo:
+        return UserInfo(username="unauthenticated-user")
+
+
+    ## For the OpenSearch proxy/backend
+
+
+    def get_opensearch_config(userinfo: UserInfo) -> hu.OpensearchConfig:
+        return hu.OpensearchConfig(
+            ## Host to connect to
+            # hosts=[{"host": "localhost", "port": 9200}],
+            hosts=[{"host": "opensearch-cluster-master-headless", "port": 9200}],
+            use_ssl=False,
+            ## For unverified tls
+            verify_certs=False,
+            ssl_show_warn=False,
+        )

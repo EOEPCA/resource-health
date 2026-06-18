@@ -1,0 +1,16 @@
+metadata:
+  namespace: resource-health
+# To require fewer resources
+singleNode: true
+config:
+  opensearch.yml: |-
+    cluster.name: opensearch-cluster
+    network.host: 0.0.0.0
+    # To avoid an error like
+    # max virtual memory areas vm.max_map_count [65530] is too low, increase to at least [262144]
+    node.store.allow_mmap: false
+extraEnvs:
+  - name: OPENSEARCH_INITIAL_ADMIN_PASSWORD
+    value: <strong_password>
+  - name: DISABLE_SECURITY_PLUGIN
+    value: "true"

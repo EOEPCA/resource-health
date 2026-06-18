@@ -43,7 +43,7 @@ from kubernetes_asyncio.client.models.v1_secret_key_selector import V1SecretKeyS
 
 DEFAULT_RUNNER_IMAGE: str = (
     os.environ.get("RH_CHECK_K8S_DEFAULT_RUNNER_IMAGE")
-    or "docker.io/eoepca/healthcheck_runner:2.0.0"
+    or "docker.io/eoepca/healthcheck_runner:2.0.1-6cbbcf4"
 )
 
 # Protocol (https or http) will be added later
