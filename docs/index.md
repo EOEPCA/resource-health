@@ -2,18 +2,18 @@
 
 The documentation for the Resource Health building block is organised as follows...
 
-* **Introduction**<br>
-Introduction to the BB - including summary of purpose and capabilities.
-* **Getting Started**<br>
-Quick start instructions - including installation, e.g. of a local instance.
-* **Design**<br>
-Description of the BB design - including its subcomponent architecture and interfaces.
-* **Usage**<br>
-Tutorials, How-tos, etc. to communicate usage of the BB.
-* **Administration**<br>
-Configuration and maintenance, and troubleshooting of the BB.
-<!-- * **API**<br>
-Details of APIs provided by the BB - including endpoints, usage descriptions and examples etc. -->
+* **Introduction**  
+  Introduction to the BB - including summary of purpose and capabilities.
+* **Getting Started**  
+  Quick start instructions - including installation, e.g. of a local instance.
+* **Design**  
+  Description of the BB design - including its subcomponent architecture and interfaces.
+* **Usage**  
+  Tutorials, How-tos, etc. to communicate usage of the BB.
+* **Administration**  
+  Configuration and maintenance, and troubleshooting of the BB.
+<!-- * **API**  
+  Details of APIs provided by the BB - including endpoints, usage descriptions and examples etc. -->
 
 ## About Resource Health BB
 
@@ -47,3 +47,20 @@ The Resource Health BB offers a generalised capability that allows all types of 
 - API to interrogate any health check status
     - API access to the history of check outcomes sufficient to produce functionality available in the Graphical UI
     - API access to execution performance statistics of check logic sufficient to produce functionality available in the Graphical UI
+
+## Web UI
+
+One of the main ways the user is expected to interact with the Resource Health BB is through the web UI.
+Here is the interface for some of the above capabilities in the web UI.
+
+Here is check creation and scheduling form.
+![create-check](create-check.png)
+
+Here is a list of current checks and their statuses.
+![check-list](check-list.png)
+
+Here is a part of a check page, where you can run the check, remove it, and inspect the recent runs of the check.
+![check-page](check-page.png)
+
+Here is a check run page, where you can inspect the telemetry from each health check run in a lot of detail.
+![check-run-details](check-run-details.png)
