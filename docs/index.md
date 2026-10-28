@@ -64,3 +64,6 @@ Here is a part of a check page, where you can run the check, remove it, and insp
 
 Here is a check run page, where you can inspect the telemetry from each health check run in a lot of detail.
 ![check-run-details](check-run-details.png)
+
+The check run telemetry is in [OTLP/JSON format](https://opentelemetry.io/docs/specs/otlp/#json-protobuf-encoding), which can be viewed in off-the-shelf tools, such as [otel-desktop-viewer](https://github.com/CtrlSpice/otel-desktop-viewer).
+![ui-trace-inspection](ui-trace-inspection.png)
