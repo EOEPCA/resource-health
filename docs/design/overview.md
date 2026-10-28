@@ -1,12 +1,11 @@
 # Design overview
 
-The resource health building block deals with health checks. These checks are typically recurrent, running on a regular schedule or in response to irregular events (such as whenever a user manually requests it). As far as the resource health building block is concerned, a health check is anything that produces a number of *traces* in [the sense of the OpenTelemetry specification](https://opentelemetry.io/docs/concepts/signals/traces/), containing one or more [spans](https://opentelemetry.io/docs/concepts/signals/traces/#spans) marked as being health check telemetry (through [span attributes](https://opentelemetry.io/docs/concepts/signals/traces/#attributes)).
-
-TODO: Sketch example picture of a trace
+The resource health building block deals with health checks. These checks are typically recurrent, running on a regular schedule or in response to irregular events (such as whenever a user manually requests it). As far as the resource health building block is concerned, a health check is anything that produces a number of *traces* in [the sense of the OpenTelemetry specification](https://opentelemetry.io/docs/concepts/signals/traces/), containing one or more [spans](https://opentelemetry.io/docs/concepts/signals/traces/#spans) marked as being health check telemetry (through [span attributes](https://opentelemetry.io/docs/concepts/signals/traces/#attributes)). An OpenTelemetry trace is just a structured log with traceability data noting which operation led to which, even if the operations are executed on different machines. Each operation is represented by a span.
 
 A span representing a health check outcome may contain [attributes](https://opentelemetry.io/docs/concepts/signals/traces/#attributes), [events](https://opentelemetry.io/docs/concepts/signals/traces/#span-events), or child spans (recursively containing attributes, events, or child spans) that contain evidence of unhealth. For example, a HTTP request performed as part of the check may return a 500 Internal Server Error response, an exception may have been generated, or an expectation expressed as an assertion may have been violated. Any given health check outcome either contains some such evidence or it does not, in the latter case the subject(s) of the check is/are presumed healthy.
 
-TODO: Sketch example picture containing one healthy and one or more examples of unhealthy check telemetry
+The two diagrams below each showcase a trace. Each trace consists of a number of spans, visualized here as the elongated rectangles. The red circle in the second diagram is an event.
+![healthy telemetry](healthy-telemetry.png){: style="width:35%"} ![unhealthy telemetry](unhealthy-telemetry.png){: style="width:51%"}
 
 Relative to the above, monitoring the health of a platform means:
 
@@ -15,13 +14,13 @@ Relative to the above, monitoring the health of a platform means:
 
 The resource health BB itself does not itself prescribe precisely *which* health checks are to be run. End-users, platform operators, and developers must themselves describe the precise suite(s) of checks and their cadences. What the resource health BB does provide is:
 
-1. [A (scripting) framework for expressing health checks](#health-check-framework) combined with a mechanism for executing such health check specifications such that appropriate *traces and spans* are generated;
+1. [A (scripting) framework for expressing health **checks**](#health-check-framework) combined with a mechanism for executing such health check specifications such that appropriate *traces and spans* are generated;
 2. [A standard deployment template for transmitting, storing, and notifying based on the generated *traces and spans*](#health-check-telemetry-transmission-and-storage);
 3. [A plugin-based library for accessing health-check telemetry](#health-check-telemetry-access-library) (i.e. OpenTelemetry Trace data) with a back end implementation compatible with 2.;
 4. [A plugin-based library for registering and configuring health-checks to be run](#health-check-management-library) with a bookend implementation mapping directly to Kubernetes resources;
-5. [Interface(s) that tie together and expose the functionalities of 3. and 4.](#interfaces) via browser based graphical interactions, REST API, and CLI tools (e.g. for use with CI/CD for GitOps-style management of health checks). 
+5. [Interface(s) that tie together and expose the functionalities of 3. and 4.](#interfaces) via browser based graphical interactions, REST API, and CLI tools (e.g. for use with CI/CD for GitOps-style management of health checks).
 
-TODO: Draw out the structural composition and information flow in the above
+![Structural composition and information flow diagram of the above.](resource-health-design.png)
 
 A platform operator can choose either to use all of the above components (to achieve full functionality), skip some components (to operate the building block with reduced functionality), or replace components by some more appropriate to their platform. Details of each component can be found in their respective sub-sections in [the following section](#component-details). For an overview of potential customisation scenarios, see the [section on customisation](#potential-customisations).
 
@@ -84,15 +83,15 @@ There is a web UI for health check management and generated telemetry inspection
 
 ### Health check management library
 
-Health checks can in principle be executed in an ad-hoc manner, as long as they are capable of transmitting the resulting OpenTelemetry trace information to the necessary endpoint. That being said, most platforms that utilise (at least some part of) the resource health building block are expected to need some form of mechanism for registering health checks together with some meta-data (at least some persistent name) in a way that allows them to be easily executed on or outside of a specified schedule. 
+Health checks can in principle be executed in an ad-hoc manner, as long as they are capable of transmitting the resulting OpenTelemetry trace information to the necessary endpoint. That being said, most platforms that utilise (at least some part of) the resource health building block are expected to need some form of mechanism for registering health checks together with some meta-data (at least some persistent name) in a way that allows them to be easily executed on or outside of a specified schedule.
 
 As is the case with [health check telemetry](#health-check-telemetry-access-library) this can in principle be handled by the target platform in a platform-specific way. In order for the the resource health building block to provide some reusable "default" front-end functionality related to the management of health checks, it includes a small library that abstracts a minimal necessary interface. The core part of this interface is intended to enable CRUD (Create, Read, Update, Delete) operations on health checks, as well as requesting the execution of checks (ad-hoc or on schedule).
 
-For platforms that do not require the use of a custom workflow engine/scheduler/etc for the execution of health checks, the building block includes an implementation of this library that maps health checks directly to Kubernetes resources (CronJobs) using the Kubernetes API. 
+For platforms that do not require the use of a custom workflow engine/scheduler/etc for the execution of health checks, the building block includes an implementation of this library that maps health checks directly to Kubernetes resources (CronJobs) using the Kubernetes API.
 
 ### Interfaces
 
-Finally the building block provides some reusable and generic front-end functionality that is intended to be used in the absence of platform-specific interfaces. 
+Finally the building block provides some reusable and generic front-end functionality that is intended to be used in the absence of platform-specific interfaces.
 
 These interfaces relatively directly expose the functionality provided by the [telemetry access library](#health-check-telemetry-access-library) and the [health check management library](#health-check-management-library) through:
 
@@ -108,7 +107,7 @@ What follows is a list of ideas of ways in which platform operators may choose t
 
 ### otel-collector
 
-The standard deployment template relies on a single deployment of OpenTelemetry collector as an ingestion endpoint. Each check execution writes directly to this centralised OpenTelemetry collector. If a platform either requires a more complex topology for transporting trace data or already has a separate infrastructure for dealing with observability data (an independent otel-collector, FluentBit, Vector, ...) this can be accommodated by simply specifying the appropriate OTLP (OpenTelemetry Line Protocol) endpoint, which might, for example, be an appropriately configured sidecar container, injected by the target cluster. 
+The standard deployment template relies on a single deployment of OpenTelemetry collector as an ingestion endpoint. Each check execution writes directly to this centralised OpenTelemetry collector. If a platform either requires a more complex topology for transporting trace data or already has a separate infrastructure for dealing with observability data (an independent otel-collector, FluentBit, Vector, ...) this can be accommodated by simply specifying the appropriate OTLP (OpenTelemetry Line Protocol) endpoint, which might, for example, be an appropriately configured sidecar container, injected by the target cluster.
 
 This also makes it easy to "siphon off" health check telemetry into an auxiliary system for more advanced analysis monitoring (e.g. to some Application Performance Monitoring software).
 

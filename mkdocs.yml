@@ -8,6 +8,7 @@ nav:
   - Resource Health:
     - index.md
     - service-offer.md
+    - development-state.md
     - Getting Started:
       - getting-started/quick-start.md
     - Design:

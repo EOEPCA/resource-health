@@ -70,4 +70,3 @@ Each trace is tagged with `user.id` of the user who created the check. To give a
 
 !!! info
     The current `user.id` annotation is meant to signal who is allowed to view the health check telemetry. For a different or more complex security model, you would need to tag the OTel traces with identifier(s) to be used in authorization decisions, and to create a document-level-security role similar to [this](https://github.com/EOEPCA/helm-charts-dev/tree/e0dd33dd8d78cb9e23e5383c1788aa8b0ba235f1/charts/resource-health-reference-deployment/values.yaml#L449), but with a different filtering condition.
-
