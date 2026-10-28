@@ -61,3 +61,14 @@ def raise_error_if_schedule_too_frequent(
             return
         prev_date = date
 ```
+
+## Try out alerting proof of concept
+
+Health check alerting is currently only a proof of concept. See [Check Alerting](../development-state.md#check-alerting) for its development state.
+
+Here are the steps to try the Resource Health alerting proof of concept:
+
+1. Configure which SMTP mailer service to use, and an account credentials for the email alert sender. This means setting `SMTP_MAILER_HOST`, `SMTP_MAILER_PORT`, `FROM_EMAIL`, and `FROM_EMAIL_PASSWORD` environment variables of the alerting service. See [here](https://github.com/EOEPCA/eoepca-plus/blob/7c6be3bad2b5252d420e111798ad344363b243e4/argocd/eoepca/resource-health/parts/app-resource-health-core.yaml#L746) for reference.
+2. Configure the user-to-email mapping. The mapping is a json file in the service container consisting of a top-level dictionary from user id to email for their alerts, e.g. the file could be `{"example-user": "user@example.com"}`. The file can be mounted from a volume. Also set the environment variable `ALERT_USER_EMAILS` of the alerting service to user email json file.
+3. Forward the health check trace data to the alerting service, for example you can make your OTel Collector(s) send a copy of the traces there. [Resource Health Reference Deployment HELM chart](https://github.com/EOEPCA/helm-charts-dev/tree/8080f0b1ce5bc93ca9b7d6ac1408a3e3f58e9a96/charts/resource-health-reference-deployment) already does this, see [here](https://github.com/EOEPCA/helm-charts-dev/blob/8080f0b1ce5bc93ca9b7d6ac1408a3e3f58e9a96/charts/resource-health-reference-deployment/values.yaml#L210) for reference. Make sure to point to the port that the alerting service expects. To change that port, set the environment variable `TRACE_RECEIVER_ADDRESS` of the alerting service, see [here](https://github.com/EOEPCA/eoepca-plus/blob/7c6be3bad2b5252d420e111798ad344363b243e4/argocd/eoepca/resource-health/parts/app-resource-health-core.yaml#L735).
+4. Now try out if the setup worked. For one of the users with an email specified in step 2, create a health check which will fail. Trigger the run manually (or wait for the health check to run according to the schedule). The configured email for the user should get the failed check alert email in a few minutes.
